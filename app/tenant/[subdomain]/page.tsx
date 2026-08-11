@@ -666,34 +666,34 @@ export default function TenantPortalPage({
                     <table className="premium-table" style={{ fontSize: '0.85rem', width: '100%' }}>
                       <thead>
                         <tr>
-                          <th>경기 종목</th>
-                          <th>참가 클래스 구분</th>
+                          <th style={{ width: '120px', whiteSpace: 'nowrap' }}>경기 종목</th>
+                          <th style={{ width: '250px' }}>참가 클래스 구분</th>
                           <th>참가 자격 및 세부 규칙</th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr>
-                          <td style={{ fontWeight: '700' }}>윈드포일</td>
+                          <td style={{ fontWeight: '700', whiteSpace: 'nowrap' }}>윈드포일</td>
                           <td>남녀 오픈</td>
                           <td>연령 제한 없음</td>
                         </tr>
                         <tr>
-                          <td style={{ fontWeight: '700' }}>윙포일</td>
+                          <td style={{ fontWeight: '700', whiteSpace: 'nowrap' }}>윙포일</td>
                           <td>남자부 / 여자부</td>
                           <td>연령 제한 없음</td>
                         </tr>
                         <tr>
-                          <td style={{ fontWeight: '700' }}>혼합 오픈</td>
+                          <td style={{ fontWeight: '700', whiteSpace: 'nowrap' }}>혼합 오픈</td>
                           <td>남자 청년부 / 남자 중년부 / 남자 장년부 / 여자부</td>
                           <td>청년부(1987.1.1 이후), 중년부(1977.1.1 ~ 1986.12.31), 장년부(1976.12.31 이전), 여자부(연령 제한 없음)</td>
                         </tr>
                         <tr>
-                          <td style={{ fontWeight: '700' }}>펀 & 포뮬러</td>
+                          <td style={{ fontWeight: '700', whiteSpace: 'nowrap' }}>펀 & 포뮬러</td>
                           <td>남자 청년부 / 남자 중년부 / 남자 장년부 / 여자부</td>
                           <td>청년부(1987.1.1 이후), 중년부(1977.1.1 ~ 1986.12.31), 장년부(1976.12.31 이전), 여자부(연령 제한 없음)</td>
                         </tr>
                         <tr>
-                          <td style={{ fontWeight: '700' }}>단체전</td>
+                          <td style={{ fontWeight: '700', whiteSpace: 'nowrap' }}>단체전</td>
                           <td>시·도 및 동호인회 (4인 1팀)</td>
                           <td>참가선수 4명이 1개 팀으로 하는 릴레이식 경기 방식</td>
                         </tr>
