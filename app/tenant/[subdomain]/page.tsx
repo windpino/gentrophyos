@@ -381,14 +381,12 @@ export default function TenantPortalPage({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {/* 하단 글씨 영역을 Crop하고 순수 거북선-돛 그래픽 엠블럼만 노출하는 컨테이너 */}
           <img
             src="/images/logo.png"
             alt="제20회 이순신장군배 전국윈드서핑대회 로고"
             style={{ height: '56px', width: 'auto', objectFit: 'contain' }}
           />
 
-          {/* 엠블럼 오른쪽에 타이틀 글자 두 줄 배치 */}
           <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             <span style={{
               fontSize: '0.85rem',
@@ -410,6 +408,52 @@ export default function TenantPortalPage({
             </span>
           </div>
         </div>
+
+        {/* 탭 네비게이션 메뉴 (상단으로 이동) */}
+        <nav
+          style={{
+            display: 'flex',
+            gap: '8px',
+            height: '100%',
+            alignItems: 'center',
+          }}
+        >
+          {[
+            { id: 'overview', label: '대회 요강', icon: Compass },
+            { id: 'notice', label: '개최공시서', icon: FileText, disabled: !ongoingTournament },
+            { id: 'register', label: '참가 신청서 제출', icon: UserPlus, disabled: !ongoingTournament },
+            { id: 'leaderboard', label: '실시간 리더보드', icon: Award, disabled: !ongoingTournament },
+            { id: 'archive', label: '역대 기록실', icon: Archive, disabled: archivedTournaments.length === 0 },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const active = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => !tab.disabled && setActiveTab(tab.id as any)}
+                disabled={tab.disabled}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '0 16px',
+                  height: '100%',
+                  border: 'none',
+                  background: 'none',
+                  color: tab.disabled ? 'rgba(0,0,0,0.15)' : (active ? 'var(--theme-primary)' : 'var(--text-muted)'),
+                  borderBottom: active ? `3px solid var(--theme-primary)` : '3px solid transparent',
+                  cursor: tab.disabled ? 'not-allowed' : 'pointer',
+                  fontWeight: '800',
+                  fontSize: '0.9rem',
+                  transition: 'var(--transition-smooth)',
+                }}
+              >
+                <Icon size={16} />
+                {tab.label}
+              </button>
+            );
+          })}
+        </nav>
 
         <div style={{ display: 'flex', gap: '12px' }}>
           <a
@@ -545,53 +589,8 @@ export default function TenantPortalPage({
       </section>
 
       {/* 3. 아래쪽 내용 (옅은 배경색으로 시각적 대비 확보) */}
-      <div style={{ background: '#f1f5f9', borderTop: '1px solid var(--border-color)', padding: '60px 0 100px 0', width: '100%' }}>
+      <div style={{ background: '#f1f5f9', borderTop: '1px solid var(--border-color)', padding: '40px 0 100px 0', width: '100%' }}>
         <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '0 20px' }}>
-          <nav
-            style={{
-              display: 'flex',
-              justifyContent: 'center',
-              gap: '12px',
-              borderBottom: '1px solid var(--border-color)',
-              marginBottom: '40px',
-              paddingTop: '20px',
-            }}
-          >
-          {[
-            { id: 'overview', label: '대회 요강', icon: Compass },
-            { id: 'notice', label: '개최공시서', icon: FileText, disabled: !ongoingTournament },
-            { id: 'register', label: '참가 신청서 제출', icon: UserPlus, disabled: !ongoingTournament },
-            { id: 'leaderboard', label: '실시간 리더보드', icon: Award, disabled: !ongoingTournament },
-            { id: 'archive', label: '역대 기록실', icon: Archive, disabled: archivedTournaments.length === 0 },
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const active = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => !tab.disabled && setActiveTab(tab.id as any)}
-                disabled={tab.disabled}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '16px 24px',
-                  border: 'none',
-                  background: 'none',
-                  color: tab.disabled ? 'rgba(255,255,255,0.2)' : (active ? 'var(--theme-primary)' : 'var(--text-muted)'),
-                  borderBottom: active ? `3px solid var(--theme-primary)` : '3px solid transparent',
-                  cursor: tab.disabled ? 'not-allowed' : 'pointer',
-                  fontWeight: '700',
-                  fontSize: '1rem',
-                  transition: 'var(--transition-smooth)',
-                }}
-              >
-                <Icon size={18} />
-                {tab.label}
-              </button>
-            );
-          })}
-        </nav>
 
         {/* 3. 메인 콘텐츠 분기 */}
         <main className="animate-fade-in" style={{ paddingBottom: '100px' }}>
