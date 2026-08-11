@@ -803,12 +803,12 @@ export default function TenantPortalPage({
           }}
         >
           {[
-            { id: 'overview', label: '대회 요강', defaultSubTab: '', disabled: false },
-            { id: 'notice', label: '개최공시서', defaultSubTab: '', disabled: false },
-            { id: 'intro', label: '대회소개', defaultSubTab: 'intro-greeting', disabled: false },
-            { id: 'live', label: '경기운영 🟢', defaultSubTab: 'live-leaderboard', disabled: !ongoingTournament },
-            { id: 'gallery', label: '미디어 & 갤러리', defaultSubTab: 'gallery-photos', disabled: false },
-            { id: 'archive', label: '역대 기록관 ⭐', defaultSubTab: 'archive-home', disabled: false },
+            { id: 'overview', label: '📋 대회 요강', defaultSubTab: '', disabled: false },
+            { id: 'notice', label: '📢 개최공시서', defaultSubTab: '', disabled: false },
+            { id: 'intro', label: '⛵ 대회소개', defaultSubTab: 'intro-greeting', disabled: false },
+            { id: 'live', label: '⏱️ 경기운영', defaultSubTab: 'live-leaderboard', disabled: !ongoingTournament },
+            { id: 'gallery', label: '📸 미디어 & 갤러리', defaultSubTab: 'gallery-photos', disabled: false },
+            { id: 'archive', label: '🏆 역대 기록관', defaultSubTab: 'archive-home', disabled: false },
           ].map((tab) => {
             const active = activeTab === tab.id;
             return (
