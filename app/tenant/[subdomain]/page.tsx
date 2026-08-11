@@ -597,7 +597,7 @@ export default function TenantPortalPage({
           
           {/* A. 대회 요강 탭 (개최공시서 상세 매핑 및 2026년형 UI 고도화) */}
           {activeTab === 'overview' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1fr', gap: '30px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '2.2fr 0.8fr', gap: '30px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
                 
                 {/* 대회 개요 카드 */}
