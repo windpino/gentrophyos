@@ -65,23 +65,26 @@ export default function TenantPortalPage({
 
   // 대회요강 Fallback 및 동적 데이터 셋업
   const overview = {
-    title: '제20회 이순신장군배 전국윈드서핑대회',
-    duration: '2026. 9. 12(토) ~ 13(일) 1박2일',
-    location: '통영시 산양읍 영운리 수륙마을 내 수륙해수욕장',
-    scale: '130명 (선착순 마감)',
-    host: '통영시',
-    sponsor: '통영시요트협회',
-    supporter: '통영시체육회, 경상남도요트협회, 한국윈드서핑협회',
-    office: '통영시 산양읍 영운리 수륙마을 내 수륙해수욕장',
-    bankName: '개별 문자 통지 예정',
+    title: '제20회 미추홀구청장배 전국핀수영대회',
+    duration: '2026. 9. 12(토) ~ 13(일) 2일간',
+    location: '문학박태환수영장 (인천광역시 미추홀구 경원대로 526)',
+    scale: '300명 (선착순 마감)',
+    host: '인천광역시 미추홀구',
+    sponsor: '인천광역시핀수영협회, 미추홀구체육회',
+    supporter: '인천광역시 미추홀구',
+    office: '문학박태환수영장 (인천광역시 미추홀구 경원대로 526)',
+    bankName: '선수등록 승인 후 개별 문자 발송 예정',
     accountNo: '계좌번호 등록대기',
-    accountHolder: '대회조직위원회',
-    entryFeeIndividual: '선수접수등록 후 개별 문자 통지',
-    entryFeeGroup: '단체전은 2026.9.13(일) 경기개시 1시간 전 등록',
-    deadlineDate: '2026년 8월 27일(목)',
-    rulesNote: '※ 이번 대회 신설된 윙포일 부분은 남녀 각각 10명으로 참가인원을 제한합니다.\n※ 참가인원은 선착순으로 130명이 충족되면 참가접수 기한이 조기에 마감될 수 있습니다.\n※ 단체전을 제외한 종목별 경기의 중복 출전은 불가합니다.\n※ 단체전은 시,도 클럽별 릴레이식 참가선수 4명이 1개 팀으로 하는 경기방식 채택합니다.\n※ 모든 선수는 경기 중 구명동의(라이프자켓)를 반드시 착용하여야 하며 미착용 시 즉시 실격(DSQ) 처리됩니다.\n※ 모든 나이는 2026년 9월 12일을 기준으로 합니다.\n※ 각 클래스는 생년월일 기준으로 편성하며 선수 5명 이상 출전 시 시상합니다.',
-    itineraryDay1: '10:00 - 12:00 : 참가선수 확인 및 등록 / 계측\n12:00 - 13:00 : 중식 제공 (대회장)\n13:00 - 13:30 : 개회식 (수륙해수욕장 특설무대)\n14:00 - 18:00 : 1일차 레이스 (각 종목 코스별)\n19:00 - : 환영식 및 시상식 (환영식 만찬 - 영운마을 물회집)',
-    itineraryDay2: '10:00 - 12:00 : 2일차 레이스 (본선)\n12:00 - 13:00 : 중식 제공 (대회장)\n13:00 - 15:00 : 결선 레이스\n15:30 - : 폐회식, 종합 시상 (영운리 마을회관 앞)\n16:30 - : 해산 및 장비 철수',
+    accountHolder: '인천광역시핀수영협회',
+    entryFeeIndividual: '개인전 1종목당 20,000원',
+    entryFeeGroup: '단체전 팀당 50,000원',
+    deadlineDate: '2026년 8월 24일(월)',
+    rulesNote: '※ 참가 신청 시 소속 클럽 명확히 작성 필수.\n※ 단체전은 남녀 혼성 계영 4x50m 및 4x100m로 진행함.\n※ 모든 나이는 2026년 9월 12일을 기준으로 합니다.\n※ 1인 최대 2종목까지 신청 가능 (단체전 제외).\n※ 참가인원은 선착순으로 300명이 충족되면 참가접수 기한이 조기에 마감될 수 있습니다.\n※ 참가비가 납부되어야 정식 등록이 완료되며 기한 내 미납 시 참가가 자동 취소됩니다.\n※ 신청기간 이후에는 취소 및 참가비 환불이 불가합니다.',
+    itineraryDay1: '10:00 - 12:00 : 선수단 현장등록 및 웜업\n12:00 - 13:00 : 중식\n13:00 - 13:30 : 개회식\n13:30 - 18:00 : 1일차 경기',
+    itineraryDay2: '09:00 - 12:00 : 2일차 경기\n12:00 - 13:00 : 중식\n13:00 - 18:00 : 2일차 경기 및 시상식\n18:00 - : 폐회식 및 해산',
+    itineraryDay3: '',
+    itineraryDay4: '',
+    itineraryDay5: '',
     ...(tenant?.overviewConfig || {})
   };
   const [loading, setLoading] = useState(true);
@@ -389,18 +392,14 @@ export default function TenantPortalPage({
 
   if (applyMode && ongoingTournament) {
     return (
-      <div style={{ ...themeStyles, minHeight: '100vh', backgroundColor: '#f1f5f9', padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <div style={{ ...themeStyles, minHeight: '100vh', backgroundColor: '#ffffff', padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         {/* 상단 단독 폼 타이틀 및 브랜딩 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
           <img
-            src="/images/logo.png"
+            src="/images/logo_new.png"
             alt="대회 로고"
-            style={{ height: '48px', width: 'auto', objectFit: 'contain' }}
+            style={{ height: '220px', width: 'auto', objectFit: 'contain' }}
           />
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-main)', lineHeight: '1.2' }}>제20회 이순신장군배</span>
-            <span style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--theme-primary)', lineHeight: '1.2' }}>전국윈드서핑대회</span>
-          </div>
         </div>
 
         {/* 단독 폼 카드 */}
@@ -423,15 +422,63 @@ export default function TenantPortalPage({
               >
                 🔗 링크 복사
               </button>
-              <button
-                onClick={() => {
-                  window.location.href = window.location.pathname;
-                }}
-                className="btn-primary"
-                style={{ padding: '8px 12px', fontSize: '0.75rem', background: 'var(--theme-primary)', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '6px', fontWeight: '700' }}
-              >
-                🏠 대회 홈페이지
-              </button>
+            </div>
+          </div>
+
+          {/* 대회 안내 정보 상단 배치 */}
+          <div style={{
+            background: '#f8fafc',
+            border: '1px solid var(--border-color)',
+            borderRadius: '12px',
+            padding: '20px 24px',
+            marginBottom: '24px',
+            fontSize: '0.85rem',
+            lineHeight: '1.7',
+            color: 'var(--text-main)'
+          }}>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: '800', margin: '0 0 16px 0', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px', color: 'var(--theme-primary)' }}>
+              제20회 이순신장군배 전국윈드서핑대회 안내
+            </h3>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <strong style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '6px' }}>▣ 대회개요</strong>
+                <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>주 최 :</strong> 통영시</p>
+                <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>주 관 :</strong> 통영시요트협회</p>
+                <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>후 원 :</strong> 통영시체육회, 경상남도요트협회, 한국윈드서핑협회</p>
+                <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>대회일정 :</strong> 2026. 9. 12(토) ~ 13(일) 1박2일</p>
+                <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>장 소 :</strong> 통영시 산양읍 영운리 수륙마을 내 수륙해수욕장</p>
+                <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>참가인원 :</strong> 130명</p>
+              </div>
+
+              <div>
+                <strong style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '6px' }}>▣ 경기종목</strong>
+                <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>윈드포일 :</strong> 남녀오픈</p>
+                <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>윙포일 :</strong> 남자부/여자부</p>
+                <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>혼합오픈 :</strong> 남자청년부/남자중년부/남자장년부/여자부</p>
+                <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>펀앤포뮬러 :</strong> 남자청년부/남자중년부/남자장년부/여자부</p>
+                <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>단체전</strong></p>
+                <p style={{ margin: '8px 0 0 0', paddingLeft: '8px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  ※ 각 클래스는 생년월일기준으로 편성하며 선수 5명이상 출전 시 시상한다.<br />
+                  ※ 단체전을 제외한 종목별 경기의 중복출전은 불가하다.<br />
+                  ※ 단체전은 시,도 클럽별 릴레이식 참가선수 4명이 1개 팀으로 하는 경기방식 채택한다.<br />
+                  ◉ 모든 나이는 2026년 9월 12일을 기준으로 한다.
+                </p>
+              </div>
+
+              <div>
+                <strong style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '6px' }}>▣ 접수방법</strong>
+                <p style={{ margin: 0, paddingLeft: '8px' }}>• 2026년 8월 27일(목) 까지 참가신청서를 작성하여 선수등록을 하여야 한다.</p>
+                <p style={{ margin: 0, paddingLeft: '8px' }}>• 단체전은 2026년 9월 13일(일) 경기개시 1시간 전 선수등록하여 시행한다.</p>
+                <p style={{ margin: 0, paddingLeft: '8px' }}>• 참가인원은 선착순으로 130명이 충족되면 참가접수기한이 조기에 마감할 수 있다. (이번대회 신설된 윙포일부분은 남녀각각 10명으로 참가인원을 제한한다.)</p>
+                <p style={{ margin: 0, paddingLeft: '8px' }}>• 참가비 입금계좌는 선수접수등록 후 개별 통지하며 참가비가 입금이 완료되어야 참가자격이 주어진다.</p>
+              </div>
+
+              <div>
+                <strong style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '6px' }}>▣ 기타&문의사항</strong>
+                <p style={{ margin: 0, paddingLeft: '8px' }}>• 통영윈드서핑협회 전무이사 임병훈(010-3648-9838)</p>
+                <p style={{ margin: 0, paddingLeft: '8px' }}>• 2026.08.10 11:37 ~ 제한 없음</p>
+              </div>
             </div>
           </div>
 
@@ -690,17 +737,7 @@ export default function TenantPortalPage({
               {regSubmitting ? '참가 신청서 제출 중...' : '참가 신청서 제출'}
             </button>
 
-            {/* 추가로 하단에 홈페이지 바로가기 버튼 */}
-            <button
-              type="button"
-              onClick={() => {
-                window.location.href = window.location.pathname;
-              }}
-              className="btn-secondary"
-              style={{ width: '100%', justifyContent: 'center', marginTop: '12px', padding: '12px', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '6px', background: '#f8fafc', border: '1px solid var(--border-color)', cursor: 'pointer', borderRadius: '8px' }}
-            >
-              🏠 대회 공식 홈페이지 바로가기
-            </button>
+
           </form>
         </div>
       </div>
@@ -717,7 +754,7 @@ export default function TenantPortalPage({
           top: 0,
           left: 0,
           right: 0,
-          height: '80px',
+          height: '96px',
           zIndex: 10,
           display: 'flex',
           justifyContent: 'space-between',
@@ -729,9 +766,9 @@ export default function TenantPortalPage({
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <img
-            src="/images/logo.png"
+            src="/images/logo_new.png"
             alt="제20회 이순신장군배 전국윈드서핑대회 로고"
-            style={{ height: '56px', width: 'auto', objectFit: 'contain' }}
+            style={{ height: '80px', width: 'auto', objectFit: 'contain' }}
           />
 
           <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
@@ -847,7 +884,7 @@ export default function TenantPortalPage({
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'flex-end',
-          padding: '80px 40px 40px 40px',
+          padding: '96px 40px 40px 40px',
           borderBottom: '1px solid var(--border-color)',
         }}
         className="animate-fade-in"
@@ -1074,20 +1111,28 @@ export default function TenantPortalPage({
               {/* 공시서 헤더 */}
               <div className="glass-panel" style={{ background: 'white', padding: '28px 32px', borderTop: '4px solid var(--theme-primary)' }}>
                 <h2 style={{ fontSize: '1.5rem', fontWeight: '900', textAlign: 'center', color: 'var(--text-main)', marginBottom: '4px' }}>
-                  제20회 이순신장군배 전국윈드서핑대회 개최공시서
+                  {overview.title} 개최공시서
                 </h2>
                 <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>Notice of Race (NOR)</p>
               </div>
 
+              {overview.noticeText ? (
+                <div className="glass-panel" style={{ background: 'white', padding: '28px 32px', whiteSpace: 'pre-wrap', lineHeight: '1.8', fontSize: '0.95rem', color: 'var(--text-main)' }}>
+                  {overview.noticeText}
+                </div>
+              ) : (
+                <>
+
               {/* 제1조 총칙 */}
               <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제1조 (총칙)</h3>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제1조 (대회 개요)</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7' }}>
-                  <p style={{ margin: 0 }}>1.1 대회명 : 제20회 이순신장군배 전국윈드서핑대회</p>
-                  <p style={{ margin: 0 }}>1.2 주 최 : 통영시</p>
-                  <p style={{ margin: 0 }}>1.3 주 관 : 통영시요트협회</p>
-                  <p style={{ margin: 0 }}>1.4 후 원 : 통영시체육회, 경상남도요트협회, 한국윈드서핑협회</p>
-                  <p style={{ margin: 0 }}>1.5 협 찬 : 모집 중</p>
+                  <p style={{ margin: 0 }}>1.1 대 회 명 : 제20회 미추홀구청장배 전국핀수영대회</p>
+                  <p style={{ margin: 0 }}>1.2 주 최 : 인천광역시 미추홀구</p>
+                  <p style={{ margin: 0 }}>1.3 주 관 : 인천광역시핀수영협회, 미추홀구체육회</p>
+                  <p style={{ margin: 0 }}>1.4 기 간 : 2026년 9월 12일(토) ~ 13일(일) (2일간)</p>
+                  <p style={{ margin: 0 }}>1.5 장 소 : 문학박태환수영장 (인천광역시 미추홀구 경원대로 526)</p>
+                  <p style={{ margin: 0 }}>1.6 참가인원 : 300명</p>
                 </div>
               </div>
 
@@ -1099,62 +1144,59 @@ export default function TenantPortalPage({
                     <thead>
                       <tr style={{ background: '#f1f5f9' }}>
                         <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', borderBottom: '2px solid #e2e8f0', whiteSpace: 'nowrap' }}>구분</th>
-                        <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', borderBottom: '2px solid #e2e8f0', whiteSpace: 'nowrap' }}>일 자</th>
-                        <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', borderBottom: '2px solid #e2e8f0' }}>주요 내용</th>
-                        <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', borderBottom: '2px solid #e2e8f0', whiteSpace: 'nowrap' }}>장 소</th>
+                        <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', borderBottom: '2px solid #e2e8f0', whiteSpace: 'nowrap' }}>시간</th>
+                        <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', borderBottom: '2px solid #e2e8f0' }}>일정</th>
+                        <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', borderBottom: '2px solid #e2e8f0', whiteSpace: 'nowrap' }}>장소</th>
                       </tr>
                     </thead>
                     <tbody>
                       {[
-                        { 구분: '참가접수', 일자: '~ 2026.8.27(목) 마감', 내용: '온라인 신청 (네이버폼)', 장소: '온라인' },
-                        { 구분: '전날 준비', 일자: '2026.9.11(금)', 내용: '대회 준비 및 장비 세팅', 장소: '수륙해수욕장' },
-                        { 구분: '1일차', 일자: '2026.9.12(토)', 내용: '등록·계측 / 개회식 / 1일차 레이스 / 환영의 밤', 장소: '수륙해수욕장' },
-                        { 구분: '2일차', 일자: '2026.9.13(일)', 내용: '2일차 레이스 / 결선 / 폐회식 · 시상식', 장소: '수륙해수욕장' },
+                        { 구분: '9. 12(토)', 시간: '10:00 ~ 12:00', 일정: '선수단 현장등록 및 웜업', 장소: '문학박태환수영장' },
+                        { 구분: '9. 12(토)', 시간: '12:00 ~ 13:00', 일정: '중식', 장소: '' },
+                        { 구분: '9. 12(토)', 시간: '13:00 ~ 13:30', 일정: '개회식', 장소: '수영장 특설무대' },
+                        { 구분: '9. 12(토)', 시간: '13:30 ~ 18:00', 일정: '1일차 경기', 장소: '문학박태환수영장' },
+                        { 구분: '9. 13(일)', 시간: '09:00 ~ 12:00', 일정: '2일차 경기', 장소: '문학박태환수영장' },
+                        { 구분: '9. 13(일)', 시간: '12:00 ~ 13:00', 일정: '중식', 장소: '' },
+                        { 구분: '9. 13(일)', 시간: '13:00 ~ 18:00', 일정: '2일차 경기 및 시상식', 장소: '문학박태환수영장' },
+                        { 구분: '9. 13(일)', 시간: '18:00 ~', 일정: '폐회식 및 해산', 장소: '수영장 특설무대' },
                       ].map((row, i) => (
                         <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
                           <td style={{ padding: '10px 14px', fontWeight: '700', whiteSpace: 'nowrap' }}>{row.구분}</td>
-                          <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>{row.일자}</td>
-                          <td style={{ padding: '10px 14px' }}>{row.내용}</td>
+                          <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>{row.시간}</td>
+                          <td style={{ padding: '10px 14px' }}>{row.일정}</td>
                           <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>{row.장소}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-              </div>
-
-              {/* 제3조 경기장 */}
-              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제3조 (경기장 및 시설)</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7' }}>
-                  <p style={{ margin: 0 }}>3.1 경기장 : 통영시 산양읍 영운리 수륙마을 내 수륙해수욕장</p>
-                  <p style={{ margin: 0 }}>3.2 경기 코스 : 수륙해수욕장 앞 해상 (별도 코스 맵 공지)</p>
-                  <p style={{ margin: 0 }}>3.3 운영본부 : 수륙해수욕장 특설 대회본부</p>
+                <div style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  <p style={{ margin: 0 }}>※ 기상 악화 및 수영장 사정에 따라 경기 시간은 변경될 수 있으며, 세부 일정은 상황에 따라 조정 및 변경될 수 있음.</p>
                 </div>
               </div>
 
-              {/* 제4조 참가 자격 */}
+              {/* 제3조 경기 종목 및 참가 자격 */}
               <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제4조 (참가 자격 및 클래스 구분)</h3>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제3조 (경기 종목 및 참가 자격)</h3>
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
                     <thead>
                       <tr style={{ background: '#f1f5f9' }}>
-                        <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', borderBottom: '2px solid #e2e8f0' }}>종목</th>
+                        <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', borderBottom: '2px solid #e2e8f0' }}>구분</th>
                         <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', borderBottom: '2px solid #e2e8f0' }}>클래스</th>
                         <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', borderBottom: '2px solid #e2e8f0' }}>비 고</th>
                       </tr>
                     </thead>
                     <tbody>
                       {[
-                        { 종목: '윈드포일', 클래스: '남녀오픈', 비고: '이번 대회 신설 종목, 남녀각 10명으로 참가인원 제한' },
-                        { 종목: '윈드포일', 클래스: '남자부 / 여자부', 비고: '생년월일 기준 클래스 편성' },
-                        { 종목: '혼합오픈', 클래스: '남자청년부 / 남자중년부 / 남자장년부 / 여자부', 비고: '생년월일 기준 클래스 편성' },
-                        { 종목: '핀앤포뮬러', 클래스: '남자청년부 / 남자중년부 / 남자장년부 / 여자부', 비고: '생년월일 기준 클래스 편성' },
-                        { 종목: '단체전', 클래스: '시·도 클럽별 릴레이 (참가선수 4명이 1개 팀)', 비고: '2026.9.13(일) 경기 개시 1시간 전 등록' },
+                        { 구분: '일반부', 클래스: '대학/일반', 비고: '' },
+                        { 구분: '청소년부', 클래스: '고등부, 중등부, 초등부', 비고: '' },
+                        { 구분: '마스터즈', 클래스: '마스터즈 1부, 마스터즈 2부, 마스터즈 3부', 비고: '※ 1부 (만 20~29세), 2부 (만 30~39세), 3부 (만 40세 이상)' },
+                        { 구분: '엘리트', 클래스: '등록선수 (학생/일반)', 비고: '' },
+                        { 구분: '단체전', 클래스: '각 클럽/동호회팀별 릴레이', 비고: '' },
                       ].map((row, i) => (
                         <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                          <td style={{ padding: '10px 14px', fontWeight: '700' }}>{row.종목}</td>
+                          <td style={{ padding: '10px 14px', fontWeight: '700' }}>{row.구분}</td>
                           <td style={{ padding: '10px 14px' }}>{row.클래스}</td>
                           <td style={{ padding: '10px 14px', color: 'var(--text-muted)' }}>{row.비고}</td>
                         </tr>
@@ -1163,115 +1205,118 @@ export default function TenantPortalPage({
                   </table>
                 </div>
                 <div style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                  <p style={{ margin: 0 }}>※ 각 클래스는 생년월일기준으로 편성하며 선수 5명이상 출전 시 시상합니다.</p>
-                  <p style={{ margin: 0 }}>※ 단체전을 제외한 종목별 경기의 중복출전은 불가합니다.</p>
-                  <p style={{ margin: 0 }}>※ 단체전은 시·도 클럽별 릴레이식 참가선수 4명이 1개 팀으로 하는 경기방식 채택합니다.</p>
-                  <p style={{ margin: 0 }}>※ 모든 나이는 2026년 9월 12일을 기준으로 한다.</p>
+                  <p style={{ margin: 0 }}>※ 참가 신청 시 소속 클럽 명확히 작성 필수.</p>
+                  <p style={{ margin: 0 }}>※ 단체전은 남녀 혼성 계영 4x50m 및 4x100m로 진행함.</p>
+                  <p style={{ margin: 0 }}>※ 모든 나이는 2026년 9월 12일을 기준으로 함.</p>
                 </div>
               </div>
 
-              {/* 제5조 참가 신청 */}
+              {/* 제4조 참가 신청 */}
               <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제5조 (참가 신청)</h3>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제4조 (참가 신청)</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7' }}>
-                  <p style={{ margin: 0 }}>5.1 2026년 8월 27일(목) 까지 참가신청서를 작성하여 선수등록을 하여야 한다.</p>
-                  <p style={{ margin: 0 }}>5.2 단체전은 2026년 9월 13일(일) 경기개시 1시간 전 선수등록하여 시행한다.</p>
-                  <p style={{ margin: 0, color: '#EF4444', fontWeight: '700' }}>5.3 참가인원은 선착순으로 130명이 충족되면 참가접수기한이 조기에 마감될 수 있다.</p>
-                  <p style={{ margin: 0, color: '#EF4444', fontWeight: '700' }}>(이번대회 신설된 윙포일부분은 남녀각각 10명으로 참가인원을 제한한다.)</p>
-                  <p style={{ margin: 0 }}>5.4 참가비 입금계좌는 선수등록록 후 개별 통지하며 참가비가 입금이 완료되어야 참가자격이 주어진다.</p>
+                  <p style={{ margin: 0 }}>4.1 신청기간 : 2026년 8월 24일(월) 까지</p>
+                  <p style={{ margin: 0 }}>4.2 신청방법 : 홈페이지를 통한 온라인 참가신청서 접수</p>
+                  <p style={{ margin: 0, color: '#EF4444', fontWeight: '700' }}>※ 참가인원은 선착순으로 300명이 충족되면 참가접수기한이 조기에 마감될 수 있다.</p>
+                  <p style={{ margin: 0, color: '#EF4444', fontWeight: '700' }}>※ 참가비가 납부되어야 정식 등록이 완료되며 기한 내 미납 시 참가가 자동 취소됩니다.</p>
+                  <p style={{ margin: 0 }}>4.3 참가비 : 개인전 1종목당 20,000원, 단체전 팀당 50,000원</p>
+                  <p style={{ margin: 0 }}>※ 1인 최대 2종목까지 신청 가능 (단체전 제외).</p>
+                  <p style={{ margin: 0 }}>※ 참가비 입금 시 반드시 &apos;소속_대표자명&apos; 또는 &apos;선수명&apos;으로 입금.</p>
+                  <p style={{ margin: 0, color: '#EF4444', fontWeight: '700' }}>※ 신청기간 이후에는 취소 및 참가비 환불이 불가합니다.</p>
                 </div>
               </div>
 
-              {/* 제6조 참가비 */}
+              {/* 제5조 시상 */}
               <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제6조 (참가비 및 납부 방법)</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7' }}>
-                  <p style={{ margin: 0 }}>6.1 개인전 참가비 : 선수 접수 등록 후 개별 문자 통지 예정</p>
-                  <p style={{ margin: 0 }}>6.2 단체전 참가비 : 2026.9.13(일) 경기 개시 1시간 전 현장 등록</p>
-                  <p style={{ margin: 0 }}>6.3 납부 방법 : 등록 승인 후 개별 문자로 계좌 안내 → 지정 계좌로 이체</p>
-                  <p style={{ margin: 0 }}>6.4 예금주 : 대회조직위원회</p>
-                </div>
-              </div>
-
-              {/* 제7조 시상 */}
-              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제7조 (공식 시상 및 상금 내역)</h3>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제5조 (시상)</h3>
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
                     <thead>
                       <tr style={{ background: '#f1f5f9' }}>
-                        <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', borderBottom: '2px solid #e2e8f0' }}>종목</th>
-                        <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', borderBottom: '2px solid #e2e8f0' }}>순위</th>
-                        <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', borderBottom: '2px solid #e2e8f0' }}>상금</th>
+                        <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', borderBottom: '2px solid #e2e8f0' }}>구분</th>
+                        <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', borderBottom: '2px solid #e2e8f0' }}>클래스</th>
+                        <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', borderBottom: '2px solid #e2e8f0' }}>시상</th>
                       </tr>
                     </thead>
                     <tbody>
                       {[
-                        { 종목: '윈드포일 (남/여 각)', 순위: '1위 / 2위 / 3위', 상금: '50만원 / 30만원 / 20만원' },
-                        { 종목: '윈드서핑 일반부 (남/여 각)', 순위: '1위 / 2위 / 3위', 상금: '50만원 / 30만원 / 20만원' },
-                        { 종목: '윈드서핑 중장년부', 순위: '1위 / 2위 / 3위', 상금: '30만원 / 20만원 / 10만원' },
-                        { 종목: '윈드서핑 청소년부', 순위: '1위 / 2위 / 3위', 상금: '30만원 / 20만원 / 10만원' },
-                        { 종목: '단체전 (팀)', 순위: '1위 / 2위 / 3위', 상금: '100만원 / 60만원 / 40만원' },
+                        { 구분: '개인전', 클래스: '전 클래스', 시상: '1위: 상장 및 메달, 2위: 상장 및 메달, 3위: 상장 및 메달' },
+                        { 구분: '단체전', 클래스: '각 클래스별 릴레이', 시상: '1위: 상패 및 메달, 2위: 상패 및 메달, 3위: 상패 및 메달' },
+                        { 구분: '종합시상', 클래스: '종합', 시상: '종합 우승: 우승기 및 트로피, 종합 준우승: 트로피, 종합 3위: 트로피' },
                       ].map((row, i) => (
                         <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                          <td style={{ padding: '10px 14px', fontWeight: '700' }}>{row.종목}</td>
-                          <td style={{ padding: '10px 14px' }}>{row.순위}</td>
-                          <td style={{ padding: '10px 14px', color: '#b45309', fontWeight: '700' }}>{row.상금}</td>
+                          <td style={{ padding: '10px 14px', fontWeight: '700' }}>{row.구분}</td>
+                          <td style={{ padding: '10px 14px' }}>{row.클래스}</td>
+                          <td style={{ padding: '10px 14px', color: '#b45309', fontWeight: '700' }}>{row.시상}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-                <p style={{ marginTop: '12px', fontSize: '0.82rem', color: 'var(--text-muted)', margin: '12px 0 0 0' }}>※ 각 클래스 5명 이상 출전 시 시상하며, 미달 시 상위 클래스에 통합하거나 시상을 생략할 수 있습니다.</p>
-              </div>
-
-              {/* 제8조 경기 규칙 */}
-              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제8조 (경기 규칙)</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7' }}>
-                  <p style={{ margin: 0 }}>8.1 본 대회는 한국윈드서핑협회 경기규칙 및 국제세일링연맹(World Sailing)의 레이싱 룰을 적용합니다.</p>
-                  <p style={{ margin: 0 }}>8.2 세부 경기 규정은 대회 당일 경기설명서(Sailing Instructions)에 따릅니다.</p>
-                  <p style={{ margin: 0 }}>8.3 모든 선수는 경기 중 구명동의(라이프자켓)를 반드시 착용하여야 하며 미착용 시 즉시 실격(DSQ) 처리됩니다.</p>
-                  <p style={{ margin: 0, color: '#EF4444', fontWeight: '700' }}>※ 구명동의 착용은 필수입니다. 위반 시 즉시 실격(DSQ).</p>
+                <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                  <p style={{ margin: 0 }}>※ 각 클래스별 참가자가 3명 미만일 경우 시상만 하고 메달 수여는 제외될 수 있습니다.</p>
+                  <p style={{ margin: 0 }}>※ 종합시상은 각 종목별 점수를 합산하여 산출함 (1위 9점, 2위 7점, 3위 6점, 4위 5점, 5위 4점, 6위 3점, 7위 2점, 8위 1점. 단체전은 배점 2배).</p>
                 </div>
               </div>
 
-              {/* 제9조 항의 및 이의신청 */}
+              {/* 제6조 제출 */}
               <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제9조 (항의 및 이의신청)</h3>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제6조 (제출)</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7' }}>
-                  <p style={{ margin: 0 }}>9.1 항의는 레이싱 룰 Part 5에 따라 처리합니다.</p>
-                  <p style={{ margin: 0 }}>9.2 심판위원회의 결정은 최종이며, 조직위원회의 결정에 이의가 있을 경우 서면으로 제출하여야 합니다.</p>
+                  <p style={{ margin: 0 }}>6.1 온라인 참가신청 시 서약서 동의 및 서명 제출</p>
+                  <p style={{ margin: 0 }}>6.2 참가 선수 전원 단체 보험 가입 필수 (소속 동호회/클럽 개별 가입 권장)</p>
+                  <p style={{ margin: 0 }}>6.3 주민등록초본 또는 학생증 사본 (본인 확인용)</p>
+                  <p style={{ margin: 0 }}>6.4 경기 당일 신분증 (주민등록증, 운전면허증 등) 지참 필수</p>
                 </div>
               </div>
 
-              {/* 제10조 보험 및 면책 */}
+              {/* 제7조 경기규칙 및 안전수칙 */}
               <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제10조 (보험 및 면책)</h3>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제7조 (경기규칙 및 안전수칙)</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7' }}>
-                  <p style={{ margin: 0 }}>10.1 조직위원회는 대회 기간 중 선수 및 보조 인력에 대한 단체 상해보험에 가입합니다.</p>
-                  <p style={{ margin: 0 }}>10.2 참가자는 본인의 책임 하에 대회에 참가하며, 천재지변·기상악화 등 불가항력에 의한 사고에 대해 조직위원회는 책임을 지지 않습니다.</p>
-                  <p style={{ margin: 0 }}>10.3 장비 파손 및 분실에 대한 책임은 선수 본인에게 있습니다.</p>
+                  <p style={{ margin: 0 }}>7.1 본 대회는 대한수중핀수영협회(KUA) 및 세계수중연맹(CMAS) 핀수영 경기 규칙을 적용합니다.</p>
+                  <p style={{ margin: 0 }}>7.2 안전을 위해 경기 중 안전요원의 통제에 적극 협조해야 하며, 이를 위반 시 퇴장 조치될 수 있습니다.</p>
+                  <p style={{ margin: 0 }}>7.3 준비운동을 철저히 하고 경기 전 심신상태를 점검해 사고를 예방해야 합니다.</p>
                 </div>
               </div>
 
-              {/* 제11조 기상 및 경기 취소 */}
+              {/* 제8조 보험 */}
               <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제11조 (기상 악화 및 경기 취소)</h3>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제8조 (보험)</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7' }}>
-                  <p style={{ margin: 0 }}>11.1 기상 악화 시 경기위원장의 판단에 따라 경기를 중단하거나 취소할 수 있습니다.</p>
-                  <p style={{ margin: 0 }}>11.2 최소 1레이스 이상 완료된 경우 성립 대회로 인정하며, 참가비는 환불하지 않습니다.</p>
-                  <p style={{ margin: 0 }}>11.3 대회 전체가 취소될 경우 참가비 환불 여부는 조직위원회의 별도 공지에 따릅니다.</p>
+                  <p style={{ margin: 0 }}>8.1 대회 주최측은 대회 참가자를 위한 스포츠안전재단 주최자배상책임공제에 가입합니다.</p>
+                  <p style={{ margin: 0 }}>8.2 참가 선수는 개인 실손의료보험 가입을 적극 권장하며, 경기 중 발생하는 부상에 대해 주최측은 응급조치 외 책임을 지지 않습니다.</p>
+                  <p style={{ margin: 0 }}>8.3 장비 파손 및 분실에 대한 책임은 선수 본인에게 있습니다.</p>
                 </div>
               </div>
 
-              {/* 제12조 기타 */}
+              {/* 제9조 항의 */}
               <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제12조 (기타 사항)</h3>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제9조 (항의)</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7' }}>
-                  <p style={{ margin: 0 }}>12.1 중식 및 숙박, 환영의 밤 숙소 배정은 선수 등록자에 한하여 전면 무상 제공됩니다.</p>
-                  <p style={{ margin: 0 }}>12.2 본 공시서에 명시되지 않은 사항은 조직위원회의 결정에 따르며, 대회 규정 변경 시 공지사항을 통해 안내합니다.</p>
-                  <p style={{ margin: 0 }}>12.3 문의 : 통영윈드서핑협회 전무이사 임병훈 (010-3648-9838)</p>
+                  <p style={{ margin: 0 }}>9.1 항의는 각 종목 경기 종료 후 30분 이내에 서면으로 제출해야 합니다.</p>
+                  <p style={{ margin: 0 }}>9.2 이의신청 시 이의신청비 50,000원을 동봉해야 하며, 기각 시 반환하지 않고 협회 기금으로 귀속됩니다.</p>
+                  <p style={{ margin: 0 }}>9.3 심판위원회의 판정이 최종 결정이며, 추가 이의제기는 불가합니다.</p>
+                </div>
+              </div>
+
+              {/* 제10조 장비 */}
+              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제10조 (장비)</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7' }}>
+                  <p style={{ margin: 0 }}>10.1 대회 공인 장비(핀, 스노클, 수영복 등) 규정을 준수해야 합니다.</p>
+                  <p style={{ margin: 0 }}>10.2 승인되지 않은 비공인 장비 사용 시 실격 처리될 수 있습니다.</p>
+                  <p style={{ margin: 0, color: '#EF4444', fontWeight: '700' }}>※ 필수 장비 누락 시 경기 참가가 제한될 수 있습니다.</p>
+                </div>
+              </div>
+
+              {/* 제11조 기타 */}
+              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제11조 (기타)</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7' }}>
+                  <p style={{ margin: 0 }}>11.1 대회 참가자 전원에게 기념 티셔츠 및 참가 기념품을 제공합니다.</p>
+                  <p style={{ margin: 0 }}>11.2 수영장 내 취사 행위는 절대 금지되며, 쓰레기는 지정된 장소에 분리배출 해야 합니다.</p>
+                  <p style={{ margin: 0 }}>11.3 기타 문의 사항은 인천광역시 핀수영협회 사무국(032-888-2940)으로 문의 바랍니다.</p>
                 </div>
               </div>
 
@@ -1279,7 +1324,7 @@ export default function TenantPortalPage({
               <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
                 <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>면책 동의</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7', background: '#fefce8', padding: '16px', borderRadius: '8px', border: '1px solid #fde68a' }}>
-                  <p style={{ margin: 0 }}>본인은 제20회 이순신장군배 전국윈드서핑대회 참가 활동 중 본인의 부주의로 인해 발생할 수 있는 사고, 즉 개인적 부상, 재산상 피해, 의학적인 사고 등 대회기간 중 발생한 사고에 대한 책임은 본인의 자의적인 참가에 의한 본인의 책임이며, 본 대회를 주관하는 관계자 및 기관에 대한 면책은 물론 책임전가를 하지 않을 것을 서약합니다.</p>
+                  <p style={{ margin: 0 }}>본인은 제20회 미추홀구청장배 전국핀수영대회 참가 활동 중 본인의 부주의로 인해 발생할 수 있는 사고, 즉 개인적 부상, 재산상 피해, 의학적인 사고 등 대회기간 중 발생한 사고에 대한 책임은 본인의 자의적인 참가에 의한 본인의 책임이며, 본 대회를 주관하는 관계자 및 기관에 대한 면책은 물론 책임전가를 하지 않을 것을 서약합니다.</p>
                 </div>
               </div>
 
@@ -1287,7 +1332,7 @@ export default function TenantPortalPage({
               <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
                 <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>개인정보 수집 동의</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7' }}>
-                  <p style={{ margin: 0 }}>• 정보수집 및 이용기관 : 통영시요트협회</p>
+                  <p style={{ margin: 0 }}>• 정보수집 및 이용기관 : 인천광역시핀수영협회, 미추홀구체육회</p>
                   <p style={{ margin: 0 }}>• 전화번호, 생년월일</p>
                   <p style={{ margin: 0 }}>• 참가선수 관리 및 보험가입 / 대회 안내문자 및 SNS발송</p>
                   <p style={{ margin: 0 }}>• 대회정산이후 폐기 한다.</p>
@@ -1300,16 +1345,18 @@ export default function TenantPortalPage({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7' }}>
                   <p style={{ margin: 0 }}>대회 기간중 촬영된 사진 / 영상은 다음 목적에 사용될 수 있음에 동의합니다.</p>
                   <p style={{ margin: 0 }}>• 관련 기관의 홈페이지, SNS, 정산보고서, 팜플렛 및 각종 홍보물</p>
-                  <p style={{ margin: 0 }}>• 수집 및 이용기관 : 통영시요트협회</p>
+                  <p style={{ margin: 0 }}>• 수집 및 이용기관 : 인천광역시핀수영협회, 미추홀구체육회</p>
                 </div>
               </div>
 
               {/* 경기장 위치 이미지 */}
               <div className="glass-panel" style={{ background: 'white', padding: '24px 28px', textAlign: 'center' }}>
                 <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px' }}>경기장 위치도</h3>
-                <img src="/images/map.png" alt="수륙해수욕장 위치도" style={{ maxWidth: '100%', borderRadius: '10px', border: '1px solid var(--border-color)' }} />
-                <p style={{ marginTop: '10px', fontSize: '0.85rem', color: 'var(--text-muted)', margin: '10px 0 0 0' }}>통영시 산양읍 영운리 수륙마을 내 수륙해수욕장</p>
+                <img src="/images/map_munhak.jpg" alt="문학박태환수영장 위치도" style={{ maxWidth: '100%', borderRadius: '10px', border: '1px solid var(--border-color)' }} />
+                <p style={{ marginTop: '10px', fontSize: '0.85rem', color: 'var(--text-muted)', margin: '10px 0 0 0' }}>인천광역시 미추홀구 경원대로 526 문학박태환수영장</p>
               </div>
+                </>
+              )}
             </div>
           )}
 
@@ -1342,16 +1389,16 @@ export default function TenantPortalPage({
                 {/* 세부 대회 일정 (타임라인 카드) */}
                 <div className="glass-panel" style={{ padding: '24px 30px', background: 'white' }}>
                   <h2 style={{ fontSize: '1.4rem', fontWeight: '800', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)' }}>
-                    <Calendar style={{ color: 'var(--theme-primary)' }} size={22} /> 공식 대회 일정표
+                    <Calendar style={{ color: 'var(--theme-primary)' }} size={22} /> 공식 대회 일정표 (5일간)
                   </h2>
                   
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
                     {/* 1일차 */}
-                    <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                    <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
                       <h4 style={{ fontWeight: '800', color: 'var(--theme-primary)', borderBottom: '2px solid var(--theme-primary)', paddingBottom: '8px', marginBottom: '12px', margin: 0 }}>
-                        1일차 일정
+                        1일차 (9/10)
                       </h4>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.85rem' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.8rem' }}>
                         {overview.itineraryDay1.split('\n').map((line: string, idx: number) => {
                           const splitIdx = line.indexOf(':');
                           if (splitIdx > -1) {
@@ -1364,11 +1411,11 @@ export default function TenantPortalPage({
                       </div>
                     </div>
                     {/* 2일차 */}
-                    <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-                      <h4 style={{ fontWeight: '800', color: 'var(--theme-gold)', borderBottom: '2px solid var(--theme-gold)', paddingBottom: '8px', marginBottom: '12px', margin: 0 }}>
-                        2일차 일정
+                    <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                      <h4 style={{ fontWeight: '800', color: 'var(--theme-primary)', borderBottom: '2px solid var(--theme-primary)', paddingBottom: '8px', marginBottom: '12px', margin: 0 }}>
+                        2일차 (9/13)
                       </h4>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.85rem' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.8rem' }}>
                         {overview.itineraryDay2.split('\n').map((line: string, idx: number) => {
                           const splitIdx = line.indexOf(':');
                           if (splitIdx > -1) {
@@ -1399,33 +1446,29 @@ export default function TenantPortalPage({
                       </thead>
                       <tbody>
                         <tr>
-                          <td style={{ whiteSpace: 'nowrap', fontWeight: '800', color: 'var(--theme-primary)' }}>윈드포일 (Wind Foil)</td>
-                          <td>남녀오픈 통합 클래스</td>
-                          <td>연령제한 없음</td>
+                          <td style={{ whiteSpace: 'nowrap', fontWeight: '800', color: 'var(--theme-primary)' }}>일반부</td>
+                          <td>대학/일반</td>
+                          <td>-</td>
                         </tr>
                         <tr>
-                          <td style={{ whiteSpace: 'nowrap', fontWeight: '800', color: 'var(--theme-primary)' }}>윙포일 (Wing Foil)</td>
-                          <td>남자부 / 여자부 개별 랭킹 산출</td>
-                          <td>연령제한 없음</td>
+                          <td style={{ whiteSpace: 'nowrap', fontWeight: '800', color: 'var(--theme-primary)' }}>청소년부</td>
+                          <td>고등부, 중등부, 초등부</td>
+                          <td>-</td>
                         </tr>
                         <tr>
-                          <td style={{ whiteSpace: 'nowrap', fontWeight: '800', color: 'var(--theme-primary)' }}>혼합오픈 (Mixed Open)</td>
-                          <td>남자 청년부, 남자 중년부, 남자 장년부, 여자부</td>
-                          <td>
-                            청년: 1987.1.1 이후<br />
-                            중년: 1977.1.1 ~ 1986.12.31<br />
-                            장년: 1976.12.31 이전 (여자는 연령제한 없음)
-                          </td>
+                          <td style={{ whiteSpace: 'nowrap', fontWeight: '800', color: 'var(--theme-primary)' }}>마스터즈</td>
+                          <td>마스터즈 1부, 마스터즈 2부, 마스터즈 3부</td>
+                          <td>※ 1부 (만 20~29세), 2부 (만 30~39세), 3부 (만 40세 이상)</td>
                         </tr>
                         <tr>
-                          <td style={{ whiteSpace: 'nowrap', fontWeight: '800', color: 'var(--theme-primary)' }}>펀 & 포뮬러 (Fun & Formula)</td>
-                          <td>남자 청년부, 남자 중년부, 남자 장년부, 여자부</td>
-                          <td>혼합오픈과 동일한 연령 기준 적용</td>
+                          <td style={{ whiteSpace: 'nowrap', fontWeight: '800', color: 'var(--theme-primary)' }}>엘리트</td>
+                          <td>등록선수 (학생/일반)</td>
+                          <td>-</td>
                         </tr>
                         <tr>
-                          <td style={{ whiteSpace: 'nowrap', fontWeight: '800', color: 'var(--theme-gold)' }}>단체전 (Club Relay)</td>
-                          <td>시·도 및 동호인회 대항전</td>
-                          <td>4인 1팀 구성 (릴레이식 경기 진행)</td>
+                          <td style={{ whiteSpace: 'nowrap', fontWeight: '800', color: 'var(--theme-gold)' }}>단체전 (Relay)</td>
+                          <td>각 클럽/동호회팀별 릴레이</td>
+                          <td>남녀 혼성 계영 4x50m 및 4x100m로 진행함.</td>
                         </tr>
                       </tbody>
                     </table>
@@ -1435,7 +1478,7 @@ export default function TenantPortalPage({
                 {/* 공식 시상 및 상금 내역 */}
                 <div className="glass-panel" style={{ padding: '24px 30px', background: 'white' }}>
                   <h2 style={{ fontSize: '1.4rem', fontWeight: '800', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)' }}>
-                    <Award style={{ color: 'var(--theme-gold)' }} size={22} /> 공식 시상 및 상금 내역 명세
+                    <Award style={{ color: 'var(--theme-gold)' }} size={22} /> 공식 시상 내역 명세
                   </h2>
                   <div className="premium-table-container">
                     <table className="premium-table" style={{ fontSize: '0.85rem', width: '100%' }}>
@@ -1443,28 +1486,28 @@ export default function TenantPortalPage({
                         <tr>
                           <th>구분</th>
                           <th>클래스</th>
-                          <th>1위 (우승)</th>
-                          <th>2위 (준우승)</th>
-                          <th>3위</th>
+                          <th>시상 및 기준</th>
                           <th>비고</th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr>
-                          <td style={{ whiteSpace: 'nowrap', fontWeight: '800' }}>개인전 (각 클래스별)</td>
-                          <td style={{ whiteSpace: 'nowrap' }}>윈드포일, 윙포일, 혼합오픈, 펀&포뮬러</td>
-                          <td style={{ whiteSpace: 'nowrap' }}><strong>상장 & 40만 원</strong></td>
-                          <td style={{ whiteSpace: 'nowrap' }}><strong>상장 & 20만 원</strong></td>
-                          <td style={{ whiteSpace: 'nowrap' }}><strong>상장 & 10만 원</strong></td>
-                          <td>메달 및 부상 지급</td>
+                          <td style={{ whiteSpace: 'nowrap', fontWeight: '800' }}>개인전</td>
+                          <td style={{ whiteSpace: 'nowrap' }}>전 클래스</td>
+                          <td style={{ whiteSpace: 'nowrap' }}><strong>1위: 상장 및 메달<br/>2위: 상장 및 메달<br/>3위: 상장 및 메달</strong></td>
+                          <td>각 클래스별 참가자가 3명 미만일 경우 시상만 하고 메달 수여는 제외될 수 있습니다.</td>
                         </tr>
                         <tr>
-                          <td style={{ whiteSpace: 'nowrap', fontWeight: '800', color: 'var(--theme-gold)' }}>단체전 (종합순위)</td>
-                          <td style={{ whiteSpace: 'nowrap' }}>시·도 및 동호인회 (릴레이)</td>
-                          <td style={{ whiteSpace: 'nowrap' }}><strong>상장 & 50만 원</strong></td>
-                          <td style={{ whiteSpace: 'nowrap' }}><strong>상장 & 40만 원</strong></td>
-                          <td style={{ whiteSpace: 'nowrap' }}><strong>상장 & 30만 원</strong></td>
-                          <td>4위: 20만, 5위: 10만 원</td>
+                          <td style={{ whiteSpace: 'nowrap', fontWeight: '800' }}>단체전</td>
+                          <td style={{ whiteSpace: 'nowrap' }}>각 클래스별 릴레이</td>
+                          <td style={{ whiteSpace: 'nowrap' }}><strong>1위: 상패 및 메달<br/>2위: 상패 및 메달<br/>3위: 상패 및 메달</strong></td>
+                          <td>-</td>
+                        </tr>
+                        <tr>
+                          <td style={{ whiteSpace: 'nowrap', fontWeight: '800', color: 'var(--theme-gold)' }}>종합시상</td>
+                          <td style={{ whiteSpace: 'nowrap' }}>종합</td>
+                          <td style={{ whiteSpace: 'nowrap' }}><strong>종합 우승: 우승기 및 트로피<br/>종합 준우승: 트로피<br/>종합 3위: 트로피</strong></td>
+                          <td>각 종목별 점수를 합산하여 산출함 (1위 9점, 2위 7점, 3위 6점, 4위 5점, 5위 4점, 6위 3점, 7위 2점, 8위 1점. 단체전은 배점 2배).</td>
                         </tr>
                       </tbody>
                     </table>
@@ -1511,7 +1554,7 @@ export default function TenantPortalPage({
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.85rem', lineHeight: '1.5', marginTop: '12px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       {overview.rulesNote.split('\n').map((line: string, idx: number) => (
-                        <p key={idx} style={{ margin: 0, fontWeight: line.includes('필수') || line.includes('실격') ? '700' : 'normal', color: line.includes('필수') || line.includes('실격') ? '#EF4444' : 'inherit' }}>
+                        <p key={idx} style={{ margin: 0, fontWeight: line.includes('필수') || line.includes('실격') || line.includes('자동 취소') || line.includes('조기 마감') ? '700' : 'normal', color: line.includes('필수') || line.includes('실격') || line.includes('자동 취소') || line.includes('조기 마감') ? '#EF4444' : 'inherit' }}>
                           {line}
                         </p>
                       ))}
@@ -1525,9 +1568,8 @@ export default function TenantPortalPage({
                     문의 및 운영진
                   </h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.85rem', marginTop: '12px' }}>
-                    <p style={{ margin: 0 }}><strong>통영윈드서핑협회 전무이사 :</strong> 임병훈 (010-3648-9838)</p>
-                    <p style={{ margin: 0 }}><strong>경기운영위원장 :</strong> 윤혜광</p>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: 0 }}>* 중식 및 숙박, 환영의 밤 숙소 배정은 선수등록자에 한하여 전면 무상 제공됩니다.</p>
+                    <p style={{ margin: 0 }}><strong>인천광역시 핀수영협회 사무국 :</strong> 032-888-2940</p>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: 0 }}>* 대회 참가자 전원에게 기념 티셔츠 및 참가 기념품을 제공합니다.</p>
                   </div>
                 </div>
 

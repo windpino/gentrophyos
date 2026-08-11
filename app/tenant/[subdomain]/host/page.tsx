@@ -42,7 +42,7 @@ export default function HostDashboardPage({
   const [tenant, setTenant] = useState<any>(null);
   const [activeTournament, setActiveTournament] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeSection, setActiveSection] = useState<'applicants' | 'tie-breaker' | 'overview'>('applicants');
+  const [activeSection, setActiveSection] = useState<'applicants' | 'tie-breaker' | 'overview' | 'notice'>('applicants');
 
   // 스프레드시트 그리드 상태 관리
   const [gridData, setGridData] = useState<GridRow[]>([]);
@@ -455,6 +455,7 @@ export default function HostDashboardPage({
             { id: 'applicants', label: '엑셀 그리드 명단 관리', icon: Users },
             { id: 'tie-breaker', label: '동점자 순위 규칙 설정', icon: Award },
             { id: 'overview', label: '대회 요강 내용 편집', icon: FileText },
+            { id: 'notice', label: '개최공시서(NOR) 편집', icon: Layers },
           ].map((item) => {
             const Icon = item.icon;
             const active = activeSection === item.id;
@@ -498,7 +499,9 @@ export default function HostDashboardPage({
         <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h1 style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '8px' }}>
-              {activeSection === 'applicants' ? '참가자 엑셀식 대량 편집 그리드' : (activeSection === 'tie-breaker' ? 'Tie-breaker 가중치 제어기' : '대회 요강 내용 편집기')}
+              {activeSection === 'applicants' ? '참가자 엑셀식 대량 편집 그리드' : 
+               activeSection === 'tie-breaker' ? 'Tie-breaker 가중치 제어기' : 
+               activeSection === 'overview' ? '대회 요강 내용 편집기' : '개최공시서(NOR) 편집기'}
             </h1>
             <p style={{ color: 'var(--text-muted)' }}>{activeTournament.title}</p>
           </div>
@@ -933,6 +936,11 @@ export default function HostDashboardPage({
         {activeSection === 'overview' && (
           <OverviewEditor tenant={tenant} subdomain={subdomain} onSaveSuccess={fetchInitialData} />
         )}
+
+        {/* SECTION D: 개최공시서 내용 편집 */}
+        {activeSection === 'notice' && (
+          <NoticeEditor tenant={tenant} subdomain={subdomain} onSaveSuccess={fetchInitialData} />
+        )}
       </main>
 
       {/* 3. 참가 신청서 원본 복제형 상세 뷰 모달 (12단계 네이버 폼 정보 정밀 복사) */}
@@ -1213,23 +1221,23 @@ interface OverviewEditorProps {
 function OverviewEditor({ tenant, subdomain, onSaveSuccess }: OverviewEditorProps) {
   // 기본 Fallback 데이터들 (2026년 이순신배)
   const defaultOverview = {
-    title: '제20회 이순신장군배 전국윈드서핑대회',
-    duration: '2026. 9. 12(토) ~ 13(일) 1박2일',
-    location: '통영시 산양읍 영운리 수륙마을 내 수륙해수욕장',
-    scale: '130명 (선착순 마감)',
-    host: '통영시',
-    sponsor: '통영시요트협회',
-    supporter: '통영시체육회, 경상남도요트협회, 한국윈드서핑협회',
-    office: '통영시 산양읍 영운리 수륙마을 내 수륙해수욕장',
-    bankName: '개별 문자 통지 예정',
+    title: '제20회 미추홀구청장배 전국핀수영대회',
+    duration: '2026. 9. 12(토) ~ 13(일) 2일간',
+    location: '문학박태환수영장 (인천광역시 미추홀구 경원대로 526)',
+    scale: '300명 (선착순 마감)',
+    host: '인천광역시 미추홀구',
+    sponsor: '인천광역시핀수영협회, 미추홀구체육회',
+    supporter: '인천광역시 미추홀구',
+    office: '문학박태환수영장 (인천광역시 미추홀구 경원대로 526)',
+    bankName: '선수등록 승인 후 개별 문자 발송 예정',
     accountNo: '계좌번호 등록대기',
-    accountHolder: '대회조직위원회',
-    entryFeeIndividual: '선수접수등록 후 개별 문자 통지',
-    entryFeeGroup: '단체전은 2026.9.13(일) 경기개시 1시간 전 등록',
-    deadlineDate: '2026년 8월 27일(목)',
-    rulesNote: '※ 이번 대회 신설된 윙포일 부분은 남녀 각각 10명으로 참가인원을 제한합니다.\n※ 참가인원은 선착순으로 130명이 충족되면 참가접수 기한이 조기에 마감될 수 있습니다.\n※ 단체전을 제외한 종목별 경기의 중복 출전은 불가합니다.\n※ 단체전은 시,도 클럽별 릴레이식 참가선수 4명이 1개 팀으로 하는 경기방식 채택합니다.\n※ 모든 선수는 경기 중 구명동의(라이프자켓)를 반드시 착용하여야 하며 미착용 시 즉시 실격(DSQ) 처리됩니다.\n※ 모든 나이는 2026년 9월 12일을 기준으로 합니다.\n※ 각 클래스는 생년월일 기준으로 편성하며 선수 5명 이상 출전 시 시상합니다.',
-    itineraryDay1: '10:00 - 12:00 : 참가선수 확인 및 등록 / 계측\n12:00 - 13:00 : 중식 제공 (대회장)\n13:00 - 13:30 : 개회식 (수륙해수욕장 특설무대)\n14:00 - 18:00 : 1일차 레이스 (각 종목 코스별)\n19:00 - : 환영식 및 시상식 (환영식 만찬 - 영운마을 물회집)',
-    itineraryDay2: '10:00 - 12:00 : 2일차 레이스 (본선)\n12:00 - 13:00 : 중식 제공 (대회장)\n13:00 - 15:00 : 결선 레이스\n15:30 - : 폐회식, 종합 시상 (영운리 마을회관 앞)\n16:30 - : 해산 및 장비 철수'
+    accountHolder: '인천광역시핀수영협회',
+    entryFeeIndividual: '개인전 1종목당 20,000원',
+    entryFeeGroup: '단체전 팀당 50,000원',
+    deadlineDate: '2026년 8월 24일(월)',
+    rulesNote: '※ 참가 신청 시 소속 클럽 명확히 작성 필수.\n※ 단체전은 남녀 혼성 계영 4x50m 및 4x100m로 진행함.\n※ 모든 나이는 2026년 9월 12일을 기준으로 합니다.\n※ 1인 최대 2종목까지 신청 가능 (단체전 제외).\n※ 참가인원은 선착순으로 300명이 충족되면 참가접수 기한이 조기에 마감될 수 있습니다.\n※ 참가비가 납부되어야 정식 등록이 완료되며 기한 내 미납 시 참가가 자동 취소됩니다.\n※ 신청기간 이후에는 취소 및 참가비 환불이 불가합니다.',
+    itineraryDay1: '10:00 - 12:00 : 선수단 현장등록 및 웜업\n12:00 - 13:00 : 중식\n13:00 - 13:30 : 개회식\n13:30 - 18:00 : 1일차 경기',
+    itineraryDay2: '09:00 - 12:00 : 2일차 경기\n12:00 - 13:00 : 중식\n13:00 - 18:00 : 2일차 경기 및 시상식\n18:00 - : 폐회식 및 해산'
   };
 
   const initialConfig = {
@@ -1402,6 +1410,181 @@ function OverviewEditor({ tenant, subdomain, onSaveSuccess }: OverviewEditorProp
             />
           </div>
 
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface NoticeEditorProps {
+  tenant: any;
+  subdomain: string;
+  onSaveSuccess: () => void;
+}
+
+function NoticeEditor({ tenant, subdomain, onSaveSuccess }: NoticeEditorProps) {
+  const defaultNoticeText = `제20회 미추홀구청장배 전국핀수영대회 개최공시서
+
+제1조 (대회 개요)
+1.1 대 회 명 : 제20회 미추홀구청장배 전국핀수영대회
+1.2 주 최 : 인천광역시 미추홀구
+1.3 주 관 : 인천광역시핀수영협회, 미추홀구체육회
+1.4 기 간 : 2026년 9월 12일(토) ~ 13일(일) (2일간)
+1.5 장 소 : 문학박태환수영장 (인천광역시 미추홀구 경원대로 526)
+1.6 참가인원 : 300명
+
+제2조 (대회 일정)
+- 9. 12(토)
+  • 10:00 ~ 12:00 : 선수단 현장등록 및 웜업 (문학박태환수영장)
+  • 12:00 ~ 13:00 : 중식
+  • 13:00 ~ 13:30 : 개회식 (수영장 특설무대)
+  • 13:30 ~ 18:00 : 1일차 경기 (문학박태환수영장)
+- 9. 13(일)
+  • 09:00 ~ 12:00 : 2일차 경기 (문학박태환수영장)
+  • 12:00 ~ 13:00 : 중식
+  • 13:00 ~ 18:00 : 2일차 경기 및 시상식 (문학박태환수영장)
+  • 18:00 ~ : 폐회식 및 해산 (수영장 특설무대)
+※ 기상 악화 및 수영장 사정에 따라 경기 시간은 변경될 수 있으며, 세부 일정은 상황에 따라 조정 및 변경될 수 있음.
+
+제3조 (경기 종목 및 참가 자격)
+- 일반부 : 대학/일반
+- 청소년부 : 고등부, 중등부, 초등부
+- 마스터즈 : 마스터즈 1부, 마스터즈 2부, 마스터즈 3부
+  ※ 1부 (만 20~29세), 2부 (만 30~39세), 3부 (만 40세 이상)
+- 엘리트 : 등록선수 (학생/일반)
+- 단체전 : 각 클럽/동호회팀별 릴레이
+※ 참가 신청 시 소속 클럽 명확히 작성 필수.
+※ 단체전은 남녀 혼성 계영 4x50m 및 4x100m로 진행함.
+※ 모든 나이는 2026년 9월 12일을 기준으로 함.
+
+제4조 (참가 신청)
+4.1 신청기간 : 2026년 8월 24일(월) 까지
+4.2 신청방법 : 홈페이지를 통한 온라인 참가신청서 접수
+※ 참가인원은 선착순으로 300명이 충족되면 참가접수기한이 조기에 마감될 수 있다.
+※ 참가비가 납부되어야 정식 등록이 완료되며 기한 내 미납 시 참가가 자동 취소됩니다.
+4.3 참가비 : 개인전 1종목당 20,000원, 단체전 팀당 50,000원
+※ 1인 최대 2종목까지 신청 가능 (단체전 제외).
+※ 참가비 입금 시 반드시 '소속_대표자명' 또는 '선수명'으로 입금.
+※ 신청기간 이후에는 취소 및 참가비 환불이 불가합니다.
+
+제5조 (시상)
+- 개인전 (전 클래스) : 1위: 상장 및 메달, 2위: 상장 및 메달, 3위: 상장 및 메달
+- 단체전 (각 클래스별 릴레이) : 1위: 상패 및 메달, 2위: 상패 및 메달, 3위: 상패 및 메달
+- 종합시상 (종합) : 종합 우승: 우승기 및 트로피, 종합 준우승: 트로피, 종합 3위: 트로피
+※ 각 클래스별 참가자가 3명 미만일 경우 시상만 하고 메달 수여는 제외될 수 있습니다.
+※ 종합시상은 각 종목별 점수를 합산하여 산출함 (1위 9점, 2위 7점, 3위 6점, 4위 5점, 5위 4점, 6위 3점, 7위 2점, 8위 1점. 단체전은 배점 2배).
+
+제6조 (제출)
+6.1 온라인 참가신청 시 서약서 동의 및 서명 제출
+6.2 참가 선수 전원 단체 보험 가입 필수 (소속 동호회/클럽 개별 가입 권장)
+6.3 주민등록초본 또는 학생증 사본 (본인 확인용)
+6.4 경기 당일 신분증 (주민등록증, 운전면허증 등) 지참 필수
+
+제7조 (경기규칙 및 안전수칙)
+7.1 본 대회는 대한수중핀수영협회(KUA) 및 세계수중연맹(CMAS) 핀수영 경기 규칙을 적용합니다.
+7.2 안전을 위해 경기 중 안전요원의 통제에 적극 협조해야 하며, 이를 위반 시 퇴장 조치될 수 있습니다.
+7.3 준비운동을 철저히 하고 경기 전 심신상태를 점검해 사고를 예방해야 합니다.
+
+제8조 (보험)
+8.1 대회 주최측은 대회 참가자를 위한 스포츠안전재단 주최자배상책임공제에 가입합니다.
+8.2 참가 선수는 개인 실손의료보험 가입을 적극 권장하며, 경기 중 발생하는 부상에 대해 주최측은 응급조치 외 책임을 지지 않습니다.
+8.3 장비 파손 및 분실에 대한 책임은 선수 본인에게 있습니다.
+
+제9조 (항의)
+9.1 항의는 각 종목 경기 종료 후 30분 이내에 서면으로 제출해야 합니다.
+9.2 이의신청 시 이의신청비 50,000원을 동봉해야 하며, 기각 시 반환하지 않고 협회 기금으로 귀속됩니다.
+9.3 심판위원회의 판정이 최종 결정이며, 추가 이의제기는 불가합니다.
+
+제10조 (장비)
+10.1 대회 공인 장비(핀, 스노클, 수영복 등) 규정을 준수해야 합니다.
+10.2 승인되지 않은 비공인 장비 사용 시 실격 처리될 수 있습니다.
+※ 필수 장비 누락 시 경기 참가가 제한될 수 있습니다.
+
+제11조 (기타)
+11.1 대회 참가자 전원에게 기념 티셔츠 및 참가 기념품을 제공합니다.
+11.2 수영장 내 취사 행위는 절대 금지되며, 쓰레기는 지정된 장소에 분리배출 해야 합니다.
+11.3 기타 문의 사항은 인천광역시 핀수영협회 사무국(032-888-2940)으로 문의 바랍니다.
+
+제12조 (오시는길)
+문학박태환수영장 (인천광역시 미추홀구 경원대로 526)
+※ 위치 및 주차 안내: 수영장 내 지하/지상 주차장 이용 가능하며 당일 참가 선수는 주차료 면제 또는 할인이 제공될 수 있습니다.`;
+
+  const [noticeText, setNoticeText] = useState(
+    tenant?.overviewConfig?.noticeText || defaultNoticeText
+  );
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (tenant?.overviewConfig?.noticeText) {
+      setNoticeText(tenant.overviewConfig.noticeText);
+    }
+  }, [tenant]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const currentConfig = tenant?.overviewConfig || {};
+      const res = await fetch(`/api/tenant/${subdomain}/overview`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          overviewConfig: {
+            ...currentConfig,
+            noticeText: noticeText
+          }
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert('개최공시서 내용이 성공적으로 업데이트되어 홈페이지에 반영되었습니다!');
+        onSaveSuccess();
+      } else {
+        alert(data.error || '저장 실패');
+      }
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '30px', maxWidth: '1000px' }} className="animate-fade-in">
+      <div className="glass-panel" style={{ background: 'white', padding: '30px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', borderBottom: '1px solid var(--border-color)', paddingBottom: '16px' }}>
+          <div>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '800', margin: 0 }}>개최공시서(NOR) 자유 편집기</h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>여기에 입력된 텍스트는 메인 홈페이지의 개최공시서 탭 화면에 실시간으로 반영됩니다.</p>
+          </div>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="btn-primary"
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', fontSize: '0.9rem' }}
+          >
+            {saving ? <RefreshCw className="animate-spin" size={16} /> : <Save size={16} />}
+            개최공시서 저장하기
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <label style={{ fontSize: '0.9rem', fontWeight: '700' }}>개최공시서 본문</label>
+          <textarea
+            style={{
+              minHeight: '600px',
+              lineHeight: '1.8',
+              fontSize: '0.95rem',
+              width: '100%',
+              padding: '20px',
+              border: '1px solid var(--border-color)',
+              borderRadius: '8px',
+              fontFamily: 'monospace',
+              background: '#f8fafc'
+            }}
+            value={noticeText}
+            onChange={e => setNoticeText(e.target.value)}
+            placeholder="개최공시서 내용을 입력하세요..."
+          />
         </div>
       </div>
     </div>
