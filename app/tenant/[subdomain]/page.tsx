@@ -687,7 +687,7 @@ export default function TenantPortalPage({
               style={{ width: '100%', justifyContent: 'center', marginTop: '30px', padding: '16px', fontSize: '1.05rem' }}
               disabled={regSubmitting}
             >
-              {regSubmitting ? '참가 신청 제출 중...' : '신청서 제출 완료'}
+              {regSubmitting ? '참가 신청서 제출 중...' : '참가 신청서 제출'}
             </button>
 
             {/* 추가로 하단에 홈페이지 바로가기 버튼 */}
@@ -923,7 +923,7 @@ export default function TenantPortalPage({
                 color: '#1b263b',
               }}
             >
-              제출
+              참가 신청서 제출
             </button>
             <button
               onClick={() => {
