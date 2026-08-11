@@ -7,6 +7,7 @@ interface GridRow {
   id: string; // 데이터베이스 registration ID 또는 임시 행의 'temp-...' ID
   playerId: string;
   name: string;
+  birth: string;
   phone: string;
   gender: string;
   club: string;
@@ -107,6 +108,7 @@ export default function HostDashboardPage({
       setRawRegistrations(regData.registrations || []);
       
       const parsedRows: GridRow[] = (regData.registrations || []).map((r: any) => {
+        let birth = '';
         let gender = '남자';
         let club = '미소속';
         let division = '윈드포일';
@@ -115,6 +117,7 @@ export default function HostDashboardPage({
         try {
           if (r.formResponses) {
             const extra = JSON.parse(r.formResponses);
+            birth = extra.birth || '';
             gender = extra.gender || '남자';
             club = extra.club || '미소속';
             division = extra.division || '윈드포일';
@@ -128,6 +131,7 @@ export default function HostDashboardPage({
           id: r.id,
           playerId: r.playerId,
           name: r.player.name,
+          birth,
           phone: r.player.phone || '',
           gender,
           club,
@@ -171,6 +175,7 @@ export default function HostDashboardPage({
       id: `temp-${Date.now()}`,
       playerId: '',
       name: '',
+      birth: '',
       phone: '',
       gender: '남자',
       club: '',
@@ -444,7 +449,7 @@ export default function HostDashboardPage({
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {[
-            { id: 'applicants', label: '엑셀 그리드 명단 관리', icon: Users },
+            { id: 'applicants', label: '참가자관리', icon: Users },
             { id: 'tie-breaker', label: '동점자 순위 규칙 설정', icon: Award },
             { id: 'overview', label: '대회 요강 내용 편집', icon: FileText },
             { id: 'notice', label: '개최공시서(NOR) 편집', icon: Layers },
@@ -491,7 +496,7 @@ export default function HostDashboardPage({
         <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h1 style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '8px' }}>
-              {activeSection === 'applicants' ? '참가자 엑셀식 대량 편집 그리드' : 
+              {activeSection === 'applicants' ? '참가자관리' : 
                activeSection === 'tie-breaker' ? 'Tie-breaker 가중치 제어기' : 
                activeSection === 'overview' ? '대회 요강 내용 편집기' : '개최공시서(NOR) 편집기'}
             </h1>
@@ -605,8 +610,9 @@ export default function HostDashboardPage({
                       <th style={{ width: '60px', textAlign: 'center' }}>순번</th>
                       <th style={{ width: '65px', textAlign: 'center' }}>상태</th>
                       <th>성명</th>
-                      <th>전화번호</th>
+                      <th>생년월일</th>
                       <th>성별</th>
+                      <th>전화번호</th>
                       <th>소속협회 / 클럽</th>
                       <th>참가종목</th>
                       <th>티셔츠 사이즈</th>
@@ -652,12 +658,12 @@ export default function HostDashboardPage({
                           />
                         </td>
 
-                        {/* 전화번호 */}
+                        {/* 생년월일 */}
                         <td style={{ padding: '8px 16px' }}>
                           <input
                             type="text"
-                            value={row.phone}
-                            onChange={(e) => handleCellChange(row.id, 'phone', e.target.value)}
+                            value={row.birth}
+                            onChange={(e) => handleCellChange(row.id, 'birth', e.target.value)}
                             style={{
                               width: '100%',
                               background: 'none',
@@ -666,7 +672,7 @@ export default function HostDashboardPage({
                               outline: 'none',
                               fontSize: '0.95rem'
                             }}
-                            placeholder="010XXXXXXXX"
+                            placeholder="예) 19901024"
                           />
                         </td>
 
@@ -687,6 +693,24 @@ export default function HostDashboardPage({
                             <option value="남자">남자</option>
                             <option value="여자">여자</option>
                           </select>
+                        </td>
+
+                        {/* 전화번호 */}
+                        <td style={{ padding: '8px 16px' }}>
+                          <input
+                            type="text"
+                            value={row.phone}
+                            onChange={(e) => handleCellChange(row.id, 'phone', e.target.value)}
+                            style={{
+                              width: '100%',
+                              background: 'none',
+                              border: 'none',
+                              color: 'var(--text-main)',
+                              outline: 'none',
+                              fontSize: '0.95rem'
+                            }}
+                            placeholder="010XXXXXXXX"
+                          />
                         </td>
 
                         {/* 소속 */}
@@ -950,7 +974,7 @@ export default function HostDashboardPage({
           try {
             const parsed = JSON.parse(rawReg.formResponses);
             email = parsed.email || 'info@gentrophy.com';
-            birthDate = parsed.birthDate || '19900815';
+            birthDate = parsed.birth || parsed.birthDate || '19900815';
             agree1 = parsed.privacyAgreed !== false;
             agree2 = parsed.portraitAgreed !== false;
             agree3 = parsed.liabilityAgreed !== false;

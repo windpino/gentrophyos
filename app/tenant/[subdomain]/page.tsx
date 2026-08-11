@@ -318,6 +318,7 @@ export default function TenantPortalPage({
     try {
       // 12단계 응답 JSON 구조 조립
       const formResponses = {
+        birth: applicantBirth,
         gender: applicantGender,
         club: applicantClub,
         division: applicantDivision,
