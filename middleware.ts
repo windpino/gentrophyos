@@ -36,8 +36,8 @@ export function middleware(req: NextRequest) {
     }
   }
 
-  // Vercel 메인 주소 및 Fallback 처리: gentrophyos.vercel.app 로 접속하거나 서브도메인이 없을 시 기본 통영 채널 노출
-  if (!subdomain || subdomain === 'gentrophyos' || subdomain.startsWith('gentrophyos-')) {
+  // Vercel 메인 주소 및 프리뷰/프로덕션 도메인 Fallback 처리: vercel.app 으로 끝나거나 서브도메인이 없을 시 기본 통영 채널 노출
+  if (!subdomain || domain.endsWith('vercel.app') || subdomain === 'gentrophyos' || subdomain.startsWith('gentrophyos-')) {
     subdomain = 'tongyeong-wind';
   }
 
