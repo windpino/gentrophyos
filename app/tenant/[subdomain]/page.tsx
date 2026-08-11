@@ -857,7 +857,21 @@ export default function TenantPortalPage({
                 
                 <div>
                   <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0369a1', borderLeft: '4px solid #0284c7', paddingLeft: '10px', marginBottom: '12px', margin: 0 }}>
-                    제 1 조 (경기 규칙)
+                    제 1 조 (대회 개요 및 일정)
+                  </h3>
+                  <div style={{ paddingLeft: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <p style={{ margin: 0 }}><strong>1. 대회명 :</strong> {overview.title}</p>
+                    <p style={{ margin: 0 }}><strong>2. 대회 기간 :</strong> {overview.duration}</p>
+                    <p style={{ margin: 0 }}><strong>3. 대회 장소 :</strong> {overview.location}</p>
+                    <p style={{ margin: 0 }}><strong>4. 임시사무실 :</strong> {overview.office}</p>
+                    <p style={{ margin: 0 }}><strong>5. 참가규모 :</strong> {overview.scale}</p>
+                    <p style={{ margin: 0 }}><strong>6. 주최/주관/후원 :</strong> 주최({overview.host}), 주관({overview.sponsor}), 후원({overview.supporter})</p>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0369a1', borderLeft: '4px solid #0284c7', paddingLeft: '10px', marginBottom: '12px', margin: 0 }}>
+                    제 2 조 (경기 규칙)
                   </h3>
                   <div style={{ paddingLeft: '14px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <p style={{ margin: 0 }}>1. 본 대회는 국제윈드서핑협회(IWA) 세일링 경기 규칙 및 본 대회 범주지시서에 의거하여 치러집니다.</p>
@@ -867,7 +881,7 @@ export default function TenantPortalPage({
 
                 <div>
                   <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0369a1', borderLeft: '4px solid #0284c7', paddingLeft: '10px', marginBottom: '12px', margin: 0 }}>
-                    제 2 조 (참가 종목 및 자격 클래스)
+                    제 3 조 (참가 종목 및 자격 클래스)
                   </h3>
                   <div style={{ paddingLeft: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <p style={{ margin: 0 }}>본 대회의 공식 경기 종목은 다음과 같이 구분하여 시행합니다.</p>
@@ -885,28 +899,18 @@ export default function TenantPortalPage({
 
                 <div>
                   <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0369a1', borderLeft: '4px solid #0284c7', paddingLeft: '10px', marginBottom: '12px', margin: 0 }}>
-                    제 3 조 (경기 채점 및 성립 조건)
+                    제 4 조 (참가 신청 및 등록)
                   </h3>
-                  <div style={{ paddingLeft: '14px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <p style={{ margin: 0 }}>1. 경기 채점은 국제 표준인 Low Point Scoring System(선착순 벌점제)을 적용합니다.</p>
-                    <p style={{ margin: 0 }}>2. 최소 1경기가 안전하게 완료되었을 시 본 대회의 공식 순위가 성립됩니다.</p>
-                    <p style={{ margin: 0 }}>3. 총 4경기 이상 완료 시, 각 선수의 성적 중 가장 나쁜 1경기 성적(벌점)을 제외(Drop)한 나머지 경기 전적의 합산으로 순위를 정합니다.</p>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0369a1', borderLeft: '4px solid #0284c7', paddingLeft: '10px', marginBottom: '12px', margin: 0 }}>
-                    제 4 조 (안전 규정 및 의무 사항)
-                  </h3>
-                  <div style={{ paddingLeft: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <div style={{ background: '#fef2f2', border: '1px solid #fee2e2', padding: '15px 20px', borderRadius: '8px', color: '#b91c1c' }}>
-                      <p style={{ fontWeight: '800', margin: 0 }}>⚠️ 구명동의(라이프재킷) 착용 필수</p>
-                      <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem' }}>
-                        모든 참가 선수는 해상 레이스 중 반드시 공인된 구명조끼를 바르게 착용해야 합니다. 미착용 혹은 임의 탈착 적발 시 즉각 실격(DSQ) 처리됩니다.
-                      </p>
+                  <div style={{ paddingLeft: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <p style={{ margin: 0 }}><strong>1. 접수마감 :</strong> {overview.deadlineDate} 까지</p>
+                    <p style={{ margin: 0 }}><strong>2. 참가 등록비 :</strong> 1인당 {overview.entryFeeIndividual} (납부처: {overview.bankName} {overview.accountNo} 예금주: {overview.accountHolder})</p>
+                    <div style={{ background: '#fff1f2', border: '1px solid #ffe4e6', padding: '12px 16px', borderRadius: '8px', color: '#be123c', fontSize: '0.85rem', fontWeight: '700', lineHeight: '1.5' }}>
+                      ⚠️ 참가신청 마감시간을 엄수하여 주시기 바라며 기한 경과 시 불이익을 입을 수 있고 당일 현장 신청은 불가하며 신청서 제출 후 5일 이내 참가비 납부 미완료 시 신청서 취소 처리함 (접수번호 미부여)
                     </div>
-                    <p style={{ margin: 0 }}>1. 모든 출전 선수는 세일에 배정된 배번 배표 조끼를 식별이 가능하도록 착용해야 합니다.</p>
-                    <p style={{ margin: 0 }}>2. 해상 기상 악화 시 경기위원장의 지시에 따라 즉시 레이스를 중단하고 전원 육상으로 복귀하여야 합니다.</p>
+                    <p style={{ margin: 0 }}><strong>3. 참가 취소 및 불참 통보 :</strong> 2026년 9월 5일(토) 18:00까지</p>
+                    <div style={{ background: '#fff1f2', border: '1px solid #ffe4e6', padding: '12px 16px', borderRadius: '8px', color: '#be123c', fontSize: '0.85rem', fontWeight: '700', lineHeight: '1.5' }}>
+                      ⚠️ 기한 내 불참 통보자에 한하여 환불 처리하며, 취소 기일 경과 후 불참 통보자는 환불이 불가함
+                    </div>
                   </div>
                 </div>
 
@@ -919,16 +923,103 @@ export default function TenantPortalPage({
                     <p style={{ margin: 0 }}>2. <strong>개인전 상금 명세 :</strong> 1위 40만 원, 2위 20만 원, 3위 10만 원</p>
                     <p style={{ margin: 0 }}>3. <strong>단체전 상금 명세 :</strong> 1위 50만 원, 2위 40만 원, 3위 30만 원, 4위 20만 원, 5위 10만 원</p>
                     <p style={{ margin: 0 }}>※ 단, 세부 클래스당 최소 참가 선수가 5명 이상 출전한 부문에 한하여 공식 시상을 진행하며, 5명 미만 시 타 클래스와 통합 또는 시상이 취소될 수 있습니다.</p>
+                    <p style={{ margin: 0 }}>※ 상금 및 상장은 주최측의 사정에 따라 변동될 수 있습니다.</p>
                   </div>
                 </div>
 
                 <div>
                   <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0369a1', borderLeft: '4px solid #0284c7', paddingLeft: '10px', marginBottom: '12px', margin: 0 }}>
-                    제 6 조 (책임 한계 및 면책 고시)
+                    제 6 조 (계측 및 규정)
                   </h3>
                   <div style={{ paddingLeft: '14px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <p style={{ margin: 0 }}>1. 계측에 관련한 모든 책임은 선수 본인에게 있습니다.</p>
+                    <p style={{ margin: 0 }}>2. 계측 시간은 9월 12일(토) 오전으로 하며 계측위원의 판정에 따릅니다.</p>
+                    <p style={{ margin: 0 }}>3. 규칙위반 장비는 실격 처리됩니다.</p>
+                    <p style={{ margin: 0 }}>4. 주최측은 계측 시 필요할 경우 추가적인 검사를 할 수 있습니다.</p>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0369a1', borderLeft: '4px solid #0284c7', paddingLeft: '10px', marginBottom: '12px', margin: 0 }}>
+                    제 7 조 (범주지시서 및 세일링 지시서)
+                  </h3>
+                  <div style={{ paddingLeft: '14px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <p style={{ margin: 0 }}>1. 범주는 국제세일링연맹(WS) 세일링 경기규칙 및 본 대회 범주지시서에 의거하여 치러집니다.</p>
+                    <p style={{ margin: 0 }}>2. 세일링 지시서는 등록확인 후 9월 12일(토) 오전 배포 예정이며, 경기장 공식 게시판에도 공지합니다.</p>
+                    <p style={{ margin: 0 }}>3. 변경된 사항은 공지 후 즉시 효력을 발생합니다.</p>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0369a1', borderLeft: '4px solid #0284c7', paddingLeft: '10px', marginBottom: '12px', margin: 0 }}>
+                    제 8 조 (경기 채점)
+                  </h3>
+                  <div style={{ paddingLeft: '14px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <p style={{ margin: 0 }}>1. 경기 채점은 국제 표준인 Low Point Scoring System(선착순 벌점제)을 적용합니다.</p>
+                    <p style={{ margin: 0 }}>2. 최소 1경기가 안전하게 완료되었을 시 본 대회의 공식 순위가 성립됩니다.</p>
+                    <p style={{ margin: 0 }}>3. 총 4경기 이상 완료 시, 각 선수의 성적 중 가장 나쁜 1경기 성적(벌점)을 제외(Drop)한 나머지 경기 전적의 합산으로 순위를 정합니다.</p>
+                    <p style={{ margin: 0 }}>4. 공동 순위자가 발생할 경우, 공동 순위자의 가장 높은 점수를 얻은 선수를 상위로 결정합니다.</p>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0369a1', borderLeft: '4px solid #0284c7', paddingLeft: '10px', marginBottom: '12px', margin: 0 }}>
+                    제 9 조 (안전 규정 및 의무 사항)
+                  </h3>
+                  <div style={{ paddingLeft: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ background: '#fef2f2', border: '1px solid #fee2e2', padding: '15px 20px', borderRadius: '8px', color: '#b91c1c', fontWeight: '700' }}>
+                      ⚠️ 해상 레이스 중 구명동의 미착용 혹은 임의 탈착 적발 시 즉각 실격(DSQ) 처리됩니다.
+                    </div>
+                    <p style={{ margin: 0 }}>1. 모든 참가 선수는 해상 레이스 중 반드시 공인된 구명동의(라이프재킷)를 바르게 착용해야 합니다.</p>
+                    <p style={{ margin: 0 }}>2. 모든 출전 선수는 세일에 배정된 배번 배표 조끼를 식별이 가능하도록 착용해야 합니다.</p>
+                    <p style={{ margin: 0 }}>3. 해상 기상 악화 시 경기위원장의 지시에 따라 즉시 레이스를 중단하고 전원 육상으로 복귀하여야 합니다.</p>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0369a1', borderLeft: '4px solid #0284c7', paddingLeft: '10px', marginBottom: '12px', margin: 0 }}>
+                    제 10 조 (책임 한계 및 면책 고시)
+                  </h3>
+                  <div style={{ paddingLeft: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ background: '#fef2f2', border: '1px solid #fee2e2', padding: '15px 20px', borderRadius: '8px', color: '#b91c1c', fontWeight: '700' }}>
+                      ⚠️ 대회 중의 모든 사고는 참가자 본인의 전적인 책임이며, 주최측 및 관계자는 어떠한 보상 및 책임도 지지 않습니다.
+                    </div>
                     <p style={{ margin: 0 }}>1. 본 대회에 참가하는 선수는 전적으로 자기 책임하에 범주에 참여합니다. 주최기관, 주관기관, 후원단체 및 경기 운영 요원은 대회 중 발생한 장비 손상, 인명 사고, 부상 및 사망 등의 물리적/민형사상 손해에 대하여 일체의 책임을 지지 않습니다.</p>
                     <p style={{ margin: 0 }}>2. 선수는 참가 신청서 제출과 동시에 면책 서약서 조항에 전면 동의한 것으로 간주합니다.</p>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0369a1', borderLeft: '4px solid #0284c7', paddingLeft: '10px', marginBottom: '12px', margin: 0 }}>
+                    제 11 조 (기타 안내)
+                  </h3>
+                  <div style={{ paddingLeft: '14px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <p style={{ margin: 0 }}>1. 대회장 내 주차 및 텐트 설치 등은 지정된 장소에서만 가능합니다.</p>
+                    <p style={{ margin: 0 }}>2. 선수 확인 등록 시 중식 및 환영만찬 식권을 배부합니다.</p>
+                    <p style={{ margin: 0 }}>3. 기타 세부 문의사항은 통영요트협회 사무국으로 문의하시기 바랍니다.</p>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0369a1', borderLeft: '4px solid #0284c7', paddingLeft: '10px', marginBottom: '12px', margin: 0 }}>
+                    제 12 조 (경기 수역 및 약도)
+                  </h3>
+                  <div style={{ paddingLeft: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <p style={{ margin: 0 }}>통영시 산양읍 영운리 수륙마을 내 수륙해수욕장 앞 해상</p>
+                    <div style={{
+                      marginTop: '10px',
+                      borderRadius: '12px',
+                      overflow: 'hidden',
+                      border: '1px solid var(--border-color)',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                      maxWidth: '600px'
+                    }}>
+                      <img
+                        src="/images/map.png"
+                        alt="제20회 이순신장군배 경기 수역 약도"
+                        style={{ width: '100%', height: 'auto', display: 'block' }}
+                      />
+                    </div>
                   </div>
                 </div>
 
