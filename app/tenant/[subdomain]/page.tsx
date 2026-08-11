@@ -465,7 +465,7 @@ export default function TenantPortalPage({
             left: 0,
             right: 0,
             bottom: 0,
-            background: 'linear-gradient(180deg, rgba(2, 6, 23, 0.3) 0%, rgba(2, 6, 23, 0.95) 100%)',
+            background: 'linear-gradient(180deg, rgba(2, 6, 23, 0.1) 0%, rgba(2, 6, 23, 0.75) 100%)',
             zIndex: 1,
           }}
         />
