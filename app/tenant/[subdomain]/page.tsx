@@ -716,30 +716,30 @@ export default function TenantPortalPage({
                     <table className="premium-table" style={{ fontSize: '0.85rem', width: '100%' }}>
                       <thead>
                         <tr>
-                          <th>구분</th>
+                          <th style={{ width: '80px', whiteSpace: 'nowrap' }}>구분</th>
                           <th>대상 종목</th>
-                          <th>1위 상금</th>
-                          <th>2위 상금</th>
-                          <th>3위 상금</th>
-                          <th>비고</th>
+                          <th style={{ width: '120px', whiteSpace: 'nowrap' }}>1위 상금</th>
+                          <th style={{ width: '120px', whiteSpace: 'nowrap' }}>2위 상금</th>
+                          <th style={{ width: '120px', whiteSpace: 'nowrap' }}>3위 상금</th>
+                          <th style={{ width: '180px', whiteSpace: 'nowrap' }}>비고</th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr>
-                          <td style={{ fontWeight: '700' }}>개인전</td>
+                          <td style={{ fontWeight: '700', whiteSpace: 'nowrap' }}>개인전</td>
                           <td>윈드포일, 윙포일, 혼합 오픈, 펀&포뮬러</td>
-                          <td><strong>상장 & 40만 원</strong></td>
-                          <td><strong>상장 & 20만 원</strong></td>
-                          <td><strong>상장 & 10만 원</strong></td>
-                          <td>각 클래스 부문별 지급</td>
+                          <td style={{ whiteSpace: 'nowrap' }}><strong>상장 & 40만 원</strong></td>
+                          <td style={{ whiteSpace: 'nowrap' }}><strong>상장 & 20만 원</strong></td>
+                          <td style={{ whiteSpace: 'nowrap' }}><strong>상장 & 10만 원</strong></td>
+                          <td style={{ whiteSpace: 'nowrap' }}>각 클래스 부문별 지급</td>
                         </tr>
                         <tr>
-                          <td style={{ fontWeight: '700' }}>단체전</td>
+                          <td style={{ fontWeight: '700', whiteSpace: 'nowrap' }}>단체전</td>
                           <td>시·도 및 클럽대항 릴레이</td>
-                          <td><strong>상장 & 50만 원</strong></td>
-                          <td><strong>상장 & 40만 원</strong></td>
-                          <td><strong>상장 & 30만 원</strong></td>
-                          <td>4위: 20만, 5위: 10만 원</td>
+                          <td style={{ whiteSpace: 'nowrap' }}><strong>상장 & 50만 원</strong></td>
+                          <td style={{ whiteSpace: 'nowrap' }}><strong>상장 & 40만 원</strong></td>
+                          <td style={{ whiteSpace: 'nowrap' }}><strong>상장 & 30만 원</strong></td>
+                          <td style={{ whiteSpace: 'nowrap' }}>4위: 20만, 5위: 10만 원</td>
                         </tr>
                       </tbody>
                     </table>
