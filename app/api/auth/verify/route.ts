@@ -7,13 +7,13 @@ import type { NextRequest } from 'next/server';
 export async function POST(req: NextRequest) {
   try {
     const { password } = await req.json();
-    const adminPassword = process.env.ADMIN_PASSWORD;
-
+    const adminPassword = process.env.ADMIN_PASSWORD?.trim();
+ 
     if (!adminPassword) {
       return NextResponse.json({ success: false, message: '서버 설정 오류' }, { status: 500 });
     }
-
-    if (password === adminPassword) {
+ 
+    if (password?.toString().trim() === adminPassword) {
       return NextResponse.json({ success: true });
     } else {
       // 잘못된 비밀번호는 항상 401 + 동일 지연(timing attack 방지)
