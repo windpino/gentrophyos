@@ -33,11 +33,16 @@ export default function HostDashboardPage({
 }) {
   const { subdomain } = use(params);
 
+  // 비밀번호 인증 게이트 추가
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [authError, setAuthError] = useState('');
+
   // 기본 정보
   const [tenant, setTenant] = useState<any>(null);
   const [activeTournament, setActiveTournament] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeSection, setActiveSection] = useState<'applicants' | 'tie-breaker'>('applicants');
+  const [activeSection, setActiveSection] = useState<'applicants' | 'tie-breaker' | 'overview'>('applicants');
 
   // 스프레드시트 그리드 상태 관리
   const [gridData, setGridData] = useState<GridRow[]>([]);
@@ -50,6 +55,24 @@ export default function HostDashboardPage({
 
   // 동점자 룰
   const [rules, setRules] = useState<TieBreakerRule[]>([]);
+
+  useEffect(() => {
+    const authSession = sessionStorage.getItem(`host_auth_${subdomain}`);
+    if (authSession === 'true') {
+      setIsAuthenticated(true);
+    }
+  }, [subdomain]);
+
+  const handleAuthSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordInput === '781818') {
+      sessionStorage.setItem(`host_auth_${subdomain}`, 'true');
+      setIsAuthenticated(true);
+      setAuthError('');
+    } else {
+      setAuthError('올바르지 않은 비밀번호입니다. 다시 입력해 주세요.');
+    }
+  };
 
   useEffect(() => {
     fetchInitialData();
@@ -294,6 +317,108 @@ export default function HostDashboardPage({
     '--theme-gold': '#c5a880',
   } as React.CSSProperties;
 
+  if (!isAuthenticated) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'radial-gradient(circle at top right, #0f172a 0%, #020617 100%)',
+        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        padding: '20px'
+      }}>
+        <div style={{
+          background: 'rgba(30, 41, 59, 0.45)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          padding: '45px 40px',
+          borderRadius: '24px',
+          width: '100%',
+          maxWidth: '440px',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+          textAlign: 'center'
+        }}>
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '64px',
+            height: '64px',
+            background: 'linear-gradient(135deg, #c5a880 0%, #b39366 100%)',
+            borderRadius: '16px',
+            marginBottom: '24px',
+            boxShadow: '0 8px 20px -6px rgba(197, 168, 128, 0.5)'
+          }}>
+            <Settings size={28} color="#1e293b" />
+          </div>
+          
+          <h2 style={{ fontSize: '1.6rem', fontWeight: '900', color: 'white', marginBottom: '8px', letterSpacing: '-0.5px' }}>
+            주최자 ERP 보안 게이트
+          </h2>
+          <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '32px', lineHeight: '1.5' }}>
+            {tenant.name}<br />
+            주최자 권한 인증을 진행합니다.
+          </p>
+
+          <form onSubmit={handleAuthSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ position: 'relative', textAlign: 'left' }}>
+              <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#c5a880', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>
+                비밀번호 입력
+              </label>
+              <input
+                type="password"
+                placeholder="비밀번호 6자리를 입력하세요"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                style={{
+                  width: '100%',
+                  background: 'rgba(15, 23, 42, 0.6)',
+                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  borderRadius: '12px',
+                  padding: '14px 16px',
+                  color: 'white',
+                  fontSize: '1rem',
+                  outline: 'none',
+                  textAlign: 'center',
+                  letterSpacing: '0.25em',
+                  transition: 'border-color 0.2s'
+                }}
+                autoFocus
+              />
+            </div>
+
+            {authError && (
+              <p style={{ color: '#f87171', fontSize: '0.8rem', fontWeight: '600', margin: '4px 0 0 0' }}>
+                ⚠️ {authError}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              style={{
+                width: '100%',
+                background: 'linear-gradient(135deg, #c5a880 0%, #b39366 100%)',
+                color: '#0f172a',
+                border: 'none',
+                borderRadius: '12px',
+                padding: '14px',
+                fontSize: '0.95rem',
+                fontWeight: '800',
+                cursor: 'pointer',
+                transition: 'transform 0.1s, opacity 0.2s',
+                marginTop: '10px',
+                boxShadow: '0 4px 12px rgba(197, 168, 128, 0.2)'
+              }}
+            >
+              대시보드 잠금 해제
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={themeStyles} className="grid-dashboard">
       
@@ -319,6 +444,7 @@ export default function HostDashboardPage({
           {[
             { id: 'applicants', label: '엑셀 그리드 명단 관리', icon: Users },
             { id: 'tie-breaker', label: '동점자 순위 규칙 설정', icon: Award },
+            { id: 'overview', label: '대회 요강 내용 편집', icon: FileText },
           ].map((item) => {
             const Icon = item.icon;
             const active = activeSection === item.id;
@@ -362,7 +488,7 @@ export default function HostDashboardPage({
         <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h1 style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '8px' }}>
-              {activeSection === 'applicants' ? '참가자 엑셀식 대량 편집 그리드' : 'Tie-breaker 가중치 제어기'}
+              {activeSection === 'applicants' ? '참가자 엑셀식 대량 편집 그리드' : (activeSection === 'tie-breaker' ? 'Tie-breaker 가중치 제어기' : '대회 요강 내용 편집기')}
             </h1>
             <p style={{ color: 'var(--text-muted)' }}>{activeTournament.title}</p>
           </div>
@@ -793,6 +919,10 @@ export default function HostDashboardPage({
           </div>
         )}
 
+        {/* SECTION C: 대회 요강 내용 편집 */}
+        {activeSection === 'overview' && (
+          <OverviewEditor tenant={tenant} subdomain={subdomain} onSaveSuccess={fetchInitialData} />
+        )}
       </main>
 
       {/* 3. 참가 신청서 원본 복제형 상세 뷰 모달 (12단계 네이버 폼 정보 정밀 복사) */}
@@ -1060,6 +1190,210 @@ export default function HostDashboardPage({
           </div>
         );
       })()}
+    </div>
+  );
+}
+
+interface OverviewEditorProps {
+  tenant: any;
+  subdomain: string;
+  onSaveSuccess: () => void;
+}
+
+function OverviewEditor({ tenant, subdomain, onSaveSuccess }: OverviewEditorProps) {
+  // 기본 Fallback 데이터들 (2026년 이순신배)
+  const defaultOverview = {
+    title: '제20회 이순신장군배 전국윈드서핑대회',
+    duration: '2026년 9월 12일(토) ~ 13일(일) (1박 2일)',
+    location: '통영시 산양읍 영운리 수륙마을 수륙해수욕장 일원',
+    scale: '선착순 130명 내외',
+    host: '통영시',
+    sponsor: '통영시요트협회, 이순신장군배 전국윈드서핑대회 조직위원회',
+    supporter: '통영시체육회, 경상남도요트협회, 한국윈드서핑협회',
+    office: '수륙마을 내 윈드서핑대회장',
+    bankName: '수협',
+    accountNo: '0010-0010-0010',
+    accountHolder: '통영시요트협회',
+    entryFeeIndividual: '40,000원 (대학생 이하 20,000원)',
+    entryFeeGroup: '50,000원 / 팀당',
+    deadlineDate: '2026년 8월 20일(목) 18:00',
+    rulesNote: '구명동의(라이프재킷) 착용 필수. 모든 참가 선수는 해상 레이스 중 반드시 공인된 구명조끼를 바르게 착용해야 합니다. 미착용 혹은 임의 탈착 적발 시 즉각 실격(DSQ) 처리됩니다.\n모든 출전 선수는 세일에 배정된 배번 배표 조끼를 식별이 가능하도록 착용해야 합니다.\n해상 기상 악화 시 경기위원장의 지시에 따라 즉시 레이스를 중단하고 전원 육상으로 복귀하여야 합니다.',
+    itineraryDay1: '10:00 - 12:00 : 참가선수 확인 및 등록 / 계측\n12:00 - 13:00 : 중식 제공 (대회장)\n13:00 - 13:30 : 개회식 (수륙해수욕장 특설무대)\n14:00 - 18:00 : 1일차 레이스 (각 종목 코스별)\n19:00 - : 환영식 및 시상식 (환영식 만찬 - 영운마을 물회집)',
+    itineraryDay2: '10:00 - 12:00 : 2일차 레이스 (본선)\n12:00 - 13:00 : 중식 제공 (대회장)\n13:00 - 15:00 : 결선 레이스\n15:30 - : 폐회식, 종합 시상 (영운리 마을회관 앞)\n16:30 - : 해산 및 장비 철수'
+  };
+
+  const initialConfig = {
+    ...defaultOverview,
+    ...(tenant.overviewConfig || {})
+  };
+
+  const [config, setConfig] = useState(initialConfig);
+  const [saving, setSaving] = useState(false);
+
+  const handleChange = (field: string, value: string) => {
+    setConfig((prev: any) => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/tenant/${subdomain}/overview`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ overviewConfig: config })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert('대회 요강 내용이 성공적으로 업데이트되어 전체 페이지에 반영되었습니다!');
+        onSaveSuccess();
+      } else {
+        alert(data.error || '저장 실패');
+      }
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '30px', maxWidth: '1000px' }} className="animate-fade-in">
+      <div className="glass-panel" style={{ background: 'white', padding: '30px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', borderBottom: '1px solid var(--border-color)', paddingBottom: '16px' }}>
+          <div>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '800', margin: 0 }}>대회 요강 폼 편집기</h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>수정된 요강 내용은 메인 홈페이지의 요강 및 캘린더 일정표에 실시간 적용됩니다.</p>
+          </div>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="btn-primary"
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', fontSize: '0.9rem' }}
+          >
+            {saving ? <RefreshCw className="animate-spin" size={16} /> : <Save size={16} />}
+            대회 요강 저장하기
+          </button>
+        </div>
+
+        {/* 폼 그리드 구성 */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          
+          {/* 1. 기본 개요 세션 */}
+          <div>
+            <h4 style={{ color: 'var(--theme-primary)', fontWeight: '800', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '16px' }}>
+              1. 대회 기본 개요 명세
+            </h4>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>대회명</label>
+                <input type="text" className="form-input" value={config.title} onChange={e => handleChange('title', e.target.value)} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>대회 기간</label>
+                <input type="text" className="form-input" value={config.duration} onChange={e => handleChange('duration', e.target.value)} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>대회 장소</label>
+                <input type="text" className="form-input" value={config.location} onChange={e => handleChange('location', e.target.value)} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>참가규모</label>
+                <input type="text" className="form-input" value={config.scale} onChange={e => handleChange('scale', e.target.value)} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>주최</label>
+                <input type="text" className="form-input" value={config.host} onChange={e => handleChange('host', e.target.value)} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>주관</label>
+                <input type="text" className="form-input" value={config.sponsor} onChange={e => handleChange('sponsor', e.target.value)} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>후원</label>
+                <input type="text" className="form-input" value={config.supporter} onChange={e => handleChange('supporter', e.target.value)} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>임시사무실</label>
+                <input type="text" className="form-input" value={config.office} onChange={e => handleChange('office', e.target.value)} />
+              </div>
+            </div>
+          </div>
+
+          {/* 2. 일정표 세션 */}
+          <div>
+            <h4 style={{ color: 'var(--theme-primary)', fontWeight: '800', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '16px' }}>
+              2. 공식 일자별 타임라인 (줄바꿈 단위 기입)
+            </h4>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>1일차 일정 정보</label>
+                <textarea
+                  style={{ minHeight: '150px', lineHeight: '1.6', fontSize: '0.9rem', width: '100%', padding: '12px', border: '1px solid var(--border-color)', borderRadius: '8px' }}
+                  value={config.itineraryDay1}
+                  onChange={e => handleChange('itineraryDay1', e.target.value)}
+                />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>2일차 일정 정보</label>
+                <textarea
+                  style={{ minHeight: '150px', lineHeight: '1.6', fontSize: '0.9rem', width: '100%', padding: '12px', border: '1px solid var(--border-color)', borderRadius: '8px' }}
+                  value={config.itineraryDay2}
+                  onChange={e => handleChange('itineraryDay2', e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 3. 접수 및 계좌 세션 */}
+          <div>
+            <h4 style={{ color: 'var(--theme-primary)', fontWeight: '800', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '16px' }}>
+              3. 참가비 수납 및 마감 기일
+            </h4>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>은행명</label>
+                <input type="text" className="form-input" value={config.bankName} onChange={e => handleChange('bankName', e.target.value)} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>계좌번호</label>
+                <input type="text" className="form-input" value={config.accountNo} onChange={e => handleChange('accountNo', e.target.value)} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>예금주</label>
+                <input type="text" className="form-input" value={config.accountHolder} onChange={e => handleChange('accountHolder', e.target.value)} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>개인전 참가비</label>
+                <input type="text" className="form-input" value={config.entryFeeIndividual} onChange={e => handleChange('entryFeeIndividual', e.target.value)} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>단체전 참가비</label>
+                <input type="text" className="form-input" value={config.entryFeeGroup} onChange={e => handleChange('entryFeeGroup', e.target.value)} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>접수 마감일</label>
+                <input type="text" className="form-input" value={config.deadlineDate} onChange={e => handleChange('deadlineDate', e.target.value)} />
+              </div>
+            </div>
+          </div>
+
+          {/* 4. 안전 및 규칙 정보 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <h4 style={{ color: 'var(--theme-primary)', fontWeight: '800', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '16px' }}>
+              4. 경기 규칙 및 안전 수칙 (줄바꿈 단위 기입)
+            </h4>
+            <textarea
+              style={{ minHeight: '120px', lineHeight: '1.6', fontSize: '0.9rem', width: '100%', padding: '12px', border: '1px solid var(--border-color)', borderRadius: '8px' }}
+              value={config.rulesNote}
+              onChange={e => handleChange('rulesNote', e.target.value)}
+            />
+          </div>
+
+        </div>
+      </div>
     </div>
   );
 }

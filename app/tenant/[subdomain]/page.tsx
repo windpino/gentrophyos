@@ -10,6 +10,7 @@ interface TenantData {
   logoUrl: string | null;
   primaryColor: string;
   rulesSummary: string | null;
+  overviewConfig?: any;
   tournaments: Array<{
     id: string;
     title: string;
@@ -58,6 +59,28 @@ export default function TenantPortalPage({
 
   // 상태 관리
   const [tenant, setTenant] = useState<TenantData | null>(null);
+
+  // 대회요강 Fallback 및 동적 데이터 셋업
+  const overview = {
+    title: '제20회 이순신장군배 전국윈드서핑대회',
+    duration: '2026년 9월 12일(토) ~ 13일(일) (1박 2일)',
+    location: '통영시 산양읍 영운리 수륙마을 수륙해수욕장 일원',
+    scale: '선착순 130명 내외',
+    host: '통영시',
+    sponsor: '통영시요트협회, 이순신장군배 전국윈드서핑대회 조직위원회',
+    supporter: '통영시체육회, 경상남도요트협회, 한국윈드서핑협회',
+    office: '수륙마을 내 윈드서핑대회장',
+    bankName: '수협',
+    accountNo: '0010-0010-0010',
+    accountHolder: '통영시요트협회',
+    entryFeeIndividual: '40,000원 (대학생 이하 20,000원)',
+    entryFeeGroup: '50,000원 / 팀당',
+    deadlineDate: '2026년 8월 20일(목) 18:00',
+    rulesNote: '구명동의(라이프재킷) 착용 필수. 모든 참가 선수는 해상 레이스 중 반드시 공인된 구명조끼를 바르게 착용해야 합니다. 미착용 혹은 임의 탈착 적발 시 즉각 실격(DSQ) 처리됩니다.\n모든 출전 선수는 세일에 배정된 배번 배표 조끼를 식별이 가능하도록 착용해야 합니다.\n해상 기상 악화 시 경기위원장의 지시에 따라 즉시 레이스를 중단하고 전원 육상으로 복귀하여야 합니다.',
+    itineraryDay1: '10:00 - 12:00 : 참가선수 확인 및 등록 / 계측\n12:00 - 13:00 : 중식 제공 (대회장)\n13:00 - 13:30 : 개회식 (수륙해수욕장 특설무대)\n14:00 - 18:00 : 1일차 레이스 (각 종목 코스별)\n19:00 - : 환영식 및 시상식 (환영식 만찬 - 영운마을 물회집)',
+    itineraryDay2: '10:00 - 12:00 : 2일차 레이스 (본선)\n12:00 - 13:00 : 중식 제공 (대회장)\n13:00 - 15:00 : 결선 레이스\n15:30 - : 폐회식, 종합 시상 (영운리 마을회관 앞)\n16:30 - : 해산 및 장비 철수',
+    ...(tenant?.overviewConfig || {})
+  };
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'notice' | 'register' | 'leaderboard' | 'archive'>('overview');
   const [activeDivisionTab, setActiveDivisionTab] = useState<string>('윈드포일');
@@ -607,16 +630,16 @@ export default function TenantPortalPage({
                   </h2>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', fontSize: '0.95rem' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <p style={{ margin: 0 }}><strong>대회명 :</strong> 제20회 이순신장군배 전국윈드서핑대회</p>
-                      <p style={{ margin: 0 }}><strong>기간 :</strong> 2026년 9월 12일(토) ~ 13일(일) (1박 2일)</p>
-                      <p style={{ margin: 0 }}><strong>장소 :</strong> 통영시 산양읍 영운리 수륙마을 수륙해수욕장 일원</p>
-                      <p style={{ margin: 0 }}><strong>참가규모 :</strong> 선착순 130명 내외</p>
+                      <p style={{ margin: 0 }}><strong>대회명 :</strong> {overview.title}</p>
+                      <p style={{ margin: 0 }}><strong>기간 :</strong> {overview.duration}</p>
+                      <p style={{ margin: 0 }}><strong>장소 :</strong> {overview.location}</p>
+                      <p style={{ margin: 0 }}><strong>참가규모 :</strong> {overview.scale}</p>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <p style={{ margin: 0 }}><strong>주최 :</strong> 통영시</p>
-                      <p style={{ margin: 0 }}><strong>주관 :</strong> 통영시요트협회, 이순신장군배 전국윈드서핑대회 조직위원회</p>
-                      <p style={{ margin: 0 }}><strong>후원 :</strong> 통영시체육회, 경상남도요트협회, 한국윈드서핑협회</p>
-                      <p style={{ margin: 0 }}><strong>임시사무실 :</strong> 수륙마을 내 윈드서핑대회장</p>
+                      <p style={{ margin: 0 }}><strong>주최 :</strong> {overview.host}</p>
+                      <p style={{ margin: 0 }}><strong>주관 :</strong> {overview.sponsor}</p>
+                      <p style={{ margin: 0 }}><strong>후원 :</strong> {overview.supporter}</p>
+                      <p style={{ margin: 0 }}><strong>임시사무실 :</strong> {overview.office}</p>
                     </div>
                   </div>
                 </div>
@@ -631,27 +654,35 @@ export default function TenantPortalPage({
                     {/* 1일차 */}
                     <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
                       <h4 style={{ fontWeight: '800', color: 'var(--theme-primary)', borderBottom: '2px solid var(--theme-primary)', paddingBottom: '8px', marginBottom: '12px', margin: 0 }}>
-                        1일차: 9월 12일 (토)
+                        1일차 일정
                       </h4>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.85rem' }}>
-                        <p style={{ margin: 0 }}><strong>10:00 - 12:00 :</strong> 참가선수 확인 및 등록 / 계측</p>
-                        <p style={{ margin: 0 }}><strong>12:00 - 13:00 :</strong> 중식 제공 (대회장)</p>
-                        <p style={{ margin: 0 }}><strong>13:00 - 13:30 :</strong> 개회식 (수륙해수욕장 특설무대)</p>
-                        <p style={{ margin: 0 }}><strong>14:00 - 18:00 :</strong> 1일차 레이스 (각 종목 코스별)</p>
-                        <p style={{ margin: 0 }}><strong>19:00 - :</strong> 환영식 및 시상식 (환영식 만찬 - 영운마을 물회집)</p>
+                        {overview.itineraryDay1.split('\n').map((line: string, idx: number) => {
+                          const splitIdx = line.indexOf(':');
+                          if (splitIdx > -1) {
+                            const time = line.substring(0, splitIdx).trim();
+                            const desc = line.substring(splitIdx + 1).trim();
+                            return <p key={idx} style={{ margin: 0 }}><strong>{time} :</strong> {desc}</p>;
+                          }
+                          return <p key={idx} style={{ margin: 0 }}>{line}</p>;
+                        })}
                       </div>
                     </div>
                     {/* 2일차 */}
                     <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
                       <h4 style={{ fontWeight: '800', color: 'var(--theme-gold)', borderBottom: '2px solid var(--theme-gold)', paddingBottom: '8px', marginBottom: '12px', margin: 0 }}>
-                        2일차: 9월 13일 (일)
+                        2일차 일정
                       </h4>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.85rem' }}>
-                        <p style={{ margin: 0 }}><strong>10:00 - 12:00 :</strong> 2일차 레이스 (본선)</p>
-                        <p style={{ margin: 0 }}><strong>12:00 - 13:00 :</strong> 중식 제공 (대회장)</p>
-                        <p style={{ margin: 0 }}><strong>13:00 - 15:00 :</strong> 결선 레이스</p>
-                        <p style={{ margin: 0 }}><strong>15:30 - :</strong> 폐회식, 종합 시상 (영운리 마을회관 앞)</p>
-                        <p style={{ margin: 0 }}><strong>16:30 - :</strong> 해산 및 장비 철수</p>
+                        {overview.itineraryDay2.split('\n').map((line: string, idx: number) => {
+                          const splitIdx = line.indexOf(':');
+                          if (splitIdx > -1) {
+                            const time = line.substring(0, splitIdx).trim();
+                            const desc = line.substring(splitIdx + 1).trim();
+                            return <p key={idx} style={{ margin: 0 }}><strong>{time} :</strong> {desc}</p>;
+                          }
+                          return <p key={idx} style={{ margin: 0 }}>{line}</p>;
+                        })}
                       </div>
                     </div>
                   </div>
@@ -760,21 +791,21 @@ export default function TenantPortalPage({
                     <div>
                       <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem', fontWeight: '700' }}>접수 마감일</span>
                       <p style={{ fontWeight: '800', color: 'var(--text-main)', marginTop: '4px', fontSize: '1.05rem', margin: 0 }}>
-                        2026년 8월 13일 (목) 마감
+                        {overview.deadlineDate}
                       </p>
-                      <p style={{ fontSize: '0.8rem', color: '#EF4444', marginTop: '2px', margin: 0 }}>* 선착순 130명 도달 시 조기 마감될 수 있습니다.</p>
+                      <p style={{ fontSize: '0.8rem', color: '#EF4444', marginTop: '2px', margin: 0 }}>* 선착순 도달 시 조기 마감될 수 있습니다.</p>
                     </div>
 
                     <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '12px' }}>
                       <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem', fontWeight: '700' }}>참가비 정보</span>
-                      <p style={{ fontWeight: '700', color: 'var(--text-main)', marginTop: '4px', margin: 0 }}>- 개인전: 30,000원 / 1인당</p>
-                      <p style={{ fontWeight: '700', color: 'var(--text-main)', marginTop: '2px', margin: 0 }}>- 단체전: 50,000원 / 팀당</p>
+                      <p style={{ fontWeight: '700', color: 'var(--text-main)', marginTop: '4px', margin: 0 }}>- 개인전: {overview.entryFeeIndividual}</p>
+                      <p style={{ fontWeight: '700', color: 'var(--text-main)', marginTop: '2px', margin: 0 }}>- 단체전: {overview.entryFeeGroup}</p>
                     </div>
 
                     <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.8rem' }}>
                       <span style={{ color: 'var(--theme-primary)', fontWeight: '800', display: 'block', marginBottom: '4px' }}>입금 계좌 안내</span>
-                      <p style={{ fontWeight: '700', color: 'var(--text-main)', margin: 0 }}>농협은행 351-0984-6726-83</p>
-                      <p style={{ color: 'var(--text-muted)', marginTop: '2px', margin: 0 }}>예금주: 임병훈(통영윈드서핑카이트보딩협회)</p>
+                      <p style={{ fontWeight: '700', color: 'var(--text-main)', margin: 0 }}>{overview.bankName} {overview.accountNo}</p>
+                      <p style={{ color: 'var(--text-muted)', marginTop: '2px', margin: 0 }}>예금주: {overview.accountHolder}</p>
                     </div>
                   </div>
                 </div>
@@ -785,15 +816,12 @@ export default function TenantPortalPage({
                     경기 규칙 & 안전 수칙
                   </h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.85rem', lineHeight: '1.5', marginTop: '12px' }}>
-                    <div style={{ background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '12px', borderRadius: '8px' }}>
-                      <span style={{ color: '#EF4444', fontWeight: '800', display: 'block', marginBottom: '4px' }}>⚠️ 안전 장구 착용 의무</span>
-                      <p style={{ color: '#EF4444', fontWeight: '700', margin: 0 }}>
-                        모든 선수는 경기 중 반드시 공식 구명동의(라이프재킷)를 올바르게 착용해야 합니다. 미착용 시 실격 조치됩니다.
-                      </p>
-                    </div>
-                    <div>
-                      <p style={{ margin: 0 }}><strong>경기 규칙:</strong> IWA(국제윈드서핑협회) 세일링 경기규칙 및 범주지시서를 준수합니다.</p>
-                      <p style={{ marginTop: '6px', margin: 0 }}><strong>채점 방식:</strong> Low Point Scoring System을 사용합니다. 최소 1경기를 완료해야 공식 순위가 성립하며, 4경기 이상 완료 시 가장 낮은 1경기를 제외한 나머지 전적으로 순위를 산출합니다.</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {overview.rulesNote.split('\n').map((line: string, idx: number) => (
+                        <p key={idx} style={{ margin: 0, fontWeight: line.includes('필수') || line.includes('실격') ? '700' : 'normal', color: line.includes('필수') || line.includes('실격') ? '#EF4444' : 'inherit' }}>
+                          {line}
+                        </p>
+                      ))}
                     </div>
                   </div>
                 </div>

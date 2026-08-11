@@ -34,6 +34,7 @@ export async function GET(
     const tenant = {
       ...tenantData,
       createdAt: new Date(tenantData.createdAt),
+      overviewConfig: tenantData.overviewConfig || null,
       tournaments,
     };
 
