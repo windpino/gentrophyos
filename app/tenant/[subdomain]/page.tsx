@@ -1085,7 +1085,7 @@ export default function TenantPortalPage({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7' }}>
                   <p style={{ margin: 0 }}>1.1 대회명 : 제20회 이순신장군배 전국윈드서핑대회</p>
                   <p style={{ margin: 0 }}>1.2 주 최 : 통영시</p>
-                  <p style={{ margin: 0 }}>1.3 주 관 : 통영시요트협회 / 사)통영윈드서핑협회 / 통영시윈드서핑연합회</p>
+                  <p style={{ margin: 0 }}>1.3 주 관 : 통영시요트협회</p>
                   <p style={{ margin: 0 }}>1.4 후 원 : 통영시체육회, 경상남도요트협회, 한국윈드서핑협회</p>
                   <p style={{ margin: 0 }}>1.5 협 찬 : 모집 중</p>
                 </div>
@@ -1147,9 +1147,11 @@ export default function TenantPortalPage({
                     </thead>
                     <tbody>
                       {[
-                        { 종목: '윈드포일', 클래스: '일반부 (남/여)', 비고: '남녀 각 10명 제한, 신설종목' },
-                        { 종목: '윈드서핑', 클래스: '일반부 / 중장년부 / 여성부 / 청소년부', 비고: '생년월일 기준 클래스 편성' },
-                        { 종목: '단체전', 클래스: '시·도 클럽별 릴레이 (4명 1팀)', 비고: '2026.9.13(일) 경기 개시 1시간 전 등록' },
+                        { 종목: '윈드포일', 클래스: '남녀오픈', 비고: '이번 대회 신설 종목, 남녀각 10명으로 참가인원 제한' },
+                        { 종목: '윈드포일', 클래스: '남자부 / 여자부', 비고: '생년월일 기준 클래스 편성' },
+                        { 종목: '혼합오픈', 클래스: '남자청년부 / 남자중년부 / 남자장년부 / 여자부', 비고: '생년월일 기준 클래스 편성' },
+                        { 종목: '핀앤포뮬러', 클래스: '남자청년부 / 남자중년부 / 남자장년부 / 여자부', 비고: '생년월일 기준 클래스 편성' },
+                        { 종목: '단체전', 클래스: '시·도 클럽별 릴레이 (참가선수 4명이 1개 팀)', 비고: '2026.9.13(일) 경기 개시 1시간 전 등록' },
                       ].map((row, i) => (
                         <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
                           <td style={{ padding: '10px 14px', fontWeight: '700' }}>{row.종목}</td>
@@ -1161,9 +1163,10 @@ export default function TenantPortalPage({
                   </table>
                 </div>
                 <div style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                  <p style={{ margin: 0 }}>※ 각 클래스는 선수 5명 이상 출전 시 시상합니다.</p>
-                  <p style={{ margin: 0 }}>※ 단체전을 제외한 종목별 경기의 중복 출전은 불가합니다.</p>
-                  <p style={{ margin: 0 }}>※ 모든 나이는 2026년 9월 12일 기준으로 합니다.</p>
+                  <p style={{ margin: 0 }}>※ 각 클래스는 생년월일기준으로 편성하며 선수 5명이상 출전 시 시상합니다.</p>
+                  <p style={{ margin: 0 }}>※ 단체전을 제외한 종목별 경기의 중복출전은 불가합니다.</p>
+                  <p style={{ margin: 0 }}>※ 단체전은 시·도 클럽별 릴레이식 참가선수 4명이 1개 팀으로 하는 경기방식 채택합니다.</p>
+                  <p style={{ margin: 0 }}>※ 모든 나이는 2026년 9월 12일을 기준으로 한다.</p>
                 </div>
               </div>
 
@@ -1171,9 +1174,11 @@ export default function TenantPortalPage({
               <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
                 <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제5조 (참가 신청)</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7' }}>
-                  <p style={{ margin: 0 }}>5.1 접수 기간 : ~ 2026년 8월 27일(목) 마감 (선착순 130명 조기마감 가능)</p>
-                  <p style={{ margin: 0 }}>5.2 신청 방법 : 네이버폼 온라인 신청 또는 본 홈페이지 참가 신청서 제출</p>
-                  <p style={{ margin: 0 }}>5.3 참가 규모 : 총 130명 (선착순)</p>
+                  <p style={{ margin: 0 }}>5.1 2026년 8월 27일(목) 까지 참가신청서를 작성하여 선수등록을 하여야 한다.</p>
+                  <p style={{ margin: 0 }}>5.2 단체전은 2026년 9월 13일(일) 경기개시 1시간 전 선수등록하여 시행한다.</p>
+                  <p style={{ margin: 0, color: '#EF4444', fontWeight: '700' }}>5.3 참가인원은 선착순으로 130명이 충족되면 참가접수기한이 조기에 마감될 수 있다.</p>
+                  <p style={{ margin: 0, color: '#EF4444', fontWeight: '700' }}>(이번대회 신설된 윙포일부분은 남녀각각 10명으로 참가인원을 제한한다.)</p>
+                  <p style={{ margin: 0 }}>5.4 참가비 입금계좌는 선수등록록 후 개별 통지하며 참가비가 입금이 완료되어야 참가자격이 주어진다.</p>
                 </div>
               </div>
 
@@ -1266,7 +1271,36 @@ export default function TenantPortalPage({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7' }}>
                   <p style={{ margin: 0 }}>12.1 중식 및 숙박, 환영의 밤 숙소 배정은 선수 등록자에 한하여 전면 무상 제공됩니다.</p>
                   <p style={{ margin: 0 }}>12.2 본 공시서에 명시되지 않은 사항은 조직위원회의 결정에 따르며, 대회 규정 변경 시 공지사항을 통해 안내합니다.</p>
-                  <p style={{ margin: 0 }}>12.3 문의처 : 통영윈드서핑협회 전무이사 임병훈 (010-3648-9838), 경기운영위원장 윤혜광</p>
+                  <p style={{ margin: 0 }}>12.3 문의 : 통영윈드서핑협회 전무이사 임병훈 (010-3648-9838)</p>
+                </div>
+              </div>
+
+              {/* 면책 동의 */}
+              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>면책 동의</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7', background: '#fefce8', padding: '16px', borderRadius: '8px', border: '1px solid #fde68a' }}>
+                  <p style={{ margin: 0 }}>본인은 제20회 이순신장군배 전국윈드서핑대회 참가 활동 중 본인의 부주의로 인해 발생할 수 있는 사고, 즉 개인적 부상, 재산상 피해, 의학적인 사고 등 대회기간 중 발생한 사고에 대한 책임은 본인의 자의적인 참가에 의한 본인의 책임이며, 본 대회를 주관하는 관계자 및 기관에 대한 면책은 물론 책임전가를 하지 않을 것을 서약합니다.</p>
+                </div>
+              </div>
+
+              {/* 개인정보 수집 동의 */}
+              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>개인정보 수집 동의</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7' }}>
+                  <p style={{ margin: 0 }}>• 정보수집 및 이용기관 : 통영시요트협회</p>
+                  <p style={{ margin: 0 }}>• 전화번호, 생년월일</p>
+                  <p style={{ margin: 0 }}>• 참가선수 관리 및 보험가입 / 대회 안내문자 및 SNS발송</p>
+                  <p style={{ margin: 0 }}>• 대회정산이후 폐기 한다.</p>
+                </div>
+              </div>
+
+              {/* 초상권 및 저작권 사용동의 */}
+              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>초상권 및 저작권 사용동의</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7' }}>
+                  <p style={{ margin: 0 }}>대회 기간중 촬영된 사진 / 영상은 다음 목적에 사용될 수 있음에 동의합니다.</p>
+                  <p style={{ margin: 0 }}>• 관련 기관의 홈페이지, SNS, 정산보고서, 팜플렛 및 각종 홍보물</p>
+                  <p style={{ margin: 0 }}>• 수집 및 이용기관 : 통영시요트협회</p>
                 </div>
               </div>
 
