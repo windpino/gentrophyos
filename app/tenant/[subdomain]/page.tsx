@@ -514,7 +514,7 @@ export default function TenantPortalPage({
           }}
         />
 
-        <div style={{ position: 'relative', zIndex: 2, maxWidth: '1000px', margin: '0 auto', width: '100%' }}>
+        <div style={{ position: 'relative', zIndex: 2, maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
           
           {/* 타이틀 위의 서브 뱃지 */}
           <div style={{ marginBottom: '16px' }}>
@@ -590,7 +590,7 @@ export default function TenantPortalPage({
 
       {/* 3. 아래쪽 내용 (옅은 배경색으로 시각적 대비 확보) */}
       <div style={{ background: '#f1f5f9', borderTop: '1px solid var(--border-color)', padding: '40px 0 100px 0', width: '100%' }}>
-        <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '0 20px' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px' }}>
 
         {/* 3. 메인 콘텐츠 분기 */}
         <main className="animate-fade-in" style={{ paddingBottom: '100px' }}>
