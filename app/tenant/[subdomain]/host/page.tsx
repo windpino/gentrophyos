@@ -63,14 +63,24 @@ export default function HostDashboardPage({
     }
   }, [subdomain]);
 
-  const handleAuthSubmit = (e: React.FormEvent) => {
+  const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (passwordInput === '781818') {
-      sessionStorage.setItem(`host_auth_${subdomain}`, 'true');
-      setIsAuthenticated(true);
-      setAuthError('');
-    } else {
-      setAuthError('올바르지 않은 비밀번호입니다. 다시 입력해 주세요.');
+    try {
+      const res = await fetch('/api/auth/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: passwordInput }),
+      });
+      if (res.ok) {
+        sessionStorage.setItem(`host_auth_${subdomain}`, 'true');
+        setIsAuthenticated(true);
+        setAuthError('');
+      } else {
+        setAuthError('올바르지 않은 비밀번호입니다. 다시 입력해 주세요.');
+        setPasswordInput('');
+      }
+    } catch {
+      setAuthError('서버 연결 오류가 발생했습니다. 다시 시도해 주세요.');
     }
   };
 

@@ -49,7 +49,38 @@ export default function RefereeMobilePage({
   const [ptsWon2, setPtsWon2] = useState(0);
   const [ptsLost2, setPtsLost2] = useState(0);
 
+  // 인증 게이트
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [authError, setAuthError] = useState('');
+
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const authSession = sessionStorage.getItem(`referee_auth_${subdomain}`);
+    if (authSession === 'true') setIsAuthenticated(true);
+  }, [subdomain]);
+
+  const handleAuthSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch('/api/auth/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: passwordInput }),
+      });
+      if (res.ok) {
+        sessionStorage.setItem(`referee_auth_${subdomain}`, 'true');
+        setIsAuthenticated(true);
+        setAuthError('');
+      } else {
+        setAuthError('비밀번호가 올바르지 않습니다.');
+        setPasswordInput('');
+      }
+    } catch {
+      setAuthError('서버 연결 오류가 발생했습니다. 다시 시도해 주세요.');
+    }
+  };
 
   useEffect(() => {
     fetchInitialData();
@@ -204,6 +235,58 @@ export default function RefereeMobilePage({
       setSubmitting(false);
     }
   };
+
+  // 인증 게이트 UI
+  if (!isAuthenticated) {
+    return (
+      <div style={{
+        display: 'flex', justifyContent: 'center', alignItems: 'center',
+        height: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+      }}>
+        <div style={{
+          background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: '20px', padding: '48px 40px', width: '100%', maxWidth: '380px',
+          textAlign: 'center', backdropFilter: 'blur(20px)',
+        }}>
+          <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>⚖️</div>
+          <h1 style={{ fontSize: '1.4rem', fontWeight: '900', color: 'white', marginBottom: '6px' }}>심판 입력기</h1>
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem', marginBottom: '28px' }}>
+            접근 권한 확인이 필요합니다
+          </p>
+          <form onSubmit={handleAuthSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <input
+              type="password"
+              placeholder="비밀번호를 입력하세요"
+              value={passwordInput}
+              onChange={(e) => setPasswordInput(e.target.value)}
+              style={{
+                width: '100%', background: 'rgba(15,23,42,0.6)',
+                border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px',
+                padding: '14px 16px', color: 'white', fontSize: '1rem',
+                outline: 'none', textAlign: 'center', letterSpacing: '0.25em',
+                boxSizing: 'border-box',
+              }}
+              autoFocus
+            />
+            {authError && (
+              <p style={{ color: '#f87171', fontSize: '0.8rem', margin: '0' }}>⚠️ {authError}</p>
+            )}
+            <button
+              type="submit"
+              style={{
+                width: '100%', background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                color: 'white', border: 'none', borderRadius: '12px',
+                padding: '14px', fontSize: '0.95rem', fontWeight: '800',
+                cursor: 'pointer', marginTop: '6px',
+              }}
+            >
+              입력기 잠금 해제
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
