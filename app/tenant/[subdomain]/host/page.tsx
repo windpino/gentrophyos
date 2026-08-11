@@ -56,13 +56,6 @@ export default function HostDashboardPage({
   // 동점자 룰
   const [rules, setRules] = useState<TieBreakerRule[]>([]);
 
-  useEffect(() => {
-    const authSession = sessionStorage.getItem(`host_auth_${subdomain}`);
-    if (authSession === 'true') {
-      setIsAuthenticated(true);
-    }
-  }, [subdomain]);
-
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -72,7 +65,6 @@ export default function HostDashboardPage({
         body: JSON.stringify({ password: passwordInput }),
       });
       if (res.ok) {
-        sessionStorage.setItem(`host_auth_${subdomain}`, 'true');
         setIsAuthenticated(true);
         setAuthError('');
       } else {

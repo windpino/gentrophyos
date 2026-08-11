@@ -56,11 +56,6 @@ export default function RefereeMobilePage({
 
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    const authSession = sessionStorage.getItem(`referee_auth_${subdomain}`);
-    if (authSession === 'true') setIsAuthenticated(true);
-  }, [subdomain]);
-
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -70,7 +65,6 @@ export default function RefereeMobilePage({
         body: JSON.stringify({ password: passwordInput }),
       });
       if (res.ok) {
-        sessionStorage.setItem(`referee_auth_${subdomain}`, 'true');
         setIsAuthenticated(true);
         setAuthError('');
       } else {
