@@ -803,12 +803,79 @@ export default function TenantPortalPage({
           }}
         >
           {[
-            { id: 'overview', label: '📋 대회 요강', defaultSubTab: '', disabled: false },
-            { id: 'notice', label: '📢 개최공시서', defaultSubTab: '', disabled: false },
-            { id: 'intro', label: '⛵ 대회소개', defaultSubTab: 'intro-greeting', disabled: false },
-            { id: 'live', label: '⏱️ 경기운영', defaultSubTab: 'live-leaderboard', disabled: !ongoingTournament },
-            { id: 'gallery', label: '📸 미디어 & 갤러리', defaultSubTab: 'gallery-photos', disabled: false },
-            { id: 'archive', label: '🏆 역대 기록관', defaultSubTab: 'archive-home', disabled: false },
+            {
+              id: 'overview',
+              label: '대회 요강',
+              icon: (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="16" y1="13" x2="8" y2="13"></line>
+                  <line x1="16" y1="17" x2="8" y2="17"></line>
+                </svg>
+              ),
+              defaultSubTab: '',
+              disabled: false
+            },
+            {
+              id: 'notice',
+              label: '개최공시서',
+              icon: (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                </svg>
+              ),
+              defaultSubTab: '',
+              disabled: false
+            },
+            {
+              id: 'intro',
+              label: '대회소개',
+              icon: (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <path d="M2 20h20M12 2v14M12 4l7 7h-7M5 16h14a2 2 0 0 1 2 2v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-1a2 2 0 0 1 2-2z"></path>
+                </svg>
+              ),
+              defaultSubTab: 'intro-greeting',
+              disabled: false
+            },
+            {
+              id: 'live',
+              label: '경기운영',
+              icon: (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+              ),
+              defaultSubTab: 'live-leaderboard',
+              disabled: !ongoingTournament
+            },
+            {
+              id: 'gallery',
+              label: '미디어 & 갤러리',
+              icon: (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                  <polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
+              ),
+              defaultSubTab: 'gallery-photos',
+              disabled: false
+            },
+            {
+              id: 'archive',
+              label: '역대 기록관',
+              icon: (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.45 1-1 1H4v2h16v-2h-5c-.55 0-1-.45-1-1v-2.34M12 2a7 7 0 0 1 7 7v4.66a5 5 0 0 1-5 4.67h-4a5 5 0 0 1-5-4.67V9a7 7 0 0 1 7-7z"></path>
+                </svg>
+              ),
+              defaultSubTab: 'archive-home',
+              disabled: false
+            },
           ].map((tab) => {
             const active = activeTab === tab.id;
             return (
@@ -824,7 +891,7 @@ export default function TenantPortalPage({
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px',
+                  gap: '8px',
                   padding: '0 16px',
                   height: '100%',
                   border: 'none',
@@ -837,7 +904,8 @@ export default function TenantPortalPage({
                   transition: 'var(--transition-smooth)',
                 }}
               >
-                {tab.label}
+                {tab.icon}
+                <span>{tab.label}</span>
               </button>
             );
           })}
