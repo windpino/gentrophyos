@@ -1281,7 +1281,7 @@ export default function TenantPortalPage({
 
           {/* A. 대회 요강 대메뉴 (Notice of Race 통합 및 세련된 연동) */}
           {activeTab === 'overview' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '2.2fr 0.8fr', gap: '30px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: '30px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
                 
                 {/* 대회 개요 카드 */}
