@@ -809,7 +809,7 @@ export default function TenantPortalPage({
 
         <div style={{ display: 'flex', gap: '12px' }}>
           <a
-            href={`/tenant/${subdomain}/host`}
+            href="/host"
             className="btn-secondary"
             style={{
               padding: '8px 16px',
@@ -822,7 +822,7 @@ export default function TenantPortalPage({
             주최자 ERP
           </a>
           <a
-            href={`/tenant/${subdomain}/referee`}
+            href="/referee"
             className="btn-primary"
             style={{
               padding: '8px 16px',
