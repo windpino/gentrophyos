@@ -1,0 +1,129 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Tenant {
+  id           String       @id @default(uuid())
+  name         String
+  subdomain    String       @unique
+  customDomain String?      @unique
+  logoUrl      String?
+  primaryColor String       @default("#4F46E5")
+  rulesSummary String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  tournaments  Tournament[]
+  users        User[]
+  players      Player[]
+}
+
+model User {
+  id           String       @id @default(uuid())
+  tenantId     String?
+  tenant       Tenant?      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  email        String       @unique
+  passwordHash String
+  name         String
+  role         String       // PLATFORM_ADMIN, HOST_ADMIN, REFEREE, VIEWER
+  createdAt    DateTime     @default(now())
+  matches      Match[]      @relation("RefereeMatches")
+}
+
+model Tournament {
+  id                String             @id @default(uuid())
+  tenantId          String
+  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  title             String
+  status            String             @default("REGISTRATION") // REGISTRATION, ONGOING, ARCHIVED
+  startDate         DateTime
+  endDate           DateTime
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  registrationForm  RegistrationForm?
+  registrations     Registration[]
+  matches           Match[]
+  tieBreakerRules   TieBreakerRule[]
+}
+
+model RegistrationForm {
+  id           String     @id @default(uuid())
+  tournamentId String     @unique
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  fields       String     // JSON definition of fields
+  createdAt    DateTime   @default(now())
+}
+
+model Registration {
+  id            String     @id @default(uuid())
+  tournamentId  String
+  tournament    Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  playerId      String
+  player        Player     @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  formResponses String     // JSON submitted form responses
+  paymentStatus String     @default("PENDING") // PENDING, APPROVED, REFUNDED
+  status        String     @default("PENDING") // PENDING, APPROVED, REJECTED
+  createdAt     DateTime   @default(now())
+}
+
+model Player {
+  id           String             @id @default(uuid())
+  tenantId     String
+  tenant       Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name         String
+  email        String?
+  phone        String?
+  uniqueCode   String             @unique
+  createdAt    DateTime           @default(now())
+  registrations Registration[]
+  stats        PlayerStats?
+  matches      MatchParticipant[]
+}
+
+model PlayerStats {
+  playerId     String   @id
+  player       Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  totalMatches Int      @default(0)
+  wins         Int      @default(0)
+  losses       Int      @default(0)
+  draws        Int      @default(0)
+}
+
+model Match {
+  id           String             @id @default(uuid())
+  tournamentId String
+  tournament   Tournament         @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  round        Int
+  matchType    String             // LEAGUE, TOURNAMENT, RECORD
+  status       String             @default("SCHEDULED") // SCHEDULED, ONGOING, COMPLETED
+  refereeId    String?
+  referee      User?              @relation("RefereeMatches", fields: [refereeId], references: [id], onDelete: SetNull)
+  scheduledAt  DateTime?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  participants MatchParticipant[]
+}
+
+model MatchParticipant {
+  matchId  String
+  match    Match   @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  playerId String
+  player   Player  @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  score    Int     @default(0)
+  isWinner Boolean @default(false)
+  details  String? // JSON string (extra score details like scoreDiff, totalScores)
+
+  @@id([matchId, playerId])
+}
+
+model TieBreakerRule {
+  id           String     @id @default(uuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  priority     Int
+  ruleType     String     // HEAD_TO_HEAD, SCORE_DIFF, TOTAL_SCORES, AGE_ORDER
+}

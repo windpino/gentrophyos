@@ -1,0 +1,1065 @@
+'use client';
+
+import React, { useState, useEffect, use } from 'react';
+import { Award, Check, X, Upload, Download, Plus, Trash2, ArrowUp, ArrowDown, Users, FileText, Settings, Layers, Calendar, RefreshCw, Save, Search, Eye, ExternalLink } from 'lucide-react';
+
+interface GridRow {
+  id: string; // 데이터베이스 registration ID 또는 임시 행의 'temp-...' ID
+  playerId: string;
+  name: string;
+  phone: string;
+  gender: string;
+  club: string;
+  division: string;
+  tshirtSize: string;
+  paymentStatus: 'PENDING' | 'APPROVED';
+  status: 'PENDING' | 'APPROVED';
+  
+  // 편집 제어 플래그
+  isEdited?: boolean;
+  isNew?: boolean;
+}
+
+interface TieBreakerRule {
+  id: string;
+  priority: number;
+  ruleType: string;
+}
+
+export default function HostDashboardPage({
+  params,
+}: {
+  params: Promise<{ subdomain: string }>;
+}) {
+  const { subdomain } = use(params);
+
+  // 기본 정보
+  const [tenant, setTenant] = useState<any>(null);
+  const [activeTournament, setActiveTournament] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [activeSection, setActiveSection] = useState<'applicants' | 'tie-breaker'>('applicants');
+
+  // 스프레드시트 그리드 상태 관리
+  const [gridData, setGridData] = useState<GridRow[]>([]);
+  const [rawRegistrations, setRawRegistrations] = useState<any[]>([]); // 원본 상세 데이터 바인딩용
+  const [deletedIds, setDeletedIds] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchCategory, setSearchCategory] = useState<'all' | 'name' | 'phone' | 'club' | 'division'>('all'); // 카테고리별 검색
+  const [selectedReg, setSelectedReg] = useState<GridRow | null>(null); // 신청서 보기 팝업용
+  const [isSaving, setIsSaving] = useState(false);
+
+  // 동점자 룰
+  const [rules, setRules] = useState<TieBreakerRule[]>([]);
+
+  useEffect(() => {
+    fetchInitialData();
+  }, [subdomain]);
+
+  const fetchInitialData = async () => {
+    try {
+      const tenantRes = await fetch(`/api/tenant/${subdomain}`);
+      const tenantData = await tenantRes.json();
+      if (tenantData.tenant) {
+        setTenant(tenantData.tenant);
+        const ongoing = tenantData.tenant.tournaments.find((t: any) => t.status === 'ONGOING');
+        if (ongoing) {
+          setActiveTournament(ongoing);
+          await loadSectionData(ongoing.id);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadSectionData = async (tId: string) => {
+    try {
+      // 1. 참가 신청서 데이터 로드 및 윈드서핑 그리드 변환
+      const regRes = await fetch(`/api/tenant/${subdomain}/registrations?tournamentId=${tId}`);
+      const regData = await regRes.json();
+      setRawRegistrations(regData.registrations || []);
+      
+      const parsedRows: GridRow[] = (regData.registrations || []).map((r: any) => {
+        let gender = '남자';
+        let club = '미소속';
+        let division = '윈드포일';
+        let tshirtSize = 'L (105)';
+
+        try {
+          if (r.formResponses) {
+            const extra = JSON.parse(r.formResponses);
+            gender = extra.gender || '남자';
+            club = extra.club || '미소속';
+            division = extra.division || '윈드포일';
+            tshirtSize = extra.tshirtSize || 'L (105)';
+          }
+        } catch (e) {
+          // 기본값 사용
+        }
+
+        return {
+          id: r.id,
+          playerId: r.playerId,
+          name: r.player.name,
+          phone: r.player.phone || '',
+          gender,
+          club,
+          division,
+          tshirtSize,
+          paymentStatus: r.paymentStatus,
+          status: r.status,
+        };
+      });
+
+      setGridData(parsedRows);
+
+      // 2. 동점자 룰 로드
+      const ruleRes = await fetch(`/api/tenant/${subdomain}/rules-detail?tournamentId=${tId}`);
+      const ruleData = await ruleRes.json();
+      setRules(ruleData.rules || []);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // 엑셀 그리드 셀 수정 핸들러
+  const handleCellChange = (rowId: string, field: keyof GridRow, value: any) => {
+    setGridData(
+      gridData.map((row) => {
+        if (row.id === rowId) {
+          return {
+            ...row,
+            [field]: value,
+            isEdited: true, // 변경점 추적
+          };
+        }
+        return row;
+      })
+    );
+  };
+
+  // 엑셀식 새 행 삽입 (대량 등록용)
+  const handleAddNewRow = () => {
+    const newRow: GridRow = {
+      id: `temp-${Date.now()}`,
+      playerId: '',
+      name: '',
+      phone: '',
+      gender: '남자',
+      club: '',
+      division: '윈드포일',
+      tshirtSize: 'L (105)',
+      paymentStatus: 'APPROVED',
+      status: 'APPROVED',
+      isNew: true, // 신규 추가 행 추적
+    };
+    setGridData([newRow, ...gridData]);
+  };
+
+  // 행 삭제
+  const handleDeleteRow = (rowId: string) => {
+    if (!confirm('정말 선택한 참가자를 목록에서 지우시겠습니까?')) return;
+    setGridData(gridData.filter((row) => row.id !== rowId));
+    if (!rowId.startsWith('temp-')) {
+      setDeletedIds([...deletedIds, rowId]);
+    }
+  };
+
+  // 엑셀 그리드 일괄 저장 (벌크 업데이트)
+  const handleSaveAllChanges = async () => {
+    if (!activeTournament) return;
+
+    const updatedList = gridData.filter((row) => row.isEdited && !row.isNew);
+    const insertedList = gridData.filter((row) => row.isNew && row.name.trim());
+
+    if (updatedList.length === 0 && insertedList.length === 0 && deletedIds.length === 0) {
+      alert('저장할 변경 사항이 없습니다.');
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      const res = await fetch(`/api/tenant/${subdomain}/registrations/bulk-update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tournamentId: activeTournament.id,
+          updatedList,
+          insertedList,
+          deletedIds,
+        }),
+      });
+
+      if (res.ok) {
+        alert('모든 스프레드시트 변경 사항이 성공적으로 저장 및 일괄 처리되었습니다!');
+        setDeletedIds([]);
+        await loadSectionData(activeTournament.id);
+      } else {
+        const data = await res.json();
+        alert(data.error || '저장 실패');
+      }
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // 동점자 룰 우선순위 제어
+  const handleMoveRule = async (index: number, direction: 'up' | 'down') => {
+    if (!activeTournament) return;
+
+    const newRules = [...rules];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+
+    if (targetIndex < 0 || targetIndex >= newRules.length) return;
+
+    const temp = newRules[index];
+    newRules[index] = newRules[targetIndex];
+    newRules[targetIndex] = temp;
+
+    const updatedRules = newRules.map((rule, idx) => ({
+      ...rule,
+      priority: idx + 1,
+    }));
+
+    try {
+      const res = await fetch(`/api/tenant/${subdomain}/rules-detail`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tournamentId: activeTournament.id,
+          rulesList: updatedRules,
+        }),
+      });
+
+      if (res.ok) {
+        setRules(updatedRules);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // 실시간 검색 기능 필터링 (카테고리별 정밀 검색)
+  const filteredGridData = gridData.filter((row) => {
+    const query = searchQuery.toLowerCase().trim();
+    if (!query) return true;
+
+    if (searchCategory === 'name') {
+      return row.name.toLowerCase().includes(query);
+    }
+    if (searchCategory === 'phone') {
+      return row.phone.includes(query);
+    }
+    if (searchCategory === 'club') {
+      return row.club.toLowerCase().includes(query);
+    }
+    if (searchCategory === 'division') {
+      return row.division.toLowerCase().includes(query);
+    }
+
+    // 전체(all) 통합 검색
+    return (
+      row.name.toLowerCase().includes(query) ||
+      row.phone.includes(query) ||
+      row.club.toLowerCase().includes(query) ||
+      row.division.toLowerCase().includes(query)
+    );
+  });
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: 'var(--bg-main)' }}>
+        <RefreshCw className="animate-spin" size={48} style={{ color: 'var(--theme-primary)' }} />
+      </div>
+    );
+  }
+
+  if (!tenant || !activeTournament) {
+    return (
+      <div style={{ padding: '80px 20px', textAlign: 'center' }}>
+        <h2 style={{ fontSize: '2rem', color: '#EF4444' }}>관리 대상 채널이 존재하지 않습니다.</h2>
+      </div>
+    );
+  }
+
+  const themeStyles = {
+    '--theme-primary': tenant.primaryColor || '#1f6f8b',
+    '--theme-primary-hover': '#154e62',
+    '--theme-primary-rgb': '31, 111, 139',
+    '--theme-gold': '#c5a880',
+  } as React.CSSProperties;
+
+  return (
+    <div style={themeStyles} className="grid-dashboard">
+      
+      {/* 1. 사이드바 */}
+      <aside
+        style={{
+          background: 'rgba(2, 6, 23, 0.95)',
+          borderRight: '1px solid var(--border-color)',
+          padding: '30px 20px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '40px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <Settings size={22} style={{ color: 'var(--theme-gold)' }} />
+          <h2 style={{ fontSize: '1.2rem', fontWeight: '800', color: 'white', fontFamily: 'var(--font-title)' }}>
+            Wind <span style={{ color: 'var(--theme-gold)' }}>ERP</span>
+          </h2>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {[
+            { id: 'applicants', label: '엑셀 그리드 명단 관리', icon: Users },
+            { id: 'tie-breaker', label: '동점자 순위 규칙 설정', icon: Award },
+          ].map((item) => {
+            const Icon = item.icon;
+            const active = activeSection === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveSection(item.id as any)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '14px 18px',
+                  background: active ? 'rgba(255,255,255,0.06)' : 'none',
+                  color: active ? 'var(--theme-primary)' : 'var(--text-muted)',
+                  border: 'none',
+                  borderLeft: active ? `4px solid var(--theme-primary)` : '4px solid transparent',
+                  borderRadius: '0 8px 8px 0',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontWeight: '600',
+                  fontSize: '0.95rem',
+                  transition: 'var(--transition-smooth)',
+                }}
+              >
+                <Icon size={18} />
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div style={{ marginTop: 'auto', padding: '16px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', fontSize: '0.85rem' }}>
+          <span style={{ color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>대회 기관:</span>
+          <span style={{ fontWeight: '700', color: 'var(--text-main)' }}>{tenant.name}</span>
+        </div>
+      </aside>
+
+      {/* 2. 대시보드 메인 */}
+      <main style={{ padding: '40px', overflowY: 'auto' }}>
+        
+        <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h1 style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '8px' }}>
+              {activeSection === 'applicants' ? '참가자 엑셀식 대량 편집 그리드' : 'Tie-breaker 가중치 제어기'}
+            </h1>
+            <p style={{ color: 'var(--text-muted)' }}>{activeTournament.title}</p>
+          </div>
+
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <a
+              href={`/tenant/${subdomain}`}
+              className="btn-secondary"
+              style={{ fontSize: '0.9rem', padding: '10px 18px', display: 'flex', alignItems: 'center', gap: '6px', background: 'white' }}
+            >
+              <ExternalLink size={16} /> 대회 홈페이지 가기
+            </a>
+            <a
+              href={`/api/tenant/${subdomain}/registrations/export?tournamentId=${activeTournament.id}`}
+              className="btn-secondary"
+              style={{ fontSize: '0.9rem', padding: '10px 18px', display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Download size={16} /> 엑셀 내보내기 (Export)
+            </a>
+          </div>
+        </header>
+
+        {/* SECTION A: 참가자 엑셀 스프레드시트 관리 */}
+        {activeSection === 'applicants' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            
+            {/* 그리드 상단 툴바 (검색, 행추가, 일괄저장) */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
+              
+              {/* 실시간 필터링 검색 바 + 카테고리 셀렉터 */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <select
+                  value={searchCategory}
+                  onChange={(e) => {
+                    setSearchCategory(e.target.value as any);
+                    setSearchQuery(''); // 카테고리 전환 시 검색어 초기화
+                  }}
+                  style={{
+                    padding: '10px 16px',
+                    borderRadius: '10px',
+                    border: '1px solid var(--border-color)',
+                    background: 'white',
+                    color: 'var(--text-main)',
+                    fontWeight: '700',
+                    outline: 'none',
+                    fontSize: '0.9rem',
+                    cursor: 'pointer',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                  }}
+                >
+                  <option value="all">전체 (통합 검색)</option>
+                  <option value="name">성명 검색</option>
+                  <option value="phone">전화번호 검색</option>
+                  <option value="club">소속 클럽 검색</option>
+                  <option value="division">참가 종목 검색</option>
+                </select>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'white', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '10px 16px', width: '300px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                  <Search size={18} style={{ color: 'var(--text-muted)' }} />
+                  <input
+                    type="text"
+                    placeholder={
+                      searchCategory === 'name' ? '성명 검색어 입력...' :
+                      searchCategory === 'phone' ? '전화번호 검색어 입력...' :
+                      searchCategory === 'club' ? '클럽명 검색어 입력...' :
+                      searchCategory === 'division' ? '종목 검색어 입력...' :
+                      '검색어를 입력하세요...'
+                    }
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    style={{
+                      border: 'none',
+                      background: 'none',
+                      color: 'var(--text-main)',
+                      outline: 'none',
+                      width: '100%',
+                      fontSize: '0.9rem'
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  className="btn-secondary"
+                  onClick={handleAddNewRow}
+                  style={{ fontSize: '0.9rem', padding: '10px 18px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Plus size={16} /> 행 추가 (Row Insert)
+                </button>
+                
+                <button
+                  className="btn-primary"
+                  onClick={handleSaveAllChanges}
+                  disabled={isSaving}
+                  style={{ fontSize: '0.9rem', padding: '10px 20px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Save size={16} /> {isSaving ? '일괄 저장 중...' : '변경 사항 일괄 저장'}
+                </button>
+              </div>
+            </div>
+
+            {/* 스프레드시트 형태의 그리드 테이블 */}
+            <div className="glass-panel" style={{ padding: '8px', background: 'white' }}>
+              <div className="premium-table-container" style={{ overflowX: 'auto', width: '100%', display: 'block' }}>
+                <table className="premium-table" style={{ minWidth: '1200px', width: '100%' }}>
+                  <thead>
+                    <tr>
+                      <th style={{ width: '60px', textAlign: 'center' }}>순번</th>
+                      <th style={{ width: '65px', textAlign: 'center' }}>상태</th>
+                      <th>성명</th>
+                      <th>전화번호</th>
+                      <th>성별</th>
+                      <th>소속협회 / 클럽</th>
+                      <th>참가종목</th>
+                      <th>티셔츠 사이즈</th>
+                      <th>결제 여부</th>
+                      <th>승인 상태</th>
+                      <th style={{ width: '90px', textAlign: 'center' }}>작업</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredGridData.map((row, idx) => (
+                      <tr key={row.id}>
+                        {/* 순번 */}
+                        <td style={{ textAlign: 'center', color: 'var(--text-muted)', fontWeight: '700', fontSize: '0.9rem' }}>
+                          {idx + 1}
+                        </td>
+                        {/* 편집 상태 인디케이터 */}
+                        <td style={{ textAlign: 'center' }}>
+                          {row.isNew ? (
+                            <span style={{ color: '#10B981', fontSize: '0.75rem', fontWeight: 'bold' }}>NEW</span>
+                          ) : row.isEdited ? (
+                            <span style={{ color: '#F59E0B', fontSize: '0.75rem', fontWeight: 'bold' }}>EDIT</span>
+                          ) : (
+                            <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>-</span>
+                          )}
+                        </td>
+
+                        {/* 성명 */}
+                        <td style={{ padding: '8px 16px' }}>
+                          <input
+                            type="text"
+                            value={row.name}
+                            onChange={(e) => handleCellChange(row.id, 'name', e.target.value)}
+                            style={{
+                              width: '100%',
+                              background: 'none',
+                              border: 'none',
+                              color: 'var(--text-main)',
+                              outline: 'none',
+                              fontSize: '0.95rem',
+                              fontWeight: '600'
+                            }}
+                            placeholder="성명 기입"
+                          />
+                        </td>
+
+                        {/* 전화번호 */}
+                        <td style={{ padding: '8px 16px' }}>
+                          <input
+                            type="text"
+                            value={row.phone}
+                            onChange={(e) => handleCellChange(row.id, 'phone', e.target.value)}
+                            style={{
+                              width: '100%',
+                              background: 'none',
+                              border: 'none',
+                              color: 'var(--text-main)',
+                              outline: 'none',
+                              fontSize: '0.95rem'
+                            }}
+                            placeholder="010XXXXXXXX"
+                          />
+                        </td>
+
+                        {/* 성별 */}
+                        <td style={{ padding: '8px' }}>
+                          <select
+                            value={row.gender}
+                            onChange={(e) => handleCellChange(row.id, 'gender', e.target.value)}
+                            style={{
+                              width: '100%',
+                              background: 'white',
+                              border: 'none',
+                              color: 'var(--text-main)',
+                              outline: 'none',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <option value="남자">남자</option>
+                            <option value="여자">여자</option>
+                          </select>
+                        </td>
+
+                        {/* 소속 */}
+                        <td style={{ padding: '8px 16px' }}>
+                          <input
+                            type="text"
+                            value={row.club}
+                            onChange={(e) => handleCellChange(row.id, 'club', e.target.value)}
+                            style={{
+                              width: '100%',
+                              background: 'none',
+                              border: 'none',
+                              color: 'var(--text-main)',
+                              outline: 'none',
+                              fontSize: '0.95rem'
+                            }}
+                            placeholder="클럽명 기입"
+                          />
+                        </td>
+
+                        {/* 참가종목 */}
+                        <td style={{ padding: '8px' }}>
+                          <select
+                            value={row.division}
+                            onChange={(e) => handleCellChange(row.id, 'division', e.target.value)}
+                            style={{
+                              width: '100%',
+                              background: 'white',
+                              border: 'none',
+                              color: 'var(--text-main)',
+                              outline: 'none',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <option value="윈드포일">윈드포일</option>
+                            <option value="윙포일">윙포일</option>
+                            <option value="혼합오픈">혼합오픈</option>
+                            <option value="펀엔포뮬러">펀엔포뮬러</option>
+                          </select>
+                        </td>
+
+                        {/* 티셔츠 사이즈 */}
+                        <td style={{ padding: '8px' }}>
+                          <select
+                            value={row.tshirtSize}
+                            onChange={(e) => handleCellChange(row.id, 'tshirtSize', e.target.value)}
+                            style={{
+                              width: '100%',
+                              background: 'white',
+                              border: 'none',
+                              color: 'var(--text-main)',
+                              outline: 'none',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <option value="S (95)">S (95)</option>
+                            <option value="M (100)">M (100)</option>
+                            <option value="L (105)">L (105)</option>
+                            <option value="XL (110)">XL (110)</option>
+                          </select>
+                        </td>
+
+                        {/* 결제 상태 */}
+                        <td style={{ padding: '8px' }}>
+                          <select
+                            value={row.paymentStatus}
+                            onChange={(e) => handleCellChange(row.id, 'paymentStatus', e.target.value)}
+                            style={{
+                              width: '100%',
+                              background: 'white',
+                              border: 'none',
+                              color: row.paymentStatus === 'APPROVED' ? '#10B981' : '#EF4444',
+                              fontWeight: '600',
+                              outline: 'none',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <option value="PENDING" style={{ color: '#EF4444' }}>미결제</option>
+                            <option value="APPROVED" style={{ color: '#10B981' }}>결제완료</option>
+                          </select>
+                        </td>
+
+                        {/* 참가 승인 상태 */}
+                        <td style={{ padding: '8px' }}>
+                          <select
+                            value={row.status}
+                            onChange={(e) => handleCellChange(row.id, 'status', e.target.value)}
+                            style={{
+                              width: '100%',
+                              background: 'white',
+                              border: 'none',
+                              color: row.status === 'APPROVED' ? '#10B981' : '#F59E0B',
+                              fontWeight: '600',
+                              outline: 'none',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <option value="PENDING" style={{ color: '#F59E0B' }}>대기상태</option>
+                            <option value="APPROVED" style={{ color: '#10B981' }}>승인완료</option>
+                          </select>
+                        </td>
+
+                        {/* 작업 (상세보기 및 삭제) */}
+                        <td style={{ textAlign: 'center' }}>
+                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
+                            <button
+                              className="btn-secondary"
+                              onClick={() => setSelectedReg(row)}
+                              style={{
+                                padding: '6px',
+                                borderRadius: '8px',
+                                color: 'var(--theme-primary)',
+                                borderColor: 'rgba(31, 111, 139, 0.1)',
+                                background: 'none'
+                              }}
+                              title="신청서 원본 상세 보기"
+                            >
+                              <Eye size={14} />
+                            </button>
+                            <button
+                              className="btn-secondary"
+                              onClick={() => handleDeleteRow(row.id)}
+                              style={{
+                                padding: '6px',
+                                borderRadius: '8px',
+                                color: '#EF4444',
+                                borderColor: 'rgba(239, 68, 68, 0.1)',
+                                background: 'none'
+                              }}
+                              title="삭제"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* SECTION B: 동점자 룰 제어 */}
+        {activeSection === 'tie-breaker' && (
+          <div style={{ maxWidth: '700px' }} className="glass-panel">
+            <h3 style={{ fontSize: '1.25rem', marginBottom: '16px' }}>순위 결정을 위한 규칙 체인 우선순위</h3>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '24px', fontSize: '0.9rem' }}>
+              승점이 같을 때 적용되는 타이 브레이커 규칙 순서입니다. 위/아래 버튼으로 우선순위를 즉각 조절합니다.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {rules.map((rule, idx) => {
+                let ruleKorean = '';
+                let ruleDesc = '';
+                switch (rule.ruleType) {
+                  case 'HEAD_TO_HEAD':
+                    ruleKorean = '승자승 원칙 (Head-to-Head)';
+                    ruleDesc = '동점인 선수들 간 직접 승패 전적을 평가하여 상위를 결정합니다.';
+                    break;
+                  case 'SCORE_DIFF':
+                    ruleKorean = '세부 점수 득실차 (Score Difference)';
+                    ruleDesc = '경기 동안 획득한 세부 스코어의 득실차가 큰 선수를 우대합니다.';
+                    break;
+                  case 'TOTAL_SCORES':
+                    ruleKorean = '다득점 총합 (Total Points Won)';
+                    ruleDesc = '모든 매치에서 획득한 세부 포인트의 전체 누적 합산치를 우선합니다.';
+                    break;
+                  case 'AGE_ORDER':
+                    ruleKorean = '연장자 우선 원칙 (Age Order)';
+                    ruleDesc = '생년월일(YYYYMMDD)을 파싱하여 나이가 더 많은 선수를 위로 올립니다.';
+                    break;
+                  default:
+                    ruleKorean = rule.ruleType;
+                    ruleDesc = '정렬 규칙';
+                }
+
+                return (
+                  <div
+                    key={rule.id}
+                    style={{
+                      padding: '20px',
+                      background: 'rgba(255,255,255,0.02)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between'
+                    }}
+                  >
+                    <div style={{ flex: 1, marginRight: '16px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+                        <span style={{
+                          width: '24px',
+                          height: '24px',
+                          borderRadius: '50%',
+                          backgroundColor: 'var(--theme-primary)',
+                          color: 'white',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '0.8rem',
+                          fontWeight: '700'
+                        }}>
+                          {idx + 1}
+                        </span>
+                        <h4 style={{ fontWeight: '700' }}>{ruleKorean}</h4>
+                      </div>
+                      <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{ruleDesc}</p>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <button
+                        className="btn-secondary"
+                        style={{ padding: '6px', opacity: idx === 0 ? 0.3 : 1, cursor: idx === 0 ? 'not-allowed' : 'pointer' }}
+                        onClick={() => idx !== 0 && handleMoveRule(idx, 'up')}
+                        disabled={idx === 0}
+                      >
+                        <ArrowUp size={14} />
+                      </button>
+                      <button
+                        className="btn-secondary"
+                        style={{ padding: '6px', opacity: idx === rules.length - 1 ? 0.3 : 1, cursor: idx === rules.length - 1 ? 'not-allowed' : 'pointer' }}
+                        onClick={() => idx !== rules.length - 1 && handleMoveRule(idx, 'down')}
+                        disabled={idx === rules.length - 1}
+                      >
+                        <ArrowDown size={14} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+      </main>
+
+      {/* 3. 참가 신청서 원본 복제형 상세 뷰 모달 (12단계 네이버 폼 정보 정밀 복사) */}
+      {selectedReg && (() => {
+        // rawRegistrations에서 원본 response 찾기
+        const rawReg = rawRegistrations.find(r => r.id === selectedReg.id);
+        let email = 'info@gentrophy.com';
+        let birthDate = '19900815'; // 기본 목데이터
+        let agree1 = true;
+        let agree2 = true;
+        let agree3 = true;
+        let agree4 = true;
+
+        if (rawReg && rawReg.formResponses) {
+          try {
+            const parsed = JSON.parse(rawReg.formResponses);
+            email = parsed.email || 'info@gentrophy.com';
+            birthDate = parsed.birthDate || '19900815';
+            agree1 = parsed.privacyAgreed !== false;
+            agree2 = parsed.portraitAgreed !== false;
+            agree3 = parsed.liabilityAgreed !== false;
+            agree4 = parsed.feeAgreed !== false;
+          } catch(e) {
+            // 파싱오류 시 기본 데이터 유지
+          }
+        }
+
+        return (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 9999,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: '20px'
+          }}>
+            <div style={{
+              width: '100%',
+              maxWidth: '700px',
+              background: '#ffffff',
+              borderRadius: '20px',
+              boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+              display: 'flex',
+              flexDirection: 'column',
+              maxHeight: '90vh',
+              overflow: 'hidden',
+              color: 'var(--text-main)'
+            }}>
+              {/* 모달 헤더 */}
+              <div style={{
+                padding: '24px 30px',
+                borderBottom: '1px solid var(--border-color)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                background: '#f8fafc'
+              }}>
+                <div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                    <FileText style={{ color: 'var(--theme-primary)' }} size={20} />
+                    대회 참가 신청서 상세 정보
+                  </h3>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px', margin: 0 }}>
+                    선수가 제출한 12단계 참가 신청서의 실제 약관 동의 및 인적 사항 정보입니다.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setSelectedReg(null)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer',
+                    padding: '8px',
+                    borderRadius: '50%',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* 모달 콘텐츠 */}
+              <div style={{ padding: '30px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '24px', flex: 1 }}>
+                
+                {/* 1 ~ 8단계 인적사항 및 기본 응답 */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                  
+                  {/* 성명 */}
+                  <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase' }}>1. 참가자 성명</span>
+                    <p style={{ fontSize: '1.05rem', fontWeight: '700', marginTop: '4px', marginBottom: 0, color: 'var(--text-main)' }}>{selectedReg.name}</p>
+                  </div>
+
+                  {/* 생년월일 */}
+                  <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase' }}>2. 생년월일 (8자리)</span>
+                    <p style={{ fontSize: '1.05rem', fontWeight: '700', marginTop: '4px', marginBottom: 0, color: 'var(--text-main)' }}>{birthDate}</p>
+                  </div>
+
+                  {/* 연락처 */}
+                  <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase' }}>3. 연락처 (전화번호)</span>
+                    <p style={{ fontSize: '1.05rem', fontWeight: '700', marginTop: '4px', marginBottom: 0, color: 'var(--text-main)' }}>{selectedReg.phone || '미입력'}</p>
+                  </div>
+
+                  {/* 성별 */}
+                  <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase' }}>4. 성별</span>
+                    <p style={{ fontSize: '1.05rem', fontWeight: '700', marginTop: '4px', marginBottom: 0, color: 'var(--text-main)' }}>{selectedReg.gender}</p>
+                  </div>
+
+                  {/* 소속 */}
+                  <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase' }}>5. 소속협회 또는 클럽</span>
+                    <p style={{ fontSize: '1.05rem', fontWeight: '700', marginTop: '4px', marginBottom: 0, color: 'var(--text-main)' }}>{selectedReg.club || '미소속'}</p>
+                  </div>
+
+                  {/* 이메일 */}
+                  <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase' }}>6. 이메일 주소</span>
+                    <p style={{ fontSize: '1.05rem', fontWeight: '700', marginTop: '4px', marginBottom: 0, color: 'var(--text-main)' }}>{email}</p>
+                  </div>
+
+                  {/* 참가종목 */}
+                  <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase' }}>7. 참가 부문 / 종목</span>
+                    <p style={{ fontSize: '1.05rem', fontWeight: '700', marginTop: '4px', marginBottom: 0, color: 'var(--theme-primary)' }}>{selectedReg.division}</p>
+                  </div>
+
+                  {/* 티셔츠 사이즈 */}
+                  <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase' }}>8. 티셔츠 사이즈</span>
+                    <p style={{ fontSize: '1.05rem', fontWeight: '700', marginTop: '4px', marginBottom: 0, color: 'var(--text-main)' }}>{selectedReg.tshirtSize}</p>
+                  </div>
+
+                </div>
+
+                <div style={{ borderTop: '1px dashed var(--border-color)', margin: '10px 0' }} />
+
+                {/* 9 ~ 12단계 약관 동의 및 준수 서약서 리스트 */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  
+                  {/* 9단계: 개인정보 활용 */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-main)' }}>9. 개인정보 수집 및 이용 동의</span>
+                    <div style={{
+                      padding: '10px 14px',
+                      background: '#f8fafc',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '8px',
+                      fontSize: '0.8rem',
+                      color: 'var(--text-muted)',
+                      maxHeight: '60px',
+                      overflowY: 'auto'
+                    }}>
+                      이순신장군배 대회조직위원회는 참가자 식별, 연락, 보험 가입 및 기록 관리를 위해 성명, 생년월일, 연락처, 이메일 등의 개인정보를 수집하며 대회가 종료된 후 관계 법령에 따라 파기합니다.
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                      <input type="checkbox" checked={agree1} readOnly style={{ accentColor: 'var(--theme-primary)' }} />
+                      <span style={{ fontSize: '0.85rem', fontWeight: '700', color: agree1 ? '#10B981' : '#EF4444' }}>
+                        {agree1 ? '동의함 (제출 완료)' : '미동의'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 10단계: 초상권 동의 */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-main)' }}>10. 초상권 사용 및 홍보 활용 동의</span>
+                    <div style={{
+                      padding: '10px 14px',
+                      background: '#f8fafc',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '8px',
+                      fontSize: '0.8rem',
+                      color: 'var(--text-muted)',
+                      maxHeight: '60px',
+                      overflowY: 'auto'
+                    }}>
+                      대회 중 촬영된 영상, 사진 등의 미디어는 주최사 및 언론사, GenTrophy 플랫폼에서 아카이브, 보도자료, 홈페이지 홍보 목적으로 영구히 자유롭게 사용할 수 있습니다.
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                      <input type="checkbox" checked={agree2} readOnly style={{ accentColor: 'var(--theme-primary)' }} />
+                      <span style={{ fontSize: '0.85rem', fontWeight: '700', color: agree2 ? '#10B981' : '#EF4444' }}>
+                        {agree2 ? '동의함 (제출 완료)' : '미동의'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 11단계: 안전 사고 면책 */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-main)' }}>11. 안전 사고 면책 및 준수 서약서</span>
+                    <div style={{
+                      padding: '10px 14px',
+                      background: '#f8fafc',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '8px',
+                      fontSize: '0.8rem',
+                      color: 'var(--text-muted)',
+                      maxHeight: '60px',
+                      overflowY: 'auto'
+                    }}>
+                      본 참가자는 대회 중 개인의 과실, 자연재해 등으로 발생하는 사고 및 장비 훼손에 대해 주최사 및 GenTrophy 측에 일체의 배상을 청구하지 않을 것이며, 경기 규정을 철저히 준수할 것을 서약합니다.
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                      <input type="checkbox" checked={agree3} readOnly style={{ accentColor: 'var(--theme-primary)' }} />
+                      <span style={{ fontSize: '0.85rem', fontWeight: '700', color: agree3 ? '#10B981' : '#EF4444' }}>
+                        {agree3 ? '동의함 (제출 완료)' : '미동의'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 12단계: 환불 규정 및 참가비 확인 */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-main)' }}>12. 참가비 납부 및 환불 규정 확인</span>
+                    <div style={{
+                      padding: '10px 14px',
+                      background: '#f8fafc',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '8px',
+                      fontSize: '0.8rem',
+                      color: 'var(--text-muted)',
+                      maxHeight: '60px',
+                      overflowY: 'auto'
+                    }}>
+                      참가비(50,000원) 미납 시 접수가 승인되지 않으며, 대회 공식 접수 기간 마감일 3일 전 이후에는 취소 및 환불이 불가능함을 확인하고 이에 동의합니다.
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                      <input type="checkbox" checked={agree4} readOnly style={{ accentColor: 'var(--theme-primary)' }} />
+                      <span style={{ fontSize: '0.85rem', fontWeight: '700', color: agree4 ? '#10B981' : '#EF4444' }}>
+                        {agree4 ? '동의함 (제출 완료)' : '미동의'}
+                      </span>
+                    </div>
+                  </div>
+
+                </div>
+
+              </div>
+
+              {/* 모달 푸터 */}
+              <div style={{
+                padding: '20px 30px',
+                borderTop: '1px solid var(--border-color)',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                background: '#f8fafc'
+              }}>
+                <button
+                  onClick={() => setSelectedReg(null)}
+                  className="btn-primary"
+                  style={{ padding: '10px 24px', fontSize: '0.9rem' }}
+                >
+                  확인 및 닫기
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
