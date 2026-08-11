@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, use } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Award, Calendar, Layers, FileText, CheckCircle2, UserPlus, RefreshCw, Archive, Search, Compass, MapPin, Phone } from 'lucide-react';
 
 interface TenantData {
@@ -56,6 +57,8 @@ export default function TenantPortalPage({
   params: Promise<{ subdomain: string }>;
 }) {
   const { subdomain } = use(params);
+  const searchParams = useSearchParams();
+  const applyMode = searchParams.get('mode') === 'apply';
 
   // 상태 관리
   const [tenant, setTenant] = useState<TenantData | null>(null);
@@ -383,6 +386,326 @@ export default function TenantPortalPage({
     '--theme-primary-rgb': '0, 128, 128',
   } as React.CSSProperties;
 
+  if (applyMode && ongoingTournament) {
+    return (
+      <div style={{ ...themeStyles, minHeight: '100vh', backgroundColor: '#f1f5f9', padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        {/* 상단 단독 폼 타이틀 및 브랜딩 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+          <img
+            src="/images/logo.png"
+            alt="대회 로고"
+            style={{ height: '48px', width: 'auto', objectFit: 'contain' }}
+          />
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-main)', lineHeight: '1.2' }}>제20회 이순신장군배</span>
+            <span style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--theme-primary)', lineHeight: '1.2' }}>전국윈드서핑대회</span>
+          </div>
+        </div>
+
+        {/* 단독 폼 카드 */}
+        <div style={{ width: '100%', maxWidth: '650px', background: '#ffffff', borderRadius: '16px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05)', border: '1px solid var(--border-color)', padding: '32px' }}>
+          
+          {/* 헤더 버튼 영역 (홈페이지 바로가기 및 링크 복사) */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '16px', marginBottom: '24px' }}>
+            <div>
+              <h2 style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--text-main)' }}>대회 참가 신청서 작성</h2>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '4px' }}>* 표시가 있는 항목은 필수 작성 항목입니다.</p>
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(window.location.origin + window.location.pathname + '?mode=apply');
+                  alert('참가 신청서 단독 링크가 클립보드에 복사되었습니다! 다른 분들께 링크를 공유해 보세요.');
+                }}
+                className="btn-secondary"
+                style={{ padding: '8px 12px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', background: '#f8fafc', border: '1px solid var(--border-color)', cursor: 'pointer', borderRadius: '6px' }}
+              >
+                🔗 링크 복사
+              </button>
+              <button
+                onClick={() => {
+                  window.location.href = window.location.pathname;
+                }}
+                className="btn-primary"
+                style={{ padding: '8px 12px', fontSize: '0.75rem', background: 'var(--theme-primary)', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '6px', fontWeight: '700' }}
+              >
+                🏠 대회 홈페이지
+              </button>
+            </div>
+          </div>
+
+          <form onSubmit={handleRegisterSubmit}>
+            {/* 1. 성명 */}
+            <div className="form-group">
+              <label className="form-label">1. 성명 <span style={{ color: '#EF4444' }}>*</span></label>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="실명을 입력해 주세요."
+                value={applicantName}
+                onChange={(e) => setApplicantName(e.target.value)}
+                required
+              />
+            </div>
+
+            {/* 2. 생년월일 */}
+            <div className="form-group">
+              <label className="form-label">2. 생년월일 (8자리) 예) 19450815 <span style={{ color: '#EF4444' }}>*</span></label>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="예) 19901024"
+                value={applicantBirth}
+                onChange={(e) => setApplicantBirth(e.target.value)}
+                required
+              />
+            </div>
+
+            {/* 3. 성별 */}
+            <div className="form-group">
+              <label className="form-label">3. 성별 <span style={{ color: '#EF4444' }}>*</span></label>
+              <div style={{ display: 'flex', gap: '20px', marginTop: '8px' }}>
+                {['남자', '여자'].map((g) => (
+                  <label key={g} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="gender_select_apply"
+                      value={g}
+                      checked={applicantGender === g}
+                      onChange={(e) => setApplicantGender(e.target.value)}
+                      style={{ width: '18px', height: '18px' }}
+                    />
+                    <span>{g}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* 4. 전화번호 */}
+            <div className="form-group">
+              <label className="form-label">4. 전화번호 (휴대폰번호) <span style={{ color: '#EF4444' }}>*</span></label>
+              <input
+                type="tel"
+                className="form-input"
+                placeholder="예) 01012345678"
+                value={applicantPhone}
+                onChange={(e) => setApplicantPhone(e.target.value)}
+                required
+              />
+            </div>
+
+            {/* 5. 소속협회 또는 클럽 */}
+            <div className="form-group">
+              <label className="form-label">5. 소속협회 또는 클럽 <span style={{ color: '#EF4444' }}>*</span></label>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="소속 단체명을 입력해 주세요."
+                value={applicantClub}
+                onChange={(e) => setApplicantClub(e.target.value)}
+                required
+              />
+            </div>
+
+            {/* 6. 참가종목 */}
+            <div className="form-group">
+              <label className="form-label">6. 참가종목 <span style={{ color: '#EF4444' }}>*</span></label>
+              <select
+                className="form-input"
+                value={applicantDivision}
+                onChange={(e) => setApplicantDivision(e.target.value)}
+                required
+                style={{ background: 'white', color: 'var(--text-main)' }}
+              >
+                <option value="윈드포일">윈드포일 (남녀오픈)</option>
+                <option value="윙포일">윙포일 (남자부/여자부)</option>
+                <option value="혼합오픈">혼합오픈 (연령대별 편성)</option>
+                <option value="펀엔포뮬러">펀엔포뮬러 (연령대별 편성)</option>
+              </select>
+            </div>
+
+            {/* 7. 티셔츠 사이즈 */}
+            <div className="form-group">
+              <label className="form-label">7. 티셔츠(기념품)사이즈 <span style={{ color: '#EF4444' }}>*</span></label>
+              <select
+                className="form-input"
+                value={applicantTshirt}
+                onChange={(e) => setApplicantTshirt(e.target.value)}
+                required
+                style={{ background: 'white', color: 'var(--text-main)' }}
+              >
+                <option value="S (95)">S (95)</option>
+                <option value="M (100)">M (100)</option>
+                <option value="L (105)">L (105)</option>
+                <option value="XL (110)">XL (110)</option>
+              </select>
+            </div>
+
+            {/* 8. 조끼 배번티 수령 동의 */}
+            <div className="form-group" style={{ background: 'rgba(255,255,255,0.01)', padding: '16px', borderRadius: '10px', border: '1px solid var(--border-color)', marginTop: '16px' }}>
+              <label className="form-label" style={{ fontWeight: '600', color: 'var(--text-main)' }}>
+                8. 당일 대회본부에 조끼(배번티)를 반드시 수령하셔야 합니다. <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
+                • 대회운영본부 수령 필수 (사용 후 반드시 반납바랍니다)
+              </p>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={vestAgreement}
+                  onChange={(e) => setVestAgreement(e.target.checked)}
+                  style={{ width: '18px', height: '18px' }}
+                />
+                <span style={{ fontWeight: '600' }}>네. 확인했습니다.</span>
+              </label>
+            </div>
+
+            {/* 9. 입금안내 확인 동의 */}
+            <div className="form-group" style={{ background: 'rgba(255,255,255,0.01)', padding: '16px', borderRadius: '10px', border: '1px solid var(--border-color)', marginTop: '16px' }}>
+              <label className="form-label" style={{ fontWeight: '600', color: 'var(--text-main)' }}>
+                9. 참가비 입금 안내 확인 동의 <span style={{ color: '#EF4444' }}>*</span>
+              </label>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
+                • 선착순 선수등록 처리 후 130명 마감 시 계좌는 개별 문자 통지합니다.
+              </p>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={paymentNoticeAgreement}
+                  onChange={(e) => setPaymentNoticeAgreement(e.target.checked)}
+                  style={{ width: '18px', height: '18px' }}
+                />
+                <span style={{ fontWeight: '600' }}>네. 확인했습니다.</span>
+              </label>
+            </div>
+
+            {/* 10. 면책 서약서 동의 */}
+            <div className="form-group" style={{ marginTop: '24px' }}>
+              <label className="form-label">10. 면책 동의서 서약에 동의합니다. <span style={{ color: '#EF4444' }}>*</span></label>
+              <div style={{
+                height: '100px',
+                overflowY: 'scroll',
+                background: 'rgba(0,0,0,0.2)',
+                padding: '12px',
+                borderRadius: '8px',
+                fontSize: '0.8rem',
+                color: 'var(--text-muted)',
+                lineHeight: '1.5',
+                marginBottom: '12px',
+                border: '1px solid var(--border-color)'
+              }}>
+                본인은 제20회 이순신장군배 전국윈드서핑대회 참가 활동 중 본인의 부주의로 인해 발생할 수 있는 사고, 즉 개인적 부상, 재산상 피해, 의학적인 사고 등 대회기간 중 발생한 사고에 대한 책임은 본인의 자의적인 참가에 의한 본인의 책임이며, 본 대회를 주관하는 관계자 및 기관에 대한 면책은 물론 책임전가를 하지 않을 것을 서약합니다.
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={liabilityWaiver}
+                  onChange={(e) => setLiabilityWaiver(e.target.checked)}
+                  style={{ width: '18px', height: '18px' }}
+                />
+                <span style={{ fontWeight: '600' }}>네. 동의합니다.</span>
+              </label>
+            </div>
+
+            {/* 11. 개인정보 수집 동의 */}
+            <div className="form-group" style={{ marginTop: '20px' }}>
+              <label className="form-label">11. 개인정보 수집에 동의합니다. <span style={{ color: '#EF4444' }}>*</span></label>
+              <div style={{
+                height: '80px',
+                overflowY: 'scroll',
+                background: 'rgba(0,0,0,0.2)',
+                padding: '12px',
+                borderRadius: '8px',
+                fontSize: '0.8rem',
+                color: 'var(--text-muted)',
+                lineHeight: '1.5',
+                marginBottom: '12px',
+                border: '1px solid var(--border-color)'
+              }}>
+                • 정보수집 및 이용기관 : 통영시요트협회<br />
+                • 수집 정보 : 성명, 생년월일, 전화번호, 이메일, 소속 단체<br />
+                • 수집 목적 : 참가자 관리 및 보험가입, 대회 공지 전송 등<br />
+                • 보존 기간 : 대회 정산 이후 즉시 폐기합니다.
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={privacyConsent}
+                  onChange={(e) => setPrivacyConsent(e.target.checked)}
+                  style={{ width: '18px', height: '18px' }}
+                />
+                <span style={{ fontWeight: '600' }}>네. 동의합니다.</span>
+              </label>
+            </div>
+
+            {/* 12. 초상권 사용 동의 */}
+            <div className="form-group" style={{ marginTop: '20px' }}>
+              <label className="form-label">12. 초상권 및 저작권 사용 동의 <span style={{ color: '#EF4444' }}>*</span></label>
+              <div style={{
+                height: '80px',
+                overflowY: 'scroll',
+                background: 'rgba(0,0,0,0.2)',
+                padding: '12px',
+                borderRadius: '8px',
+                fontSize: '0.8rem',
+                color: 'var(--text-muted)',
+                lineHeight: '1.5',
+                marginBottom: '12px',
+                border: '1px solid var(--border-color)'
+              }}>
+                대회 기간 중 촬영된 사진/영상은 다음 목적에 사용될 수 있음에 동의합니다.<br />
+                • 관련 기관의 홈페이지, SNS, 정산보고서, 팜플렛 및 각종 홍보물 제작 게재 등<br />
+                • 수집 및 이용기관 : 통영시요트협회
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={mediaConsent}
+                  onChange={(e) => setMediaConsent(e.target.checked)}
+                  style={{ width: '18px', height: '18px' }}
+                />
+                <span style={{ fontWeight: '600' }}>네. 동의합니다.</span>
+              </label>
+            </div>
+
+            {regError && (
+              <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#F87171', border: '1px solid #EF4444', padding: '12px', borderRadius: '8px', marginBottom: '20px', fontSize: '0.9rem' }}>
+                {regError}
+              </div>
+            )}
+
+            {regSuccess && (
+              <div style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#34D399', border: '1px solid #10B981', padding: '12px', borderRadius: '8px', marginBottom: '20px', fontSize: '0.9rem' }}>
+                {regSuccess}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="btn-primary"
+              style={{ width: '100%', justifyContent: 'center', marginTop: '30px', padding: '16px', fontSize: '1.05rem' }}
+              disabled={regSubmitting}
+            >
+              {regSubmitting ? '참가 신청 제출 중...' : '신청서 제출 완료'}
+            </button>
+
+            {/* 추가로 하단에 홈페이지 바로가기 버튼 */}
+            <button
+              type="button"
+              onClick={() => {
+                window.location.href = window.location.pathname;
+              }}
+              className="btn-secondary"
+              style={{ width: '100%', justifyContent: 'center', marginTop: '12px', padding: '12px', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '6px', background: '#f8fafc', border: '1px solid var(--border-color)', cursor: 'pointer', borderRadius: '8px' }}
+            >
+              🏠 대회 공식 홈페이지 바로가기
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={themeStyles}>
       
@@ -444,7 +767,6 @@ export default function TenantPortalPage({
           {[
             { id: 'overview', label: '대회 요강', icon: Compass },
             { id: 'notice', label: '개최공시서', icon: FileText, disabled: !ongoingTournament },
-            { id: 'register', label: '참가 신청서 제출', icon: UserPlus, disabled: !ongoingTournament },
             { id: 'leaderboard', label: '실시간 리더보드', icon: Award, disabled: !ongoingTournament },
             { id: 'archive', label: '역대 기록실', icon: Archive, disabled: archivedTournaments.length === 0 },
           ].map((tab) => {
@@ -532,7 +854,7 @@ export default function TenantPortalPage({
             left: 0,
             right: 0,
             bottom: 0,
-            background: 'linear-gradient(180deg, rgba(2, 6, 23, 0.1) 0%, rgba(2, 6, 23, 0.75) 100%)',
+            background: 'linear-gradient(180deg, rgba(2, 6, 23, 0.05) 0%, rgba(2, 6, 23, 0.45) 100%)',
             zIndex: 1,
           }}
         />
@@ -579,7 +901,11 @@ export default function TenantPortalPage({
 
           <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
             <button
-              onClick={() => ongoingTournament && setActiveTab('register')}
+              onClick={() => {
+                if (ongoingTournament) {
+                  window.open(window.location.pathname + '?mode=apply', '_blank');
+                }
+              }}
               className="btn-primary"
               style={{
                 padding: '16px 32px',
@@ -590,7 +916,7 @@ export default function TenantPortalPage({
                 color: '#1b263b',
               }}
             >
-              대회 참가 신청서 작성
+              제출
             </button>
             <button
               onClick={() => ongoingTournament && setActiveTab('leaderboard')}
@@ -1036,9 +1362,34 @@ export default function TenantPortalPage({
           {/* B. 참가 신청서 제출 탭 (네이버 폼 12단계 완벽 재현) */}
           {activeTab === 'register' && ongoingTournament && (
             <div style={{ maxWidth: '650px', margin: '0 auto' }} className="glass-panel">
-              <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '16px', marginBottom: '24px' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: '800' }}>대회 참가 신청서 작성</h2>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '4px' }}>* 표시가 있는 항목은 필수 작성 항목입니다.</p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '16px', marginBottom: '24px' }}>
+                <div>
+                  <h2 style={{ fontSize: '1.5rem', fontWeight: '800' }}>대회 참가 신청서 작성</h2>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '4px' }}>* 표시가 있는 항목은 필수 작성 항목입니다.</p>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(window.location.origin + window.location.pathname + '?mode=apply');
+                      alert('참가 신청서 단독 링크가 클립보드에 복사되었습니다! 다른 분들께 링크를 공유해 보세요.');
+                    }}
+                    className="btn-secondary"
+                    style={{ padding: '8px 12px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', background: '#f8fafc', border: '1px solid var(--border-color)', cursor: 'pointer', borderRadius: '6px' }}
+                  >
+                    🔗 링크 복사
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.open(window.location.pathname + '?mode=apply', '_blank');
+                    }}
+                    className="btn-primary"
+                    style={{ padding: '8px 12px', fontSize: '0.75rem', background: 'var(--theme-primary)', color: 'white', border: 'none', cursor: 'pointer', borderRadius: '6px', fontWeight: '700' }}
+                  >
+                    ↗️ 새창에서 작성
+                  </button>
+                </div>
               </div>
 
               <form onSubmit={handleRegisterSubmit}>
