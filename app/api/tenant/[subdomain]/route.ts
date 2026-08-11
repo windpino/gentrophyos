@@ -18,8 +18,7 @@ export async function GET(
 
     const tournamentsQuery = query(
       collection(firestore, 'tournaments'),
-      where('tenantId', '==', tenantData.id),
-      orderBy('createdAt', 'desc')
+      where('tenantId', '==', tenantData.id)
     );
     const tournamentsSnap = await getDocs(tournamentsQuery);
     const tournaments = tournamentsSnap.docs.map(docSnap => {
@@ -30,7 +29,7 @@ export async function GET(
         endDate: new Date(data.endDate),
         createdAt: new Date(data.createdAt),
       };
-    });
+    }).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
     const tenant = {
       ...tenantData,

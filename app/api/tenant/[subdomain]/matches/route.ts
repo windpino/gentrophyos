@@ -22,13 +22,20 @@ export async function GET(
       const activeTournamentQuery = query(
         collection(firestore, 'tournaments'),
         where('tenantId', '==', tenant.id),
-        where('status', '==', 'ONGOING'),
-        orderBy('createdAt', 'desc'),
-        limit(1)
+        where('status', '==', 'ONGOING')
       );
       const activeTournamentSnap = await getDocs(activeTournamentQuery);
       if (!activeTournamentSnap.empty) {
-        queryTournamentId = activeTournamentSnap.docs[0].id;
+        const activeTours = activeTournamentSnap.docs.map(docSnap => {
+          const data = docSnap.data();
+          return {
+            id: docSnap.id,
+            createdAt: new Date(data.createdAt),
+          };
+        }).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        if (activeTours.length > 0) {
+          queryTournamentId = activeTours[0].id;
+        }
       }
     }
 
@@ -38,8 +45,7 @@ export async function GET(
 
     const matchesQuery = query(
       collection(firestore, 'matches'),
-      where('tournamentId', '==', queryTournamentId),
-      orderBy('createdAt', 'asc')
+      where('tournamentId', '==', queryTournamentId)
     );
     const matchesSnap = await getDocs(matchesQuery);
     const matches = matchesSnap.docs.map(docSnap => {
@@ -49,7 +55,7 @@ export async function GET(
         id: docSnap.id,
         createdAt: new Date(data.createdAt),
       };
-    });
+    }).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
 
     return NextResponse.json({ matches });
   } catch (error: any) {

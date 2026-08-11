@@ -28,14 +28,21 @@ export async function GET(
       const activeTourQuery = query(
         collection(firestore, 'tournaments'),
         where('tenantId', '==', tenant.id),
-        where('status', '==', 'ONGOING'),
-        orderBy('createdAt', 'desc'),
-        limit(1)
+        where('status', '==', 'ONGOING')
       );
       const activeTourSnap = await getDocs(activeTourQuery);
       if (!activeTourSnap.empty) {
-        const docSnap = activeTourSnap.docs[0];
-        tournament = { id: docSnap.id, ...docSnap.data() };
+        const activeTours = activeTourSnap.docs.map(docSnap => {
+          const data = docSnap.data();
+          return {
+            id: docSnap.id,
+            ...data,
+            createdAt: new Date(data.createdAt),
+          };
+        }).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        if (activeTours.length > 0) {
+          tournament = activeTours[0];
+        }
       }
     }
 
@@ -45,11 +52,10 @@ export async function GET(
 
     // 3. 동점자 룰 가져오기
     const rulesQuery = query(
-      collection(firestore, `tournaments/${tournament.id}/tieBreakerRules`),
-      orderBy('priority', 'asc')
+      collection(firestore, `tournaments/${tournament.id}/tieBreakerRules`)
     );
     const rulesSnap = await getDocs(rulesQuery);
-    const rules = rulesSnap.docs.map(docSnap => docSnap.data());
+    const rules = rulesSnap.docs.map(docSnap => docSnap.data()).sort((a: any, b: any) => a.priority - b.priority);
 
     const divisionParam = searchParams.get('division');
 
