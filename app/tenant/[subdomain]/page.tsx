@@ -609,14 +609,14 @@ export default function TenantPortalPage({
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', fontSize: '0.95rem' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <p style={{ margin: 0 }}><strong>대회명 :</strong> 제20회 이순신장군배 전국윈드서핑대회</p>
-                      <p style={{ margin: 0 }}><strong>기간 :</strong> 2026년 9월 5일(토) ~ 6일(일) (1박 2일)</p>
+                      <p style={{ margin: 0 }}><strong>기간 :</strong> 2026년 9월 12일(토) ~ 13일(일) (1박 2일)</p>
                       <p style={{ margin: 0 }}><strong>장소 :</strong> 통영시 산양읍 영운리 수륙마을 수륙해수욕장 일원</p>
-                      <p style={{ margin: 0 }}><strong>참가규모 :</strong> 선착순 130명 한정 조기마감 가능</p>
+                      <p style={{ margin: 0 }}><strong>참가규모 :</strong> 선착순 130명 내외</p>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <p style={{ margin: 0 }}><strong>주최 :</strong> 통영시</p>
-                      <p style={{ margin: 0 }}><strong>주관 :</strong> 통영시요트협회</p>
-                      <p style={{ margin: 0 }}><strong>후원 :</strong> 통영시체육회, 경상남도요트협회</p>
+                      <p style={{ margin: 0 }}><strong>주관 :</strong> 통영시요트협회, 이순신장군배 전국윈드서핑대회 조직위원회</p>
+                      <p style={{ margin: 0 }}><strong>후원 :</strong> 통영시체육회, 경상남도요트협회, 한국윈드서핑협회</p>
                       <p style={{ margin: 0 }}><strong>임시사무실 :</strong> 수륙마을 내 윈드서핑대회장</p>
                     </div>
                   </div>
@@ -632,26 +632,27 @@ export default function TenantPortalPage({
                     {/* 1일차 */}
                     <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
                       <h4 style={{ fontWeight: '800', color: 'var(--theme-primary)', borderBottom: '2px solid var(--theme-primary)', paddingBottom: '8px', marginBottom: '12px', margin: 0 }}>
-                        1일차: 9월 5일 (토)
+                        1일차: 9월 12일 (토)
                       </h4>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.85rem' }}>
-                        <p style={{ margin: 0 }}><strong>10:00 - 12:00 :</strong> 선수등록확인 및 계측</p>
+                        <p style={{ margin: 0 }}><strong>10:00 - 12:00 :</strong> 참가선수 확인 및 등록 / 계측</p>
                         <p style={{ margin: 0 }}><strong>12:00 - 13:00 :</strong> 중식 제공 (대회장)</p>
                         <p style={{ margin: 0 }}><strong>13:00 - 13:30 :</strong> 개회식 (수륙해수욕장 특설무대)</p>
                         <p style={{ margin: 0 }}><strong>14:00 - 18:00 :</strong> 1일차 레이스 (각 종목 코스별)</p>
-                        <p style={{ margin: 0 }}><strong>19:00 - :</strong> 환영의 밤 및 경품 추첨 (통영협회 앞마당)</p>
+                        <p style={{ margin: 0 }}><strong>19:00 - :</strong> 환영식 및 시상식 (환영식 만찬 - 영운마을 물회집)</p>
                       </div>
                     </div>
                     {/* 2일차 */}
                     <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
                       <h4 style={{ fontWeight: '800', color: 'var(--theme-gold)', borderBottom: '2px solid var(--theme-gold)', paddingBottom: '8px', marginBottom: '12px', margin: 0 }}>
-                        2일차: 9월 6일 (일)
+                        2일차: 9월 13일 (일)
                       </h4>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.85rem' }}>
                         <p style={{ margin: 0 }}><strong>10:00 - 12:00 :</strong> 2일차 레이스 (본선)</p>
                         <p style={{ margin: 0 }}><strong>12:00 - 13:00 :</strong> 중식 제공 (대회장)</p>
-                        <p style={{ margin: 0 }}><strong>13:00 - 14:00 :</strong> 2일차 레이스 (단체 클럽 대항전)</p>
-                        <p style={{ margin: 0 }}><strong>16:00 - :</strong> 폐회식, 시상식 및 행운권 추첨</p>
+                        <p style={{ margin: 0 }}><strong>13:00 - 15:00 :</strong> 결선 레이스</p>
+                        <p style={{ margin: 0 }}><strong>15:30 - :</strong> 폐회식, 종합 시상 (영운리 마을회관 앞)</p>
+                        <p style={{ margin: 0 }}><strong>16:30 - :</strong> 해산 및 장비 철수</p>
                       </div>
                     </div>
                   </div>
@@ -680,29 +681,29 @@ export default function TenantPortalPage({
                         <tr>
                           <td style={{ fontWeight: '700' }}>윙포일</td>
                           <td>남자부 / 여자부</td>
-                          <td>각 10명 이내 제한 가능</td>
+                          <td>연령 제한 없음</td>
                         </tr>
                         <tr>
                           <td style={{ fontWeight: '700' }}>혼합 오픈</td>
-                          <td>청년부 / 중년부 / 장년부 / 마스터즈부 / 여자부</td>
-                          <td>남자부의 경우 참가자 연령의 1/4로 균등 분할 편성</td>
+                          <td>남자 청년부 / 남자 중년부 / 남자 장년부 / 여자부</td>
+                          <td>청년부(1987.1.1 이후), 중년부(1977.1.1 ~ 1986.12.31), 장년부(1976.12.31 이전), 여자부(연령 제한 없음)</td>
                         </tr>
                         <tr>
                           <td style={{ fontWeight: '700' }}>펀 & 포뮬러</td>
-                          <td>청년부 / 중년부 / 장년부 / 마스터즈부 / 여자부</td>
-                          <td>남자부의 경우 참가자 연령의 1/4로 균등 분할 편성</td>
+                          <td>남자 청년부 / 남자 중년부 / 남자 장년부 / 여자부</td>
+                          <td>청년부(1987.1.1 이후), 중년부(1977.1.1 ~ 1986.12.31), 장년부(1976.12.31 이전), 여자부(연령 제한 없음)</td>
                         </tr>
                         <tr>
                           <td style={{ fontWeight: '700' }}>단체전</td>
-                          <td>시·도 및 클럽대항전 (4인 1팀)</td>
-                          <td>등록 선수에 한해 참가 가능 (릴레이식 경기 방식)</td>
+                          <td>시·도 및 동호인회 (4인 1팀)</td>
+                          <td>참가선수 4명이 1개 팀으로 하는 릴레이식 경기 방식</td>
                         </tr>
                       </tbody>
                     </table>
                   </div>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '12px', lineHeight: '1.5' }}>
                     <p style={{ margin: 0 }}>※ 단체전을 제외한 종목별 경기의 중복 출전은 불가합니다.</p>
-                    <p style={{ margin: 0 }}>※ 모든 나이 산정 기준일은 <strong>2026년 9월 5일</strong>로 통일하여 계산합니다.</p>
+                    <p style={{ margin: 0 }}>※ 모든 나이 산정 기준일은 <strong>2026년 9월 12일</strong>로 통일하여 계산합니다.</p>
                     <p style={{ margin: 0 }}>※ 각 클래스는 참가선수가 5명 이상 출전 시에만 공식 시상을 진행합니다.</p>
                   </div>
                 </div>
@@ -729,8 +730,8 @@ export default function TenantPortalPage({
                           <td style={{ fontWeight: '700' }}>개인전</td>
                           <td>윈드포일, 윙포일, 혼합 오픈, 펀&포뮬러</td>
                           <td><strong>상장 & 40만 원</strong></td>
-                          <td><strong>상장 & 30만 원</strong></td>
                           <td><strong>상장 & 20만 원</strong></td>
+                          <td><strong>상장 & 10만 원</strong></td>
                           <td>각 클래스 부문별 지급</td>
                         </tr>
                         <tr>
@@ -845,13 +846,13 @@ export default function TenantPortalPage({
                     <p style={{ margin: 0 }}>본 대회의 공식 경기 종목은 다음과 같이 구분하여 시행합니다.</p>
                     <ul style={{ paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '4px', margin: 0 }}>
                       <li><strong>윈드포일 (Wind Foil) :</strong> 남녀오픈 통합 클래스</li>
-                      <li><strong>윙포일 (Wing Foil) :</strong> 남자부 및 여자부 클래스 (각 부 10명 제한 가능)</li>
-                      <li><strong>혼합오픈 (Mixed Open) :</strong> 청년부, 중년부, 장년부, 마스터즈부, 여자부</li>
-                      <li><strong>펀 & 포뮬러 (Fun & Formula) :</strong> 청년부, 중년부, 장년부, 마스터즈부, 여자부</li>
-                      <li><strong>단체전 (Club Relay) :</strong> 시·도 및 클럽대항전 (4인 1팀 릴레이식 범주)</li>
+                      <li><strong>윙포일 (Wing Foil) :</strong> 남자부 및 여자부 클래스</li>
+                      <li><strong>혼합오픈 (Mixed Open) :</strong> 남자 청년부, 남자 중년부, 남자 장년부, 여자부</li>
+                      <li><strong>펀 & 포뮬러 (Fun & Formula) :</strong> 남자 청년부, 남자 중년부, 남자 장년부, 여자부</li>
+                      <li><strong>단체전 (Club Relay) :</strong> 시·도 및 동호인회 (4인 1팀 릴레이식 범주)</li>
                     </ul>
                     <p style={{ color: '#ef4444', fontWeight: '700', margin: 0 }}>※ 단체전을 제외한 개인 종목 간의 중복 출전은 전면 불허합니다.</p>
-                    <p style={{ margin: 0 }}>※ 각 클래스의 연령 구분은 참가자의 실제 생년월일을 기준하여 청년/중년/장년/마스터즈부로 균등 1/4 분할하여 편성합니다. (기준일: 2026년 9월 5일)</p>
+                    <p style={{ margin: 0 }}>※ 남자부 연령 구분은 생년월일을 기준하여 청년부(1987.1.1 이후), 중년부(1977.1.1 ~ 1986.12.31), 장년부(1976.12.31 이전)로 편성하고 여자부는 나이 제한이 없습니다. (나이 산정 기준일: 2026년 9월 12일)</p>
                   </div>
                 </div>
 
@@ -888,7 +889,7 @@ export default function TenantPortalPage({
                   </h3>
                   <div style={{ paddingLeft: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <p style={{ margin: 0 }}>1. 개인전 각 부문 클래스별로 1위~3위까지 공식 상장 및 상금을 수여합니다.</p>
-                    <p style={{ margin: 0 }}>2. <strong>개인전 상금 명세 :</strong> 1위 40만 원, 2위 30만 원, 3위 20만 원</p>
+                    <p style={{ margin: 0 }}>2. <strong>개인전 상금 명세 :</strong> 1위 40만 원, 2위 20만 원, 3위 10만 원</p>
                     <p style={{ margin: 0 }}>3. <strong>단체전 상금 명세 :</strong> 1위 50만 원, 2위 40만 원, 3위 30만 원, 4위 20만 원, 5위 10만 원</p>
                     <p style={{ margin: 0 }}>※ 단, 세부 클래스당 최소 참가 선수가 5명 이상 출전한 부문에 한하여 공식 시상을 진행하며, 5명 미만 시 타 클래스와 통합 또는 시상이 취소될 수 있습니다.</p>
                   </div>
