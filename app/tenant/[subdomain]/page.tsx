@@ -85,7 +85,7 @@ export default function TenantPortalPage({
     ...(tenant?.overviewConfig || {})
   };
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'intro' | 'live' | 'gallery' | 'archive'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'notice' | 'intro' | 'live' | 'gallery' | 'archive'>('overview');
   const [activeSubTab, setActiveSubTab] = useState<string>('');
   const [activeDivisionTab, setActiveDivisionTab] = useState<string>('윈드포일');
   
@@ -766,13 +766,13 @@ export default function TenantPortalPage({
           }}
         >
           {[
-            { id: 'overview', label: '대회 요강', icon: Compass, defaultSubTab: '', disabled: false },
-            { id: 'intro', label: '대회소개', icon: Compass, defaultSubTab: 'intro-greeting', disabled: false },
-            { id: 'live', label: '경기운영 🟢', icon: Award, defaultSubTab: 'live-leaderboard', disabled: !ongoingTournament },
-            { id: 'gallery', label: '미디어 & 갤러리', icon: FileText, defaultSubTab: 'gallery-photos', disabled: false },
-            { id: 'archive', label: '역대 기록관 ⭐', icon: Archive, defaultSubTab: 'archive-home', disabled: false },
+            { id: 'overview', label: '대회 요강', defaultSubTab: '', disabled: false },
+            { id: 'notice', label: '개최공시서', defaultSubTab: '', disabled: false },
+            { id: 'intro', label: '대회소개', defaultSubTab: 'intro-greeting', disabled: false },
+            { id: 'live', label: '경기운영 🟢', defaultSubTab: 'live-leaderboard', disabled: !ongoingTournament },
+            { id: 'gallery', label: '미디어 & 갤러리', defaultSubTab: 'gallery-photos', disabled: false },
+            { id: 'archive', label: '역대 기록관 ⭐', defaultSubTab: 'archive-home', disabled: false },
           ].map((tab) => {
-            const Icon = tab.icon;
             const active = activeTab === tab.id;
             return (
               <button
@@ -800,7 +800,6 @@ export default function TenantPortalPage({
                   transition: 'var(--transition-smooth)',
                 }}
               >
-                <Icon size={16} />
                 {tab.label}
               </button>
             );
@@ -954,7 +953,7 @@ export default function TenantPortalPage({
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px' }}>
 
           {/* 가로형 서브 탭 네비게이션 Pill Bar */}
-          {activeTab !== 'overview' && (
+          {activeTab !== 'overview' && activeTab !== 'notice' && (
             <div style={{
               display: 'flex',
               gap: '10px',
@@ -1069,6 +1068,217 @@ export default function TenantPortalPage({
         {/* 3. 메인 콘텐츠 분기 */}
         <main className="animate-fade-in" style={{ paddingBottom: '100px' }}>
           
+          {/* NOR. 개최공시서 탭 */}
+          {activeTab === 'notice' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {/* 공시서 헤더 */}
+              <div className="glass-panel" style={{ background: 'white', padding: '28px 32px', borderTop: '4px solid var(--theme-primary)' }}>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: '900', textAlign: 'center', color: 'var(--text-main)', marginBottom: '4px' }}>
+                  제20회 이순신장군배 전국윈드서핑대회 개최공시서
+                </h2>
+                <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>Notice of Race (NOR)</p>
+              </div>
+
+              {/* 제1조 총칙 */}
+              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제1조 (총칙)</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7' }}>
+                  <p style={{ margin: 0 }}>1.1 대회명 : 제20회 이순신장군배 전국윈드서핑대회</p>
+                  <p style={{ margin: 0 }}>1.2 주 최 : 통영시</p>
+                  <p style={{ margin: 0 }}>1.3 주 관 : 통영시요트협회 / 사)통영윈드서핑협회 / 통영시윈드서핑연합회</p>
+                  <p style={{ margin: 0 }}>1.4 후 원 : 통영시체육회, 경상남도요트협회, 한국윈드서핑협회</p>
+                  <p style={{ margin: 0 }}>1.5 협 찬 : 모집 중</p>
+                </div>
+              </div>
+
+              {/* 제2조 일정 */}
+              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제2조 (대회 일정)</h3>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
+                    <thead>
+                      <tr style={{ background: '#f1f5f9' }}>
+                        <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', borderBottom: '2px solid #e2e8f0', whiteSpace: 'nowrap' }}>구분</th>
+                        <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', borderBottom: '2px solid #e2e8f0', whiteSpace: 'nowrap' }}>일 자</th>
+                        <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', borderBottom: '2px solid #e2e8f0' }}>주요 내용</th>
+                        <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', borderBottom: '2px solid #e2e8f0', whiteSpace: 'nowrap' }}>장 소</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        { 구분: '참가접수', 일자: '~ 2026.8.27(목) 마감', 내용: '온라인 신청 (네이버폼)', 장소: '온라인' },
+                        { 구분: '전날 준비', 일자: '2026.9.11(금)', 내용: '대회 준비 및 장비 세팅', 장소: '수륙해수욕장' },
+                        { 구분: '1일차', 일자: '2026.9.12(토)', 내용: '등록·계측 / 개회식 / 1일차 레이스 / 환영의 밤', 장소: '수륙해수욕장' },
+                        { 구분: '2일차', 일자: '2026.9.13(일)', 내용: '2일차 레이스 / 결선 / 폐회식 · 시상식', 장소: '수륙해수욕장' },
+                      ].map((row, i) => (
+                        <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          <td style={{ padding: '10px 14px', fontWeight: '700', whiteSpace: 'nowrap' }}>{row.구분}</td>
+                          <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>{row.일자}</td>
+                          <td style={{ padding: '10px 14px' }}>{row.내용}</td>
+                          <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>{row.장소}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* 제3조 경기장 */}
+              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제3조 (경기장 및 시설)</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7' }}>
+                  <p style={{ margin: 0 }}>3.1 경기장 : 통영시 산양읍 영운리 수륙마을 내 수륙해수욕장</p>
+                  <p style={{ margin: 0 }}>3.2 경기 코스 : 수륙해수욕장 앞 해상 (별도 코스 맵 공지)</p>
+                  <p style={{ margin: 0 }}>3.3 운영본부 : 수륙해수욕장 특설 대회본부</p>
+                </div>
+              </div>
+
+              {/* 제4조 참가 자격 */}
+              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제4조 (참가 자격 및 클래스 구분)</h3>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
+                    <thead>
+                      <tr style={{ background: '#f1f5f9' }}>
+                        <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', borderBottom: '2px solid #e2e8f0' }}>종목</th>
+                        <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', borderBottom: '2px solid #e2e8f0' }}>클래스</th>
+                        <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', borderBottom: '2px solid #e2e8f0' }}>비 고</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        { 종목: '윈드포일', 클래스: '일반부 (남/여)', 비고: '남녀 각 10명 제한, 신설종목' },
+                        { 종목: '윈드서핑', 클래스: '일반부 / 중장년부 / 여성부 / 청소년부', 비고: '생년월일 기준 클래스 편성' },
+                        { 종목: '단체전', 클래스: '시·도 클럽별 릴레이 (4명 1팀)', 비고: '2026.9.13(일) 경기 개시 1시간 전 등록' },
+                      ].map((row, i) => (
+                        <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          <td style={{ padding: '10px 14px', fontWeight: '700' }}>{row.종목}</td>
+                          <td style={{ padding: '10px 14px' }}>{row.클래스}</td>
+                          <td style={{ padding: '10px 14px', color: 'var(--text-muted)' }}>{row.비고}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  <p style={{ margin: 0 }}>※ 각 클래스는 선수 5명 이상 출전 시 시상합니다.</p>
+                  <p style={{ margin: 0 }}>※ 단체전을 제외한 종목별 경기의 중복 출전은 불가합니다.</p>
+                  <p style={{ margin: 0 }}>※ 모든 나이는 2026년 9월 12일 기준으로 합니다.</p>
+                </div>
+              </div>
+
+              {/* 제5조 참가 신청 */}
+              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제5조 (참가 신청)</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7' }}>
+                  <p style={{ margin: 0 }}>5.1 접수 기간 : ~ 2026년 8월 27일(목) 마감 (선착순 130명 조기마감 가능)</p>
+                  <p style={{ margin: 0 }}>5.2 신청 방법 : 네이버폼 온라인 신청 또는 본 홈페이지 참가 신청서 제출</p>
+                  <p style={{ margin: 0 }}>5.3 참가 규모 : 총 130명 (선착순)</p>
+                </div>
+              </div>
+
+              {/* 제6조 참가비 */}
+              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제6조 (참가비 및 납부 방법)</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7' }}>
+                  <p style={{ margin: 0 }}>6.1 개인전 참가비 : 선수 접수 등록 후 개별 문자 통지 예정</p>
+                  <p style={{ margin: 0 }}>6.2 단체전 참가비 : 2026.9.13(일) 경기 개시 1시간 전 현장 등록</p>
+                  <p style={{ margin: 0 }}>6.3 납부 방법 : 등록 승인 후 개별 문자로 계좌 안내 → 지정 계좌로 이체</p>
+                  <p style={{ margin: 0 }}>6.4 예금주 : 대회조직위원회</p>
+                </div>
+              </div>
+
+              {/* 제7조 시상 */}
+              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제7조 (공식 시상 및 상금 내역)</h3>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
+                    <thead>
+                      <tr style={{ background: '#f1f5f9' }}>
+                        <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', borderBottom: '2px solid #e2e8f0' }}>종목</th>
+                        <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', borderBottom: '2px solid #e2e8f0' }}>순위</th>
+                        <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', borderBottom: '2px solid #e2e8f0' }}>상금</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        { 종목: '윈드포일 (남/여 각)', 순위: '1위 / 2위 / 3위', 상금: '50만원 / 30만원 / 20만원' },
+                        { 종목: '윈드서핑 일반부 (남/여 각)', 순위: '1위 / 2위 / 3위', 상금: '50만원 / 30만원 / 20만원' },
+                        { 종목: '윈드서핑 중장년부', 순위: '1위 / 2위 / 3위', 상금: '30만원 / 20만원 / 10만원' },
+                        { 종목: '윈드서핑 청소년부', 순위: '1위 / 2위 / 3위', 상금: '30만원 / 20만원 / 10만원' },
+                        { 종목: '단체전 (팀)', 순위: '1위 / 2위 / 3위', 상금: '100만원 / 60만원 / 40만원' },
+                      ].map((row, i) => (
+                        <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          <td style={{ padding: '10px 14px', fontWeight: '700' }}>{row.종목}</td>
+                          <td style={{ padding: '10px 14px' }}>{row.순위}</td>
+                          <td style={{ padding: '10px 14px', color: '#b45309', fontWeight: '700' }}>{row.상금}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p style={{ marginTop: '12px', fontSize: '0.82rem', color: 'var(--text-muted)', margin: '12px 0 0 0' }}>※ 각 클래스 5명 이상 출전 시 시상하며, 미달 시 상위 클래스에 통합하거나 시상을 생략할 수 있습니다.</p>
+              </div>
+
+              {/* 제8조 경기 규칙 */}
+              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제8조 (경기 규칙)</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7' }}>
+                  <p style={{ margin: 0 }}>8.1 본 대회는 한국윈드서핑협회 경기규칙 및 국제세일링연맹(World Sailing)의 레이싱 룰을 적용합니다.</p>
+                  <p style={{ margin: 0 }}>8.2 세부 경기 규정은 대회 당일 경기설명서(Sailing Instructions)에 따릅니다.</p>
+                  <p style={{ margin: 0 }}>8.3 모든 선수는 경기 중 구명동의(라이프자켓)를 반드시 착용하여야 하며 미착용 시 즉시 실격(DSQ) 처리됩니다.</p>
+                  <p style={{ margin: 0, color: '#EF4444', fontWeight: '700' }}>※ 구명동의 착용은 필수입니다. 위반 시 즉시 실격(DSQ).</p>
+                </div>
+              </div>
+
+              {/* 제9조 항의 및 이의신청 */}
+              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제9조 (항의 및 이의신청)</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7' }}>
+                  <p style={{ margin: 0 }}>9.1 항의는 레이싱 룰 Part 5에 따라 처리합니다.</p>
+                  <p style={{ margin: 0 }}>9.2 심판위원회의 결정은 최종이며, 조직위원회의 결정에 이의가 있을 경우 서면으로 제출하여야 합니다.</p>
+                </div>
+              </div>
+
+              {/* 제10조 보험 및 면책 */}
+              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제10조 (보험 및 면책)</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7' }}>
+                  <p style={{ margin: 0 }}>10.1 조직위원회는 대회 기간 중 선수 및 보조 인력에 대한 단체 상해보험에 가입합니다.</p>
+                  <p style={{ margin: 0 }}>10.2 참가자는 본인의 책임 하에 대회에 참가하며, 천재지변·기상악화 등 불가항력에 의한 사고에 대해 조직위원회는 책임을 지지 않습니다.</p>
+                  <p style={{ margin: 0 }}>10.3 장비 파손 및 분실에 대한 책임은 선수 본인에게 있습니다.</p>
+                </div>
+              </div>
+
+              {/* 제11조 기상 및 경기 취소 */}
+              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제11조 (기상 악화 및 경기 취소)</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7' }}>
+                  <p style={{ margin: 0 }}>11.1 기상 악화 시 경기위원장의 판단에 따라 경기를 중단하거나 취소할 수 있습니다.</p>
+                  <p style={{ margin: 0 }}>11.2 최소 1레이스 이상 완료된 경우 성립 대회로 인정하며, 참가비는 환불하지 않습니다.</p>
+                  <p style={{ margin: 0 }}>11.3 대회 전체가 취소될 경우 참가비 환불 여부는 조직위원회의 별도 공지에 따릅니다.</p>
+                </div>
+              </div>
+
+              {/* 제12조 기타 */}
+              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제12조 (기타 사항)</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7' }}>
+                  <p style={{ margin: 0 }}>12.1 중식 및 숙박, 환영의 밤 숙소 배정은 선수 등록자에 한하여 전면 무상 제공됩니다.</p>
+                  <p style={{ margin: 0 }}>12.2 본 공시서에 명시되지 않은 사항은 조직위원회의 결정에 따르며, 대회 규정 변경 시 공지사항을 통해 안내합니다.</p>
+                  <p style={{ margin: 0 }}>12.3 문의처 : 통영윈드서핑협회 전무이사 임병훈 (010-3648-9838), 경기운영위원장 윤혜광</p>
+                </div>
+              </div>
+
+              {/* 경기장 위치 이미지 */}
+              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px', textAlign: 'center' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px' }}>경기장 위치도</h3>
+                <img src="/images/map.png" alt="수륙해수욕장 위치도" style={{ maxWidth: '100%', borderRadius: '10px', border: '1px solid var(--border-color)' }} />
+                <p style={{ marginTop: '10px', fontSize: '0.85rem', color: 'var(--text-muted)', margin: '10px 0 0 0' }}>통영시 산양읍 영운리 수륙마을 내 수륙해수욕장</p>
+              </div>
+            </div>
+          )}
+
           {/* A. 대회 요강 대메뉴 (Notice of Race 통합 및 세련된 연동) */}
           {activeTab === 'overview' && (
             <div style={{ display: 'grid', gridTemplateColumns: '2.2fr 0.8fr', gap: '30px' }}>
