@@ -49,7 +49,12 @@ export default function HostDashboardPage({
   const [tenant, setTenant] = useState<any>(null);
   const [activeTournament, setActiveTournament] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeSection, setActiveSection] = useState<'applicants' | 'tie-breaker' | 'overview' | 'notice'>('applicants');
+  const [activeSection, setActiveSection] = useState<'applicants' | 'tie-breaker' | 'overview' | 'notice' | 'form-builder'>('applicants');
+
+  // 동적 신청서 폼 양식 (폼빌더) 상태
+  const [formFields, setFormFields] = useState<any[]>([]);
+  const [formConfigLoading, setFormConfigLoading] = useState(false);
+  const [formConfigSaving, setFormConfigSaving] = useState(false);
 
   // 스프레드시트 그리드 상태 관리
   const [gridData, setGridData] = useState<GridRow[]>([]);
@@ -176,8 +181,26 @@ export default function HostDashboardPage({
       const ruleRes = await fetch(`/api/tenant/${subdomain}/rules-detail?tournamentId=${tId}`);
       const ruleData = await ruleRes.json();
       setRules(ruleData.rules || []);
+
+      // 3. 신청서 폼 양식 로드
+      await fetchFormConfigs();
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const fetchFormConfigs = async () => {
+    setFormConfigLoading(true);
+    try {
+      const res = await fetch(`/api/tenant/${subdomain}/form-configs`);
+      const data = await res.json();
+      if (data.fields) {
+        setFormFields(data.fields);
+      }
+    } catch (err) {
+      console.error('폼 설정 조회 실패:', err);
+    } finally {
+      setFormConfigLoading(false);
     }
   };
 
@@ -484,6 +507,7 @@ export default function HostDashboardPage({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {[
             { id: 'applicants', label: '참가자관리', icon: Users },
+            { id: 'form-builder', label: '참가신청서 양식 설정', icon: Settings },
             { id: 'tie-breaker', label: '동점자 순위 규칙 설정', icon: Award },
             { id: 'overview', label: '대회 요강 내용 편집', icon: FileText },
             { id: 'notice', label: '개최공시서(NOR) 편집', icon: Layers },
@@ -531,6 +555,7 @@ export default function HostDashboardPage({
           <div>
             <h1 style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '8px' }}>
               {activeSection === 'applicants' ? '참가자관리' : 
+               activeSection === 'form-builder' ? '참가신청서 양식 설정 (폼빌더)' :
                activeSection === 'tie-breaker' ? 'Tie-breaker 가중치 제어기' : 
                activeSection === 'overview' ? '대회 요강 내용 편집기' : '개최공시서(NOR) 편집기'}
             </h1>
@@ -1055,6 +1080,308 @@ export default function HostDashboardPage({
         {activeSection === 'notice' && (
           <NoticeEditor tenant={tenant} subdomain={subdomain} onSaveSuccess={fetchInitialData} />
         )}
+
+        {/* SECTION E: 참가신청서 양식 설정 (폼빌더) */}
+        {activeSection === 'form-builder' && (
+          <div style={{ background: 'var(--bg-card)', padding: '24px', borderRadius: '12px', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}>
+            <div style={{ marginBottom: '20px' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '8px' }}>신청서 질문 양식 구성 (폼빌더)</h2>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
+                참가자가 제출할 양식의 질문과 동의서 내용을 자유롭게 설계할 수 있습니다.<br />
+                <span style={{ color: '#EF4444', fontWeight: '600' }}>⚠️ 주의:</span> <strong>name (성명), birth (생년월일), gender (성별), phone (전화번호), club (소속), division (참가종목), tshirtSize (티셔츠 사이즈)</strong> 필드는 시스템 참가자 리스트와 직결되는 핵심 질문이므로 필드코드를 임의로 변경하지 않도록 유의해주세요.
+              </p>
+            </div>
+
+            {formConfigLoading ? (
+              <div style={{ padding: '40px', textAlign: 'center' }}><RefreshCw className="animate-spin" size={24} /> 로딩 중...</div>
+            ) : (
+              <div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
+                  {formFields.map((field, idx) => (
+                    <div key={idx} style={{
+                      background: 'rgba(255, 255, 255, 0.02)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '8px',
+                      padding: '16px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '12px'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--theme-primary)' }}>Q{idx + 1}.</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (idx === 0) return;
+                              const newFields = [...formFields];
+                              const temp = newFields[idx];
+                              newFields[idx] = newFields[idx - 1];
+                              newFields[idx - 1] = temp;
+                              setFormFields(newFields);
+                            }}
+                            disabled={idx === 0}
+                            style={{ padding: '4px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: idx === 0 ? 'not-allowed' : 'pointer' }}
+                          >
+                            <ArrowUp size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (idx === formFields.length - 1) return;
+                              const newFields = [...formFields];
+                              const temp = newFields[idx];
+                              newFields[idx] = newFields[idx + 1];
+                              newFields[idx + 1] = temp;
+                              setFormFields(newFields);
+                            }}
+                            disabled={idx === formFields.length - 1}
+                            style={{ padding: '4px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: idx === formFields.length - 1 ? 'not-allowed' : 'pointer' }}
+                          >
+                            <ArrowDown size={16} />
+                          </button>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <label style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                            <input
+                              type="checkbox"
+                              checked={!!field.required}
+                              onChange={(e) => {
+                                const newFields = [...formFields];
+                                newFields[idx].required = e.target.checked;
+                                setFormFields(newFields);
+                              }}
+                            />
+                            <span>필수 입력</span>
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm('이 질문을 삭제하시겠습니까?')) {
+                                const newFields = formFields.filter((_, i) => i !== idx);
+                                setFormFields(newFields);
+                              }
+                            }}
+                            style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', background: 'rgba(239, 68, 68, 0.1)', color: '#F87171', border: '1px solid #EF4444', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem' }}
+                          >
+                            <Trash2 size={12} /> 삭제
+                          </button>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                        <div>
+                          <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>필드코드 (영문 ID)</label>
+                          <input
+                            type="text"
+                            value={field.id || ''}
+                            onChange={(e) => {
+                              const newFields = [...formFields];
+                              newFields[idx].id = e.target.value;
+                              setFormFields(newFields);
+                            }}
+                            style={{ width: '100%', padding: '8px 12px', background: 'rgba(0,0,0,0.1)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'white' }}
+                            placeholder="예: name, phone 등"
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>질문 항목 이름 (라벨)</label>
+                          <input
+                            type="text"
+                            value={field.label || ''}
+                            onChange={(e) => {
+                              const newFields = [...formFields];
+                              newFields[idx].label = e.target.value;
+                              setFormFields(newFields);
+                            }}
+                            style={{ width: '100%', padding: '8px 12px', background: 'rgba(0,0,0,0.1)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'white' }}
+                            placeholder="예: 1. 성명"
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>입력 양식 타입 (유형)</label>
+                          <select
+                            value={field.type || 'text'}
+                            onChange={(e) => {
+                              const newFields = [...formFields];
+                              newFields[idx].type = e.target.value;
+                              setFormFields(newFields);
+                            }}
+                            style={{ width: '100%', padding: '8px 12px', background: 'rgba(0,0,0,0.1)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'black' }}
+                          >
+                            <option value="text">Text (한줄 입력)</option>
+                            <option value="radio">Radio (점선택)</option>
+                            <option value="checkbox">Checkbox (동의 체크박스)</option>
+                            <option value="textarea">Textarea (여러줄 설명/동의문구)</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* 타입별 상세 설정 */}
+                      {field.type === 'text' && (
+                        <div>
+                          <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>플레이스홀더 (Placeholder)</label>
+                          <input
+                            type="text"
+                            value={field.placeholder || ''}
+                            onChange={(e) => {
+                              const newFields = [...formFields];
+                              newFields[idx].placeholder = e.target.value;
+                              setFormFields(newFields);
+                            }}
+                            style={{ width: '100%', padding: '8px 12px', background: 'rgba(0,0,0,0.1)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'white' }}
+                            placeholder="입력창 힌트 문구"
+                          />
+                        </div>
+                      )}
+
+                      {field.type === 'radio' && (
+                        <div>
+                          <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>선택 항목 옵션 목록 (쉼표로 구분)</label>
+                          <input
+                            type="text"
+                            value={field.options ? field.options.join(', ') : ''}
+                            onChange={(e) => {
+                              const newFields = [...formFields];
+                              newFields[idx].options = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+                              setFormFields(newFields);
+                            }}
+                            style={{ width: '100%', padding: '8px 12px', background: 'rgba(0,0,0,0.1)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'white' }}
+                            placeholder="예: 남자, 여자 또는 S (95), M (100), L (105)"
+                          />
+                        </div>
+                      )}
+
+                      {field.type === 'checkbox' && (
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                          <div>
+                            <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>부가 안내/설명 문구 (선택)</label>
+                            <input
+                              type="text"
+                              value={field.notice || ''}
+                              onChange={(e) => {
+                                const newFields = [...formFields];
+                                newFields[idx].notice = e.target.value;
+                                setFormFields(newFields);
+                              }}
+                              style={{ width: '100%', padding: '8px 12px', background: 'rgba(0,0,0,0.1)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'white' }}
+                              placeholder="체크박스 위 설명 문구"
+                            />
+                          </div>
+                          <div>
+                            <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>체크 동의 라벨 (예: 네. 확인했습니다.)</label>
+                            <input
+                              type="text"
+                              value={field.agreeLabel || ''}
+                              onChange={(e) => {
+                                const newFields = [...formFields];
+                                newFields[idx].agreeLabel = e.target.value;
+                                setFormFields(newFields);
+                              }}
+                              style={{ width: '100%', padding: '8px 12px', background: 'rgba(0,0,0,0.1)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'white' }}
+                              placeholder="동의 버튼 라벨 문구"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {field.type === 'textarea' && (
+                        <div>
+                          <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>약관 및 면책 동의 원문 내용</label>
+                          <textarea
+                            value={field.textareaContent || ''}
+                            onChange={(e) => {
+                              const newFields = [...formFields];
+                              newFields[idx].textareaContent = e.target.value;
+                              setFormFields(newFields);
+                            }}
+                            rows={3}
+                            style={{ width: '100%', padding: '8px 12px', background: 'rgba(0,0,0,0.1)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'white', fontFamily: 'inherit', resize: 'vertical' }}
+                            placeholder="참가자에게 동의를 구하는 상세 텍스트 정보 입력"
+                          />
+                          <div style={{ marginTop: '8px' }}>
+                            <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>체크 동의 라벨 (예: 네. 동의합니다.)</label>
+                            <input
+                              type="text"
+                              value={field.agreeLabel || ''}
+                              onChange={(e) => {
+                                const newFields = [...formFields];
+                                newFields[idx].agreeLabel = e.target.value;
+                                setFormFields(newFields);
+                              }}
+                              style={{ width: '100%', padding: '8px 12px', background: 'rgba(0,0,0,0.1)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'white' }}
+                              placeholder="동의 버튼 라벨 문구"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newFields = [...formFields, {
+                        id: `custom_${Date.now().toString().slice(-4)}`,
+                        label: '새 질문 항목',
+                        type: 'text',
+                        required: false,
+                        placeholder: ''
+                      }];
+                      setFormFields(newFields);
+                    }}
+                    className="btn-secondary"
+                    style={{ padding: '10px 18px', display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--border-color)', borderRadius: '8px', cursor: 'pointer' }}
+                  >
+                    <Plus size={16} /> 새 질문 추가
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const ids = formFields.map(f => f.id);
+                      const hasDuplicates = ids.some((val, i) => ids.indexOf(val) !== i);
+                      if (hasDuplicates) {
+                        alert('동일한 필드코드(영문 ID)가 존재합니다. 질문간의 코드는 고유해야 합니다.');
+                        return;
+                      }
+
+                      setFormConfigSaving(true);
+                      try {
+                        const res = await fetch(`/api/tenant/${subdomain}/form-configs`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ fields: formFields }),
+                        });
+                        if (res.ok) {
+                          alert('참가신청서 양식이 성공적으로 저장되었습니다!');
+                          await fetchFormConfigs();
+                        } else {
+                          const errData = await res.json();
+                          alert(`저장 실패: ${errData.error || '알 수 없는 오류'}`);
+                        }
+                      } catch (err: any) {
+                        alert(`저장 중 오류 발생: ${err.message}`);
+                      } finally {
+                        setFormConfigSaving(false);
+                      }
+                    }}
+                    className="btn-primary"
+                    disabled={formConfigSaving}
+                    style={{ padding: '10px 20px', display: 'flex', alignItems: 'center', gap: '6px', borderRadius: '8px', cursor: 'pointer', background: 'var(--theme-primary)', border: 'none', color: 'white', fontWeight: '700' }}
+                  >
+                    <Save size={16} /> {formConfigSaving ? '저장 중...' : '폼 양식 설정 저장'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </main>
 
       {/* 3. 참가 신청서 원본 복제형 상세 뷰 모달 (12단계 네이버 폼 정보 정밀 복사) */}
@@ -1063,20 +1390,13 @@ export default function HostDashboardPage({
         const rawReg = rawRegistrations.find(r => r.id === selectedReg.id);
         let email = 'info@gentrophy.com';
         let birthDate = '19900815'; // 기본 목데이터
-        let agree1 = true;
-        let agree2 = true;
-        let agree3 = true;
-        let agree4 = true;
+        let parsedResponses: Record<string, any> = {};
 
         if (rawReg && rawReg.formResponses) {
           try {
-            const parsed = JSON.parse(rawReg.formResponses);
-            email = parsed.email || 'info@gentrophy.com';
-            birthDate = parsed.birth || parsed.birthDate || '19900815';
-            agree1 = parsed.privacyAgreed !== false;
-            agree2 = parsed.portraitAgreed !== false;
-            agree3 = parsed.liabilityAgreed !== false;
-            agree4 = parsed.feeAgreed !== false;
+            parsedResponses = JSON.parse(rawReg.formResponses);
+            email = parsedResponses.email || 'info@gentrophy.com';
+            birthDate = parsedResponses.birth || parsedResponses.birthDate || '19900815';
           } catch(e) {
             // 파싱오류 시 기본 데이터 유지
           }
@@ -1203,101 +1523,53 @@ export default function HostDashboardPage({
 
                 <div style={{ borderTop: '1px dashed var(--border-color)', margin: '10px 0' }} />
 
-                {/* 9 ~ 12단계 약관 동의 및 준수 서약서 리스트 */}
+                {/* 질문 항목 및 응답 리스트 */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                  
-                  {/* 9단계: 개인정보 활용 */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <span style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-main)' }}>9. 개인정보 수집 및 이용 동의</span>
-                    <div style={{
-                      padding: '10px 14px',
-                      background: '#f8fafc',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '8px',
-                      fontSize: '0.8rem',
-                      color: 'var(--text-muted)',
-                      maxHeight: '60px',
-                      overflowY: 'auto'
-                    }}>
-                      이순신장군배 대회조직위원회는 참가자 식별, 연락, 보험 가입 및 기록 관리를 위해 성명, 생년월일, 연락처, 이메일 등의 개인정보를 수집하며 대회가 종료된 후 관계 법령에 따라 파기합니다.
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
-                      <input type="checkbox" checked={agree1} readOnly style={{ accentColor: 'var(--theme-primary)' }} />
-                      <span style={{ fontSize: '0.85rem', fontWeight: '700', color: agree1 ? '#10B981' : '#EF4444' }}>
-                        {agree1 ? '동의함 (제출 완료)' : '미동의'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* 10단계: 초상권 동의 */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <span style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-main)' }}>10. 초상권 사용 및 홍보 활용 동의</span>
-                    <div style={{
-                      padding: '10px 14px',
-                      background: '#f8fafc',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '8px',
-                      fontSize: '0.8rem',
-                      color: 'var(--text-muted)',
-                      maxHeight: '60px',
-                      overflowY: 'auto'
-                    }}>
-                      대회 중 촬영된 영상, 사진 등의 미디어는 주최사 및 언론사, GenTrophy 플랫폼에서 아카이브, 보도자료, 홈페이지 홍보 목적으로 영구히 자유롭게 사용할 수 있습니다.
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
-                      <input type="checkbox" checked={agree2} readOnly style={{ accentColor: 'var(--theme-primary)' }} />
-                      <span style={{ fontSize: '0.85rem', fontWeight: '700', color: agree2 ? '#10B981' : '#EF4444' }}>
-                        {agree2 ? '동의함 (제출 완료)' : '미동의'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* 11단계: 안전 사고 면책 */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <span style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-main)' }}>11. 안전 사고 면책 및 준수 서약서</span>
-                    <div style={{
-                      padding: '10px 14px',
-                      background: '#f8fafc',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '8px',
-                      fontSize: '0.8rem',
-                      color: 'var(--text-muted)',
-                      maxHeight: '60px',
-                      overflowY: 'auto'
-                    }}>
-                      본 참가자는 대회 중 개인의 과실, 자연재해 등으로 발생하는 사고 및 장비 훼손에 대해 주최사 및 GenTrophy 측에 일체의 배상을 청구하지 않을 것이며, 경기 규정을 철저히 준수할 것을 서약합니다.
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
-                      <input type="checkbox" checked={agree3} readOnly style={{ accentColor: 'var(--theme-primary)' }} />
-                      <span style={{ fontSize: '0.85rem', fontWeight: '700', color: agree3 ? '#10B981' : '#EF4444' }}>
-                        {agree3 ? '동의함 (제출 완료)' : '미동의'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* 12단계: 환불 규정 및 참가비 확인 */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <span style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-main)' }}>12. 참가비 납부 및 환불 규정 확인</span>
-                    <div style={{
-                      padding: '10px 14px',
-                      background: '#f8fafc',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '8px',
-                      fontSize: '0.8rem',
-                      color: 'var(--text-muted)',
-                      maxHeight: '60px',
-                      overflowY: 'auto'
-                    }}>
-                      참가비(50,000원) 미납 시 접수가 승인되지 않으며, 대회 공식 접수 기간 마감일 3일 전 이후에는 취소 및 환불이 불가능함을 확인하고 이에 동의합니다.
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
-                      <input type="checkbox" checked={agree4} readOnly style={{ accentColor: 'var(--theme-primary)' }} />
-                      <span style={{ fontSize: '0.85rem', fontWeight: '700', color: agree4 ? '#10B981' : '#EF4444' }}>
-                        {agree4 ? '동의함 (제출 완료)' : '미동의'}
-                      </span>
-                    </div>
-                  </div>
-
+                  {formFields.map((field) => {
+                    // 기본 필수 인적사항은 이미 위 그리드 영역에서 표시했으므로 생략
+                    if (['name', 'birth', 'gender', 'phone', 'club', 'division', 'tshirtSize'].includes(field.id)) {
+                      return null;
+                    }
+                    const answer = parsedResponses[field.id];
+                    return (
+                      <div key={field.id} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <span style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-main)' }}>{field.label}</span>
+                        {field.textareaContent && (
+                          <div style={{
+                            padding: '10px 14px',
+                            background: '#f8fafc',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '8px',
+                            fontSize: '0.8rem',
+                            color: 'var(--text-muted)',
+                            maxHeight: '60px',
+                            overflowY: 'auto'
+                          }}>
+                            {field.textareaContent}
+                          </div>
+                        )}
+                        {field.notice && (
+                          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
+                            {field.notice}
+                          </p>
+                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                          {field.type === 'checkbox' || field.type === 'textarea' ? (
+                            <>
+                              <input type="checkbox" checked={!!answer} readOnly style={{ accentColor: 'var(--theme-primary)' }} />
+                              <span style={{ fontSize: '0.85rem', fontWeight: '700', color: answer ? '#10B981' : '#EF4444' }}>
+                                {answer ? `${answer} (완료)` : '미동의/미확인'}
+                              </span>
+                            </>
+                          ) : (
+                            <p style={{ fontSize: '0.95rem', fontWeight: '600', margin: 0, color: 'var(--theme-primary)' }}>
+                              {answer || '미입력'}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
 
               </div>

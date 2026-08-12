@@ -109,26 +109,61 @@ export default function TenantPortalPage({
   const [archiveMatches, setArchiveMatches] = useState<Match[]>([]);
   const [archiveLoading, setArchiveLoading] = useState(false);
 
-  // 12단계 신청서 폼 상태
-  const [applicantName, setApplicantName] = useState('');
-  const [applicantBirth, setApplicantBirth] = useState(''); // 8자리 숫자
-  const [applicantGender, setApplicantGender] = useState('남자');
-  const [applicantPhone, setApplicantPhone] = useState('');
-  const [applicantClub, setApplicantClub] = useState('');
-  const [applicantDivision, setApplicantDivision] = useState('윈드포일 (남자부)');
-  const [applicantTshirt, setApplicantTshirt] = useState('L (105)');
-  
-  // 5가지 체크 동의
-  const [vestAgreement, setVestAgreement] = useState(false);
-  const [paymentNoticeAgreement, setPaymentNoticeAgreement] = useState(false);
-  const [liabilityWaiver, setLiabilityWaiver] = useState(false);
-  const [privacyConsent, setPrivacyConsent] = useState(false);
-  const [mediaConsent, setMediaConsent] = useState(false);
+  // 동적 참가신청서 양식 및 제출 응답 상태
+  const [formFields, setFormFields] = useState<any[]>([]);
+  const [formResponses, setFormResponses] = useState<Record<string, any>>({
+    gender: '남자',
+    division: '윈드포일 (남자부)',
+    tshirtSize: 'L (105)'
+  });
 
   const [regSuccess, setRegSuccess] = useState('');
   const [regError, setRegError] = useState('');
   const [regSubmitting, setRegSubmitting] = useState(false);
   const [uniqueClubs, setUniqueClubs] = useState<string[]>([]);
+
+  // 동적 신청서 폼 설정 로드 및 입력 데이터 핸들러
+  useEffect(() => {
+    if (!subdomain) return;
+    const fetchFormConfigs = async () => {
+      try {
+        const res = await fetch(`/api/tenant/${subdomain}/form-configs`);
+        const data = await res.json();
+        if (data.fields) {
+          setFormFields(data.fields);
+          
+          // 기본 필드 설정
+          const initialResponses: Record<string, any> = {};
+          data.fields.forEach((f: any) => {
+            if (f.type === 'radio') {
+              initialResponses[f.id] = (f.options && f.options.length > 0) ? f.options[0] : '';
+            } else if (f.type === 'checkbox' || f.type === 'textarea') {
+              initialResponses[f.id] = '';
+            } else {
+              initialResponses[f.id] = '';
+            }
+          });
+          
+          // 필수 기본값 보완
+          if (initialResponses.gender === undefined) initialResponses.gender = '남자';
+          if (initialResponses.division === undefined) initialResponses.division = '윈드포일 (남자부)';
+          if (initialResponses.tshirtSize === undefined) initialResponses.tshirtSize = 'L (105)';
+
+          setFormResponses(initialResponses);
+        }
+      } catch (err) {
+        console.error('신청서 폼 양식 로드 실패:', err);
+      }
+    };
+    fetchFormConfigs();
+  }, [subdomain]);
+
+  const handleInputChange = (fieldId: string, value: any) => {
+    setFormResponses(prev => ({
+      ...prev,
+      [fieldId]: value
+    }));
+  };
 
   // 데이터 로딩
   useEffect(() => {
@@ -294,51 +329,38 @@ export default function TenantPortalPage({
     }
   };
 
-  // 12단계 참가 신청서 제출 로직
+  // 동적 참가 신청서 제출 로직
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setRegSuccess('');
     setRegError('');
 
-    // 유효성 및 동의여부 검사
-    if (!applicantName.trim()) return setRegError('성명을 입력해 주세요.');
-    if (!/^\d{8}$/.test(applicantBirth)) return setRegError('생년월일 8자리를 정확히 입력해 주세요. (예: 19950815)');
-    if (!applicantPhone.trim()) return setRegError('전화번호를 입력해 주세요.');
-    if (!applicantClub.trim()) return setRegError('소속협회 또는 클럽을 기입해 주세요.');
-    
-    // 필수 동의사항 체크 확인
-    if (!vestAgreement) return setRegError('조끼(배번티) 수령 동의는 필수입니다.');
-    if (!paymentNoticeAgreement) return setRegError('입금 안내 확인 동의는 필수입니다.');
-    if (!liabilityWaiver) return setRegError('면책 동의서 서약 동의는 필수입니다.');
-    if (!privacyConsent) return setRegError('개인정보 수집 동의는 필수입니다.');
-    if (!mediaConsent) return setRegError('초상권 및 저작권 사용 동의는 필수입니다.');
+    // 필수 및 유효성 검사
+    for (const field of formFields) {
+      const val = formResponses[field.id];
+      if (field.required && (!val || (typeof val === 'string' && !val.trim()))) {
+        return setRegError(`'${field.label.replace(/^\d+\.\s*/, '')}' 항목은 필수입니다.`);
+      }
+    }
+
+    if (formResponses.birth && !/^\d{8}$/.test(formResponses.birth)) {
+      return setRegError('생년월일 8자리를 정확히 입력해 주세요. (예: 19950815)');
+    }
 
     setRegSubmitting(true);
 
     try {
-      // 12단계 응답 JSON 구조 조립
-      const formResponses = {
-        birth: applicantBirth,
-        gender: applicantGender,
-        phone: applicantPhone,
-        club: applicantClub,
-        division: applicantDivision,
-        tshirtSize: applicantTshirt,
-        vestAgreement: '네. 확인했습니다.',
-        paymentNoticeAgreement: '네. 확인했습니다.',
-        liabilityWaiver: '네. 동의합니다.',
-        privacyConsent: '네. 동의합니다.',
-        mediaConsent: '네. 동의합니다.',
-      };
+      const name = formResponses.name || '';
+      const phone = formResponses.phone || '';
 
       const res = await fetch(`/api/tenant/${subdomain}/registrations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tournamentId: activeTournamentId,
-          name: applicantName,
-          email: `${applicantName.toLowerCase()}@windsurfing.com`, // 간이 생성
-          phone: applicantPhone,
+          name,
+          email: `${name.toLowerCase()}@windsurfing.com`, // 간이 생성
+          phone,
           formResponses,
         }),
       });
@@ -351,18 +373,20 @@ export default function TenantPortalPage({
       setRegSuccess('참가 신청서가 성공적으로 제출되었습니다! 주최측에서 확인 후 문자로 입금계좌를 안내해 드립니다.');
       
       // 폼 초기화
-      setApplicantName('');
-      setApplicantBirth('');
-      setApplicantPhone('');
-      setApplicantClub('');
-      setApplicantGender('남자');
-      setApplicantDivision('윈드포일 (남자부)');
-      setApplicantTshirt('L (105)');
-      setVestAgreement(false);
-      setPaymentNoticeAgreement(false);
-      setLiabilityWaiver(false);
-      setPrivacyConsent(false);
-      setMediaConsent(false);
+      const resetResponses: Record<string, any> = {};
+      formFields.forEach((f: any) => {
+        if (f.type === 'radio') {
+          resetResponses[f.id] = (f.options && f.options.length > 0) ? f.options[0] : '';
+        } else {
+          resetResponses[f.id] = '';
+        }
+      });
+      // 필수 기본값 복구
+      resetResponses.gender = '남자';
+      resetResponses.division = '윈드포일 (남자부)';
+      resetResponses.tshirtSize = 'L (105)';
+
+      setFormResponses(resetResponses);
     } catch (err: any) {
       setRegError(err.message);
     } finally {
@@ -492,255 +516,134 @@ export default function TenantPortalPage({
           </div>
 
           <form onSubmit={handleRegisterSubmit}>
-            {/* 1. 성명 */}
-            <div className="form-group">
-              <label className="form-label">1. 성명 <span style={{ color: '#EF4444' }}>*</span></label>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="실명을 입력해 주세요."
-                value={applicantName}
-                onChange={(e) => setApplicantName(e.target.value)}
-                required
-              />
-            </div>
-
-            {/* 2. 생년월일 */}
-            <div className="form-group">
-              <label className="form-label">2. 생년월일 (8자리) 예) 19450815 <span style={{ color: '#EF4444' }}>*</span></label>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="예) 19901024"
-                value={applicantBirth}
-                onChange={(e) => setApplicantBirth(e.target.value)}
-                required
-              />
-            </div>
-
-            {/* 3. 성별 */}
-            <div className="form-group">
-              <label className="form-label">3. 성별 <span style={{ color: '#EF4444' }}>*</span></label>
-              <div style={{ display: 'flex', gap: '20px', marginTop: '8px' }}>
-                {['남자', '여자'].map((g) => (
-                  <label key={g} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+            {formFields.map((field) => {
+              if (field.type === 'text') {
+                return (
+                  <div className="form-group" key={field.id}>
+                    <label className="form-label">{field.label} {field.required && <span style={{ color: '#EF4444' }}>*</span>}</label>
                     <input
-                      type="radio"
-                      name="gender_select_apply"
-                      value={g}
-                      checked={applicantGender === g}
-                      onChange={(e) => {
-                        const newGender = e.target.value;
-                        setApplicantGender(newGender);
-                        if (newGender === '남자') {
-                          setApplicantDivision('윈드포일 (남자부)');
-                        } else {
-                          setApplicantDivision('윈드포일 (여자부)');
-                        }
-                      }}
-                      style={{ width: '18px', height: '18px' }}
+                      type={field.id === 'phone' ? 'tel' : 'text'}
+                      className="form-input"
+                      placeholder={field.placeholder || ''}
+                      value={formResponses[field.id] || ''}
+                      onChange={(e) => handleInputChange(field.id, e.target.value)}
+                      required={field.required}
                     />
-                    <span>{g}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* 4. 전화번호 */}
-            <div className="form-group">
-              <label className="form-label">4. 전화번호 (휴대폰번호) <span style={{ color: '#EF4444' }}>*</span></label>
-              <input
-                type="tel"
-                className="form-input"
-                placeholder="예) 01012345678"
-                value={applicantPhone}
-                onChange={(e) => setApplicantPhone(e.target.value)}
-                required
-              />
-            </div>
-
-            {/* 5. 소속협회 또는 클럽 */}
-            <div className="form-group">
-              <label className="form-label">5. 소속협회 또는 클럽 <span style={{ color: '#EF4444' }}>*</span></label>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="소속 단체명을 입력해 주세요."
-                value={applicantClub}
-                onChange={(e) => setApplicantClub(e.target.value)}
-                required
-              />
-            </div>
-
-            {/* 6. 참가종목 */}
-            <div className="form-group">
-              <label className="form-label">6. 참가종목 <span style={{ color: '#EF4444' }}>*</span></label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '8px' }}>
-                {(applicantGender === '남자' 
-                  ? ['윈드포일 (남자부)', '윙포일 (남자부)', '혼합오픈 (남자부)', '펀엔포뮬러 (남자부)']
-                  : ['윈드포일 (여자부)', '윙포일 (여자부)', '혼합오픈 (여자부)', '펀엔포뮬러 (여자부)']
-                ).map((divOption) => (
-                  <label key={divOption} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.95rem', fontWeight: '500' }}>
-                    <input
-                      type="radio"
-                      name="division_select_apply"
-                      value={divOption}
-                      checked={applicantDivision === divOption}
-                      onChange={(e) => setApplicantDivision(e.target.value)}
-                      style={{ width: '18px', height: '18px' }}
-                    />
-                    <span>{divOption}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* 7. 티셔츠 사이즈 */}
-            <div className="form-group">
-              <label className="form-label">7. 티셔츠(기념품)사이즈 <span style={{ color: '#EF4444' }}>*</span></label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginTop: '8px' }}>
-                {['S (95)', 'M (100)', 'L (105)', 'XL (110)'].map((szOption) => (
-                  <label key={szOption} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.95rem', fontWeight: '500' }}>
-                    <input
-                      type="radio"
-                      name="tshirt_select_apply"
-                      value={szOption}
-                      checked={applicantTshirt === szOption}
-                      onChange={(e) => setApplicantTshirt(e.target.value)}
-                      style={{ width: '18px', height: '18px' }}
-                    />
-                    <span>{szOption}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* 8. 조끼 배번티 수령 동의 */}
-            <div className="form-group" style={{ background: 'rgba(255,255,255,0.01)', padding: '16px', borderRadius: '10px', border: '1px solid var(--border-color)', marginTop: '16px' }}>
-              <label className="form-label" style={{ fontWeight: '600', color: 'var(--text-main)' }}>
-                8. 당일 대회본부에 조끼(배번티)를 반드시 수령하셔야 합니다. <span style={{ color: '#EF4444' }}>*</span>
-              </label>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
-                • 대회운영본부 수령 필수 (사용 후 반드시 반납바랍니다)
-              </p>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={vestAgreement}
-                  onChange={(e) => setVestAgreement(e.target.checked)}
-                  style={{ width: '18px', height: '18px' }}
-                />
-                <span style={{ fontWeight: '600' }}>네. 확인했습니다.</span>
-              </label>
-            </div>
-
-            {/* 9. 입금안내 확인 동의 */}
-            <div className="form-group" style={{ background: 'rgba(255,255,255,0.01)', padding: '16px', borderRadius: '10px', border: '1px solid var(--border-color)', marginTop: '16px' }}>
-              <label className="form-label" style={{ fontWeight: '600', color: 'var(--text-main)' }}>
-                9. 참가비 입금 안내 확인 동의 <span style={{ color: '#EF4444' }}>*</span>
-              </label>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
-                • 선착순 선수등록 처리 후 130명 마감 시 계좌는 개별 문자 통지합니다.
-              </p>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={paymentNoticeAgreement}
-                  onChange={(e) => setPaymentNoticeAgreement(e.target.checked)}
-                  style={{ width: '18px', height: '18px' }}
-                />
-                <span style={{ fontWeight: '600' }}>네. 확인했습니다.</span>
-              </label>
-            </div>
-
-            {/* 10. 면책 서약서 동의 */}
-            <div className="form-group" style={{ marginTop: '24px' }}>
-              <label className="form-label">10. 면책 동의서 서약에 동의합니다. <span style={{ color: '#EF4444' }}>*</span></label>
-              <div style={{
-                height: '100px',
-                overflowY: 'scroll',
-                background: 'rgba(0,0,0,0.2)',
-                padding: '12px',
-                borderRadius: '8px',
-                fontSize: '0.8rem',
-                color: 'var(--text-muted)',
-                lineHeight: '1.5',
-                marginBottom: '12px',
-                border: '1px solid var(--border-color)'
-              }}>
-                본인은 제20회 이순신장군배 전국윈드서핑대회 참가 활동 중 본인의 부주의로 인해 발생할 수 있는 사고, 즉 개인적 부상, 재산상 피해, 의학적인 사고 등 대회기간 중 발생한 사고에 대한 책임은 본인의 자의적인 참가에 의한 본인의 책임이며, 본 대회를 주관하는 관계자 및 기관에 대한 면책은 물론 책임전가를 하지 않을 것을 서약합니다.
-              </div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={liabilityWaiver}
-                  onChange={(e) => setLiabilityWaiver(e.target.checked)}
-                  style={{ width: '18px', height: '18px' }}
-                />
-                <span style={{ fontWeight: '600' }}>네. 동의합니다.</span>
-              </label>
-            </div>
-
-            {/* 11. 개인정보 수집 동의 */}
-            <div className="form-group" style={{ marginTop: '20px' }}>
-              <label className="form-label">11. 개인정보 수집에 동의합니다. <span style={{ color: '#EF4444' }}>*</span></label>
-              <div style={{
-                height: '80px',
-                overflowY: 'scroll',
-                background: 'rgba(0,0,0,0.2)',
-                padding: '12px',
-                borderRadius: '8px',
-                fontSize: '0.8rem',
-                color: 'var(--text-muted)',
-                lineHeight: '1.5',
-                marginBottom: '12px',
-                border: '1px solid var(--border-color)'
-              }}>
-                • 정보수집 및 이용기관 : 통영시요트협회<br />
-                • 수집 정보 : 성명, 생년월일, 전화번호, 이메일, 소속 단체<br />
-                • 수집 목적 : 참가자 관리 및 보험가입, 대회 공지 전송 등<br />
-                • 보존 기간 : 대회 정산 이후 즉시 폐기합니다.
-              </div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={privacyConsent}
-                  onChange={(e) => setPrivacyConsent(e.target.checked)}
-                  style={{ width: '18px', height: '18px' }}
-                />
-                <span style={{ fontWeight: '600' }}>네. 동의합니다.</span>
-              </label>
-            </div>
-
-            {/* 12. 초상권 사용 동의 */}
-            <div className="form-group" style={{ marginTop: '20px' }}>
-              <label className="form-label">12. 초상권 및 저작권 사용 동의 <span style={{ color: '#EF4444' }}>*</span></label>
-              <div style={{
-                height: '80px',
-                overflowY: 'scroll',
-                background: 'rgba(0,0,0,0.2)',
-                padding: '12px',
-                borderRadius: '8px',
-                fontSize: '0.8rem',
-                color: 'var(--text-muted)',
-                lineHeight: '1.5',
-                marginBottom: '12px',
-                border: '1px solid var(--border-color)'
-              }}>
-                대회 기간 중 촬영된 사진/영상은 다음 목적에 사용될 수 있음에 동의합니다.<br />
-                • 관련 기관의 홈페이지, SNS, 정산보고서, 팜플렛 및 각종 홍보물 제작 게재 등<br />
-                • 수집 및 이용기관 : 통영시요트협회
-              </div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={mediaConsent}
-                  onChange={(e) => setMediaConsent(e.target.checked)}
-                  style={{ width: '18px', height: '18px' }}
-                />
-                <span style={{ fontWeight: '600' }}>네. 동의합니다.</span>
-              </label>
-            </div>
+                  </div>
+                );
+              }
+              if (field.type === 'radio') {
+                return (
+                  <div className="form-group" key={field.id}>
+                    <label className="form-label">{field.label} {field.required && <span style={{ color: '#EF4444' }}>*</span>}</label>
+                    {field.id === 'division' ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '8px' }}>
+                        {(formResponses['gender'] === '여자'
+                          ? ['윈드포일 (여자부)', '윙포일 (여자부)', '혼합오픈 (여자부)', '펀엔포뮬러 (여자부)']
+                          : ['윈드포일 (남자부)', '윙포일 (남자부)', '혼합오픈 (남자부)', '펀엔포뮬러 (남자부)']
+                        ).map((divOption) => (
+                          <label key={divOption} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.95rem', fontWeight: '500' }}>
+                            <input
+                              type="radio"
+                              name="division_select_apply"
+                              value={divOption}
+                              checked={formResponses[field.id] === divOption}
+                              onChange={(e) => handleInputChange(field.id, e.target.value)}
+                              style={{ width: '18px', height: '18px' }}
+                            />
+                            <span>{divOption}</span>
+                          </label>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginTop: '8px' }}>
+                        {(field.options || []).map((opt: string) => (
+                          <label key={opt} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.95rem', fontWeight: '500' }}>
+                            <input
+                              type="radio"
+                              name={`radio_${field.id}`}
+                              value={opt}
+                              checked={formResponses[field.id] === opt}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                handleInputChange(field.id, val);
+                                if (field.id === 'gender') {
+                                  if (val === '남자') {
+                                    handleInputChange('division', '윈드포일 (남자부)');
+                                  } else {
+                                    handleInputChange('division', '윈드포일 (여자부)');
+                                  }
+                                }
+                              }}
+                              style={{ width: '18px', height: '18px' }}
+                            />
+                            <span>{opt}</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+              if (field.type === 'checkbox') {
+                return (
+                  <div className="form-group" key={field.id} style={{ background: 'rgba(255,255,255,0.01)', padding: '16px', borderRadius: '10px', border: '1px solid var(--border-color)', marginTop: '16px' }}>
+                    <label className="form-label" style={{ fontWeight: '600', color: 'var(--text-main)' }}>
+                      {field.label} {field.required && <span style={{ color: '#EF4444' }}>*</span>}
+                    </label>
+                    {field.notice && (
+                      <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
+                        • {field.notice}
+                      </p>
+                    )}
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={!!formResponses[field.id]}
+                        onChange={(e) => handleInputChange(field.id, e.target.checked ? (field.agreeLabel || '확인함') : '')}
+                        style={{ width: '18px', height: '18px' }}
+                      />
+                      <span style={{ fontWeight: '600' }}>{field.agreeLabel || '네. 확인했습니다.'}</span>
+                    </label>
+                  </div>
+                );
+              }
+              if (field.type === 'textarea') {
+                return (
+                  <div className="form-group" key={field.id} style={{ marginTop: '20px' }}>
+                    <label className="form-label">
+                      {field.label} {field.required && <span style={{ color: '#EF4444' }}>*</span>}
+                    </label>
+                    {field.textareaContent && (
+                      <div style={{
+                        height: '100px',
+                        overflowY: 'scroll',
+                        background: 'rgba(0,0,0,0.03)',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        fontSize: '0.8rem',
+                        color: 'var(--text-muted)',
+                        lineHeight: '1.5',
+                        marginBottom: '12px',
+                        border: '1px solid var(--border-color)'
+                      }}>
+                        {field.textareaContent}
+                      </div>
+                    )}
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={!!formResponses[field.id]}
+                        onChange={(e) => handleInputChange(field.id, e.target.checked ? (field.agreeLabel || '동의함') : '')}
+                        style={{ width: '18px', height: '18px' }}
+                      />
+                      <span style={{ fontWeight: '600' }}>{field.agreeLabel || '네. 동의합니다.'}</span>
+                    </label>
+                  </div>
+                );
+              }
+              return null;
+            })}
 
             {regError && (
               <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#F87171', border: '1px solid #EF4444', padding: '12px', borderRadius: '8px', marginBottom: '20px', fontSize: '0.9rem' }}>
