@@ -8,14 +8,19 @@ interface GridRow {
   playerId: string;
   name: string;
   birth: string;
-  phone: string;
   gender: string;
+  phone: string;
   club: string;
   division: string;
   tshirtSize: string;
+  vestAgreement: string;
+  paymentNoticeAgreement: string;
+  liabilityWaiver: string;
+  privacyConsent: string;
+  mediaConsent: string;
   paymentStatus: 'PENDING' | 'APPROVED';
   status: 'PENDING' | 'APPROVED';
-  
+
   // 편집 제어 플래그
   isEdited?: boolean;
   isNew?: boolean;
@@ -111,9 +116,15 @@ export default function HostDashboardPage({
       const parsedRows: GridRow[] = (regData.registrations || []).map((r: any) => {
         let birth = '';
         let gender = '남자';
+        let phone = '';
         let club = '미소속';
         let division = '윈드포일';
         let tshirtSize = 'L (105)';
+        let vestAgreement = '';
+        let paymentNoticeAgreement = '';
+        let liabilityWaiver = '';
+        let privacyConsent = '';
+        let mediaConsent = '';
 
         try {
           if (r.formResponses) {
@@ -123,21 +134,33 @@ export default function HostDashboardPage({
             club = extra.club || '미소속';
             division = extra.division || '윈드포일';
             tshirtSize = extra.tshirtSize || 'L (105)';
+            vestAgreement = extra.vestAgreement || '';
+            paymentNoticeAgreement = extra.paymentNoticeAgreement || '';
+            liabilityWaiver = extra.liabilityWaiver || '';
+            privacyConsent = extra.privacyConsent || '';
+            mediaConsent = extra.mediaConsent || '';
           }
         } catch (e) {
           // 기본값 사용
         }
+        // player에서 phone 가져오기 (formResponses에 없는 경우)
+        phone = r.player?.phone || '';
 
         return {
           id: r.id,
           playerId: r.playerId,
           name: r.player.name,
           birth,
-          phone: r.player.phone || '',
           gender,
+          phone,
           club,
           division,
           tshirtSize,
+          vestAgreement,
+          paymentNoticeAgreement,
+          liabilityWaiver,
+          privacyConsent,
+          mediaConsent,
           paymentStatus: r.paymentStatus,
           status: r.status,
         };
@@ -177,11 +200,16 @@ export default function HostDashboardPage({
       playerId: '',
       name: '',
       birth: '',
-      phone: '',
       gender: '남자',
+      phone: '',
       club: '',
       division: '윈드포일',
       tshirtSize: 'L (105)',
+      vestAgreement: '네. 확인했습니다.',
+      paymentNoticeAgreement: '네. 확인했습니다.',
+      liabilityWaiver: '네. 동의합니다.',
+      privacyConsent: '네. 동의합니다.',
+      mediaConsent: '네. 동의합니다.',
       paymentStatus: 'APPROVED',
       status: 'APPROVED',
       isNew: true, // 신규 추가 행 추적
@@ -610,15 +638,20 @@ export default function HostDashboardPage({
                     <tr>
                       <th style={{ width: '60px', textAlign: 'center' }}>순번</th>
                       <th style={{ width: '65px', textAlign: 'center' }}>상태</th>
-                      <th>성명</th>
-                      <th>생년월일</th>
-                      <th>성별</th>
-                      <th>전화번호</th>
-                      <th>소속협회 / 클럽</th>
-                      <th>참가종목</th>
-                      <th>티셔츠 사이즈</th>
-                      <th>결제 여부</th>
-                      <th>승인 상태</th>
+                      <th style={{ minWidth: '90px' }}>성명</th>
+                      <th style={{ minWidth: '110px' }}>생년월일</th>
+                      <th style={{ minWidth: '70px' }}>성별</th>
+                      <th style={{ minWidth: '130px' }}>전화번호</th>
+                      <th style={{ minWidth: '130px' }}>소속협회 / 클럽</th>
+                      <th style={{ minWidth: '110px' }}>참가종목</th>
+                      <th style={{ minWidth: '100px' }}>티셔츠 사이즈</th>
+                      <th style={{ minWidth: '90px', textAlign: 'center', fontSize: '0.8rem' }}>8.조끼수령</th>
+                      <th style={{ minWidth: '90px', textAlign: 'center', fontSize: '0.8rem' }}>9.입금안내</th>
+                      <th style={{ minWidth: '80px', textAlign: 'center', fontSize: '0.8rem' }}>10.면책동의</th>
+                      <th style={{ minWidth: '80px', textAlign: 'center', fontSize: '0.8rem' }}>11.개인정보</th>
+                      <th style={{ minWidth: '80px', textAlign: 'center', fontSize: '0.8rem' }}>12.초상권</th>
+                      <th style={{ minWidth: '80px' }}>결제 여부</th>
+                      <th style={{ minWidth: '80px' }}>승인 상태</th>
                       <th style={{ width: '90px', textAlign: 'center' }}>작업</th>
                     </tr>
                   </thead>
@@ -772,6 +805,41 @@ export default function HostDashboardPage({
                             <option value="L (105)">L (105)</option>
                             <option value="XL (110)">XL (110)</option>
                           </select>
+                        </td>
+
+                        {/* 8. 조끼수령 동의 */}
+                        <td style={{ textAlign: 'center', padding: '8px' }}>
+                          <span style={{ fontSize: '0.82rem', color: row.vestAgreement ? '#10B981' : '#EF4444', fontWeight: '600' }}>
+                            {row.vestAgreement || '미동의'}
+                          </span>
+                        </td>
+
+                        {/* 9. 입금안내 동의 */}
+                        <td style={{ textAlign: 'center', padding: '8px' }}>
+                          <span style={{ fontSize: '0.82rem', color: row.paymentNoticeAgreement ? '#10B981' : '#EF4444', fontWeight: '600' }}>
+                            {row.paymentNoticeAgreement || '미동의'}
+                          </span>
+                        </td>
+
+                        {/* 10. 면책 동의 */}
+                        <td style={{ textAlign: 'center', padding: '8px' }}>
+                          <span style={{ fontSize: '0.82rem', color: row.liabilityWaiver ? '#10B981' : '#EF4444', fontWeight: '600' }}>
+                            {row.liabilityWaiver ? '✓' : '✗'}
+                          </span>
+                        </td>
+
+                        {/* 11. 개인정보 동의 */}
+                        <td style={{ textAlign: 'center', padding: '8px' }}>
+                          <span style={{ fontSize: '0.82rem', color: row.privacyConsent ? '#10B981' : '#EF4444', fontWeight: '600' }}>
+                            {row.privacyConsent ? '✓' : '✗'}
+                          </span>
+                        </td>
+
+                        {/* 12. 초상권 동의 */}
+                        <td style={{ textAlign: 'center', padding: '8px' }}>
+                          <span style={{ fontSize: '0.82rem', color: row.mediaConsent ? '#10B981' : '#EF4444', fontWeight: '600' }}>
+                            {row.mediaConsent ? '✓' : '✗'}
+                          </span>
                         </td>
 
                         {/* 결제 상태 */}
