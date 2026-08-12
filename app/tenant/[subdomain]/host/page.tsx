@@ -131,6 +131,8 @@ export default function HostDashboardPage({
             const extra = JSON.parse(r.formResponses);
             birth = extra.birth || '';
             gender = extra.gender || '남자';
+            // formResponses에 phone이 있으면 우선 사용
+            phone = extra.phone || '';
             club = extra.club || '미소속';
             division = extra.division || '윈드포일';
             tshirtSize = extra.tshirtSize || 'L (105)';
@@ -143,8 +145,8 @@ export default function HostDashboardPage({
         } catch (e) {
           // 기본값 사용
         }
-        // player에서 phone 가져오기 (formResponses에 없는 경우)
-        phone = r.player?.phone || '';
+        // player 서브객체에서 phone 보완 (formResponses에 없는 경우)
+        if (!phone) phone = r.player?.phone || '';
 
         return {
           id: r.id,

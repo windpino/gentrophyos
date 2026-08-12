@@ -171,6 +171,7 @@ export async function POST(
       player: {
         id: player.id,
         name: player.name,
+        phone: player.phone || phone || '',
       }
     });
 

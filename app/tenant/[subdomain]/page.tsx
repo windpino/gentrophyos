@@ -320,6 +320,7 @@ export default function TenantPortalPage({
       const formResponses = {
         birth: applicantBirth,
         gender: applicantGender,
+        phone: applicantPhone,
         club: applicantClub,
         division: applicantDivision,
         tshirtSize: applicantTshirt,
