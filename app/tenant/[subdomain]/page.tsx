@@ -87,7 +87,7 @@ export default function TenantPortalPage({
     itineraryDay5: '',
     ...(tenant?.overviewConfig || {})
   };
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'notice' | 'intro' | 'live' | 'gallery' | 'archive'>('overview');
   const [activeSubTab, setActiveSubTab] = useState<string>('');
   const [activeDivisionTab, setActiveDivisionTab] = useState<string>('윈드포일');
@@ -394,8 +394,12 @@ export default function TenantPortalPage({
     }
   };
 
-  // 로딩 중에도 fallback 데이터로 즉시 렌더링 (스피너 제거)
+  // 최초 로딩 중: 아무것도 표시하지 않아 깜빡임 방지
+  if (loading && !tenant) {
+    return null;
+  }
 
+  // 로딩 완료 후에도 tenant 없으면 오류 표시
   if (!tenant) {
     return (
       <div style={{ padding: '80px 20px', textAlign: 'center' }}>
