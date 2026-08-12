@@ -119,7 +119,7 @@ export default function HostDashboardPage({
         let gender = '남자';
         let phone = '';
         let club = '미소속';
-        let division = '윈드포일';
+        let division = '윈드포일 (남자부)';
         let tshirtSize = 'L (105)';
         let vestAgreement = '';
         let paymentNoticeAgreement = '';
@@ -135,7 +135,7 @@ export default function HostDashboardPage({
             // formResponses에 phone이 있으면 우선 사용
             phone = extra.phone || '';
             club = extra.club || '미소속';
-            division = extra.division || '윈드포일';
+            division = extra.division || '윈드포일 (남자부)';
             tshirtSize = extra.tshirtSize || 'L (105)';
             vestAgreement = extra.vestAgreement || '';
             paymentNoticeAgreement = extra.paymentNoticeAgreement || '';
@@ -207,7 +207,7 @@ export default function HostDashboardPage({
       gender: '남자',
       phone: '',
       club: '',
-      division: '윈드포일',
+      division: '윈드포일 (남자부)',
       tshirtSize: 'L (105)',
       vestAgreement: '네. 확인했습니다.',
       paymentNoticeAgreement: '네. 확인했습니다.',
@@ -785,10 +785,18 @@ export default function HostDashboardPage({
                               cursor: 'pointer'
                             }}
                           >
-                            <option value="윈드포일">윈드포일</option>
-                            <option value="윙포일">윙포일</option>
-                            <option value="혼합오픈">혼합오픈</option>
-                            <option value="펀엔포뮬러">펀엔포뮬러</option>
+                            <option value="윈드포일 (남자부)">윈드포일 (남자부)</option>
+                            <option value="윙포일 (남자부)">윙포일 (남자부)</option>
+                            <option value="혼합오픈 (남자부)">혼합오픈 (남자부)</option>
+                            <option value="펀엔포뮬러 (남자부)">펀엔포뮬러 (남자부)</option>
+                            <option value="윈드포일 (여자부)">윈드포일 (여자부)</option>
+                            <option value="윙포일 (여자부)">윙포일 (여자부)</option>
+                            <option value="혼합오픈 (여자부)">혼합오픈 (여자부)</option>
+                            <option value="펀엔포뮬러 (여자부)">펀엔포뮬러 (여자부)</option>
+                            <option value="윈드포일">윈드포일 (기존)</option>
+                            <option value="윙포일">윙포일 (기존)</option>
+                            <option value="혼합오픈">혼합오픈 (기존)</option>
+                            <option value="펀엔포뮬러">펀엔포뮬러 (기존)</option>
                           </select>
                         </td>
 
@@ -810,6 +818,16 @@ export default function HostDashboardPage({
                             <option value="M (100)">M (100)</option>
                             <option value="L (105)">L (105)</option>
                             <option value="XL (110)">XL (110)</option>
+                            <option value="남자 S (95)">남자 S (95)</option>
+                            <option value="남자 M (100)">남자 M (100)</option>
+                            <option value="남자 L (105)">남자 L (105)</option>
+                            <option value="남자 XL (110)">남자 XL (110)</option>
+                            <option value="남자 XXL (115)">남자 XXL (115)</option>
+                            <option value="여자 S (85)">여자 S (85)</option>
+                            <option value="여자 M (90)">여자 M (90)</option>
+                            <option value="여자 L (95)">여자 L (95)</option>
+                            <option value="여자 XL (100)">여자 XL (100)</option>
+                            <option value="여자 XXL (105)">여자 XXL (105)</option>
                           </select>
                         </td>
 
