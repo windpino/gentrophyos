@@ -51,6 +51,7 @@ export async function POST(
         batch.update(regRef, {
           paymentStatus: row.paymentStatus,
           status: row.status,
+          bibNumber: row.bibNumber || '',
           formResponses: JSON.stringify(formResponses),
           player: {
             id: row.playerId,
@@ -129,6 +130,7 @@ export async function POST(
           formResponses: JSON.stringify(formResponses),
           paymentStatus: row.paymentStatus || 'APPROVED',
           status: row.status || 'APPROVED',
+          bibNumber: row.bibNumber || '',
           createdAt: new Date().toISOString(),
           player: {
             id: playerId,

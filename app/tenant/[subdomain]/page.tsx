@@ -1026,7 +1026,142 @@ export default function TenantPortalPage({
 
         {/* 3. 메인 콘텐츠 분기 */}
         <main className="animate-fade-in" style={{ paddingBottom: '100px' }}>
-          
+
+          {/* LIVE. 경기운영 / 실시간 리더보드 탭 */}
+          {activeTab === 'live' && activeSubTab === 'live-leaderboard' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {/* 리더보드 헤더 */}
+              <div className="glass-panel" style={{ background: 'white', padding: '28px 32px', borderTop: '4px solid var(--theme-primary)' }}>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: '900', textAlign: 'center', color: 'var(--text-main)', marginBottom: '4px' }}>
+                  {overview.title} 실시간 리더보드
+                </h2>
+                <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>Notice of Race (NOR) / 공식 실시간 순위 및 라운드별 경기 결과</p>
+              </div>
+
+              {/* 종목 탭바 */}
+              <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+                {['윈드포일', '윙포일', '혼합오픈', '펀엔포뮬러'].map((div) => {
+                  const active = activeDivisionTab === div;
+                  return (
+                    <button
+                      key={div}
+                      onClick={() => setActiveDivisionTab(div)}
+                      style={{
+                        padding: '10px 20px',
+                        borderRadius: '24px',
+                        background: active ? 'var(--theme-primary)' : '#ffffff',
+                        border: active ? 'none' : '1px solid var(--border-color)',
+                        color: active ? '#ffffff' : 'var(--text-muted)',
+                        fontSize: '0.85rem',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        transition: 'all 0.2s ease-in-out',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                      }}
+                    >
+                      {div}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {leaderboardLoading ? (
+                <div className="glass-panel" style={{ background: 'white', padding: '60px 0', textAlign: 'center' }}>
+                  <RefreshCw className="animate-spin" size={32} style={{ color: 'var(--theme-primary)', margin: '0 auto 12px auto' }} />
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>리더보드 집계 정보를 불러오는 중입니다...</p>
+                </div>
+              ) : leaderboard.length === 0 ? (
+                <div className="glass-panel" style={{ background: 'white', padding: '60px 0', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <p style={{ fontSize: '1rem', fontWeight: '700', margin: '0 0 4px 0' }}>등록된 순위표가 없습니다.</p>
+                  <p style={{ fontSize: '0.85rem', margin: 0 }}>심판이 공식 순위를 확정하면 여기에 실시간으로 표시됩니다.</p>
+                </div>
+              ) : (
+                <div className="glass-panel" style={{ background: 'white', padding: '24px 30px' }}>
+                  <div className="premium-table-container">
+                    <table className="premium-table" style={{ fontSize: '0.9rem', width: '100%', borderCollapse: 'collapse', color: 'black' }}>
+                      <thead>
+                        <tr style={{ background: '#f8fafc' }}>
+                          <th style={{ width: '70px', textAlign: 'center', fontWeight: '800' }}>순위</th>
+                          <th style={{ minWidth: '90px', fontWeight: '800' }}>성명</th>
+                          <th style={{ minWidth: '90px', fontWeight: '800' }}>배번티번호</th>
+                          <th style={{ minWidth: '100px', fontWeight: '800' }}>생년월일</th>
+                          {['1R', '2R', '3R', '4R', '5R', '6R'].map(r => (
+                            <th key={r} style={{ width: '60px', textAlign: 'center', fontWeight: '800' }}>{r}</th>
+                          ))}
+                          <th style={{ width: '80px', textAlign: 'center', fontWeight: '800', color: 'var(--theme-primary)' }}>총점</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {leaderboard.map((row: any, rIdx: number) => {
+                          const rounds = [row.r1, row.r2, row.r3, row.r4, row.r5, row.r6];
+                          const validScores = rounds.filter(val => val !== null && val !== undefined && val !== '' && !isNaN(Number(val)));
+                          
+                          let discardIdx = -1;
+                          if (validScores.length >= 4) {
+                            let maxVal = -1;
+                            for (let i = 0; i < rounds.length; i++) {
+                              const val = rounds[i];
+                              if (val !== null && val !== undefined && val !== '' && !isNaN(Number(val))) {
+                                const num = Number(val);
+                                if (num > maxVal) {
+                                  maxVal = num;
+                                  discardIdx = i;
+                                }
+                              }
+                            }
+                          }
+
+                          return (
+                            <tr key={rIdx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ textAlign: 'center', fontWeight: '800' }}>
+                                <span style={{
+                                  display: 'inline-block',
+                                  width: '28px',
+                                  height: '28px',
+                                  lineHeight: '28px',
+                                  borderRadius: '50%',
+                                  background: row.rank === 1 ? 'var(--theme-gold)' : row.rank === 2 ? '#cbd5e1' : row.rank === 3 ? '#b45309' : '#f1f5f9',
+                                  color: row.rank <= 3 ? 'white' : 'var(--text-main)',
+                                  fontSize: '0.85rem'
+                                }}>
+                                  {row.rank}
+                                </span>
+                              </td>
+                              <td style={{ fontWeight: '800' }}>{row.name}</td>
+                              <td>{row.bibNumber || '-'}</td>
+                              <td>{row.birth || '-'}</td>
+                              {rounds.map((val, idx) => {
+                                const isDiscarded = idx === discardIdx;
+                                const displayVal = val !== null && val !== undefined && val !== '' ? val : '-';
+                                return (
+                                  <td key={idx} style={{
+                                    textAlign: 'center',
+                                    color: isDiscarded ? '#94a3b8' : 'inherit',
+                                    textDecoration: isDiscarded ? 'line-through' : 'none',
+                                    fontWeight: isDiscarded ? 'normal' : '600'
+                                  }}>
+                                    {displayVal}
+                                    {isDiscarded && <span style={{ fontSize: '0.7rem', display: 'block', textDecoration: 'none', color: '#f43f5e', fontWeight: '800' }}>(제외)</span>}
+                                  </td>
+                                );
+                              })}
+                              <td style={{ textAlign: 'center', fontWeight: '900', color: 'var(--theme-primary)', fontSize: '1.05rem' }}>{row.total}점</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div style={{ marginTop: '16px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                    <p style={{ margin: '4px 0 0 0' }}>※ Sailing Low-Point 채점 기준: 각 라운드 순위가 점수가 되며(1위=1점, DNF 등은 감점 패널티 부여), 총점이 낮을수록 최종 순위가 높습니다.</p>
+                    <p style={{ margin: '2px 0 0 0' }}>※ 경기 수 4회 이상(4R~) 진행 시, 참가자의 성적 중 가장 성적이 낮은 라운드(가장 높은 점수) 1개를 자동 제외하고 합산합니다.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* NOR. 개최공시서 탭 */}
           {activeTab === 'notice' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>

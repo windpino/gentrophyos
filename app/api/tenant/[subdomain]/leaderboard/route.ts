@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db as firestore } from '@/src/lib/firebase';
-import { doc, getDoc, collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, orderBy, limit, setDoc } from 'firebase/firestore';
 import { sortPlayersByRules, assignRanks, PlayerRankInput, MatchResult } from '@/src/lib/tieBreaker';
 
 export async function GET(
@@ -50,14 +50,29 @@ export async function GET(
       return NextResponse.json({ leaderboard: [] });
     }
 
+    const divisionParam = searchParams.get('division');
+
+    // 2. 만약 저장된 커스텀 리더보드가 있다면 우선 반환
+    if (divisionParam) {
+      const savedLeaderboardDoc = await getDoc(
+        doc(firestore, `tournaments/${tournament.id}/leaderboards`, divisionParam)
+      );
+      if (savedLeaderboardDoc.exists()) {
+        const savedData = savedLeaderboardDoc.data();
+        return NextResponse.json({
+          tournamentTitle: tournament.title,
+          leaderboard: savedData.list || [],
+          isCustom: true
+        });
+      }
+    }
+
     // 3. 동점자 룰 가져오기
     const rulesQuery = query(
       collection(firestore, `tournaments/${tournament.id}/tieBreakerRules`)
     );
     const rulesSnap = await getDocs(rulesQuery);
     const rules = rulesSnap.docs.map(docSnap => docSnap.data()).sort((a: any, b: any) => a.priority - b.priority);
-
-    const divisionParam = searchParams.get('division');
 
     // 4. 승인된 참가 선수들 조회
     const regsQuery = query(
@@ -202,6 +217,33 @@ export async function GET(
     });
   } catch (error: any) {
     console.error('리더보드 집계 오류:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ subdomain: string }> }
+) {
+  try {
+    const { subdomain } = await params;
+    const body = await req.json();
+    const { tournamentId, division, list } = body;
+
+    if (!tournamentId || !division || !list) {
+      return NextResponse.json({ error: '대회 ID, 종목, 순위 목록은 필수입니다.' }, { status: 400 });
+    }
+
+    const leaderboardRef = doc(firestore, `tournaments/${tournamentId}/leaderboards`, division);
+    await setDoc(leaderboardRef, {
+      division,
+      list,
+      updatedAt: new Date().toISOString()
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error('리더보드 저장 오류:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

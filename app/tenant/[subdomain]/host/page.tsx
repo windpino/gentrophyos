@@ -21,6 +21,7 @@ interface GridRow {
   paymentStatus: 'PENDING' | 'APPROVED';
   status: 'PENDING' | 'APPROVED';
   createdAt?: string;
+  bibNumber?: string;
 
   // 편집 제어 플래그
   isEdited?: boolean;
@@ -172,6 +173,7 @@ export default function HostDashboardPage({
           paymentStatus: r.paymentStatus,
           status: r.status,
           createdAt: r.createdAt ? new Date(r.createdAt).toLocaleString('ko-KR') : '',
+          bibNumber: r.bibNumber || '',
         };
       });
 
@@ -669,6 +671,7 @@ export default function HostDashboardPage({
                       <th style={{ width: '60px', textAlign: 'center' }}>순번</th>
                       <th style={{ width: '65px', textAlign: 'center' }}>상태</th>
                       <th style={{ minWidth: '90px' }}>성명</th>
+                      <th style={{ minWidth: '90px' }}>배번티번호</th>
                       <th style={{ minWidth: '110px' }}>생년월일</th>
                       <th style={{ minWidth: '70px' }}>성별</th>
                       <th style={{ minWidth: '130px' }}>전화번호</th>
@@ -720,6 +723,25 @@ export default function HostDashboardPage({
                               fontWeight: '600'
                             }}
                             placeholder="성명 기입"
+                          />
+                        </td>
+
+                        {/* 배번티번호 */}
+                        <td style={{ padding: '8px 16px' }}>
+                          <input
+                            type="text"
+                            value={row.bibNumber || ''}
+                            onChange={(e) => handleCellChange(row.id, 'bibNumber', e.target.value)}
+                            style={{
+                              width: '100%',
+                              background: 'none',
+                              border: 'none',
+                              color: 'var(--text-main)',
+                              outline: 'none',
+                              fontSize: '0.95rem',
+                              fontWeight: '600'
+                            }}
+                            placeholder="배번 기입"
                           />
                         </td>
 
