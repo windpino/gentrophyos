@@ -1623,7 +1623,9 @@ function OverviewEditor({ tenant, subdomain, onSaveSuccess }: OverviewEditorProp
     deadlineDate: '2026년 8월 24일(월)',
     rulesNote: '※ 참가 신청 시 소속 클럽 명확히 작성 필수.\n※ 단체전은 남녀 혼성 계영 4x50m 및 4x100m로 진행함.\n※ 모든 나이는 2026년 9월 12일을 기준으로 합니다.\n※ 1인 최대 2종목까지 신청 가능 (단체전 제외).\n※ 참가인원은 선착순으로 300명이 충족되면 참가접수 기한이 조기에 마감될 수 있습니다.\n※ 참가비가 납부되어야 정식 등록이 완료되며 기한 내 미납 시 참가가 자동 취소됩니다.\n※ 신청기간 이후에는 취소 및 참가비 환불이 불가합니다.',
     itineraryDay1: '10:00 - 12:00 : 선수단 현장등록 및 웜업\n12:00 - 13:00 : 중식\n13:00 - 13:30 : 개회식\n13:30 - 18:00 : 1일차 경기',
-    itineraryDay2: '09:00 - 12:00 : 2일차 경기\n12:00 - 13:00 : 중식\n13:00 - 18:00 : 2일차 경기 및 시상식\n18:00 - : 폐회식 및 해산'
+    itineraryDay2: '09:00 - 12:00 : 2일차 경기\n12:00 - 13:00 : 중식\n13:00 - 18:00 : 2일차 경기 및 시상식\n18:00 - : 폐회식 및 해산',
+    contactPhone: '인천광역시 핀수영협회 사무국 : 032-888-2940',
+    contactNote: '* 대회 참가자 전원에게 기념 티셔츠 및 참가 기념품을 제공합니다.'
   };
 
   const initialConfig = {
@@ -1962,6 +1964,35 @@ function OverviewEditor({ tenant, subdomain, onSaveSuccess }: OverviewEditorProp
               >
                 + 시상 행 추가
               </button>
+            </div>
+          </div>
+
+          {/* 7. 문의 및 운영진 설정 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
+            <h4 style={{ color: 'var(--theme-primary)', fontWeight: '800', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '16px' }}>
+              7. 문의처 및 운영진 안내 설정
+            </h4>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>문의처 / 연락처 정보</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={config.contactPhone || ''}
+                  onChange={e => handleChange('contactPhone', e.target.value)}
+                  placeholder="예: 인천광역시 핀수영협회 사무국 : 032-888-2940"
+                />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>안내 / 공지 사항 문구</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={config.contactNote || ''}
+                  onChange={e => handleChange('contactNote', e.target.value)}
+                  placeholder="예: * 대회 참가자 전원에게 기념 티셔츠를 제공합니다."
+                />
+              </div>
             </div>
           </div>
 

@@ -1476,9 +1476,25 @@ export default function TenantPortalPage({
                   <h3 style={{ fontSize: '1.15rem', fontWeight: '800', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)', margin: 0 }}>
                     문의 및 운영진
                   </h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.85rem', marginTop: '12px' }}>
-                    <p style={{ margin: 0 }}><strong>인천광역시 핀수영협회 사무국 :</strong> 032-888-2940</p>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: 0 }}>* 대회 참가자 전원에게 기념 티셔츠 및 참가 기념품을 제공합니다.</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.85rem', marginTop: '12px', color: 'black' }}>
+                    <p style={{ margin: 0 }}>
+                      {overview.contactPhone ? (
+                        overview.contactPhone.includes(':') ? (
+                          <>
+                            <strong>{overview.contactPhone.split(':')[0].trim()} :</strong> {overview.contactPhone.substring(overview.contactPhone.indexOf(':') + 1).trim()}
+                          </>
+                        ) : (
+                          overview.contactPhone
+                        )
+                      ) : (
+                        <>
+                          <strong>인천광역시 핀수영협회 사무국 :</strong> 032-888-2940
+                        </>
+                      )}
+                    </p>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: 0 }}>
+                      {overview.contactNote || '* 대회 참가자 전원에게 기념 티셔츠 및 참가 기념품을 제공합니다.'}
+                    </p>
                   </div>
                 </div>
 
