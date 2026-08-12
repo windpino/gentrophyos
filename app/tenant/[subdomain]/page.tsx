@@ -594,7 +594,7 @@ export default function TenantPortalPage({
             <div className="form-group">
               <label className="form-label">7. 티셔츠(기념품)사이즈 <span style={{ color: '#EF4444' }}>*</span></label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginTop: '8px' }}>
-                {['S (95)', 'M (100)', 'L (105)', 'XL (110)', 'XXL (115)'].map((szOption) => (
+                {['S (95)', 'M (100)', 'L (105)', 'XL (110)'].map((szOption) => (
                   <label key={szOption} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.95rem', fontWeight: '500' }}>
                     <input
                       type="radio"
