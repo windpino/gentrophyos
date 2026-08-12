@@ -501,7 +501,7 @@ export default function HostDashboardPage({
             { id: 'form-builder', label: '참가신청서 양식 설정', icon: Settings },
             { id: 'tie-breaker', label: '동점자 순위 규칙 설정', icon: Award },
             { id: 'overview', label: '대회 요강 내용 편집', icon: FileText },
-            { id: 'notice', label: '개최공시서(NOR) 편집', icon: Layers },
+            { id: 'notice', label: '개최공시서 업로드', icon: Upload },
           ].map((item) => {
             const Icon = item.icon;
             const active = activeSection === item.id;
@@ -548,7 +548,7 @@ export default function HostDashboardPage({
               {activeSection === 'applicants' ? '참가자관리' : 
                activeSection === 'form-builder' ? '참가신청서 양식 설정 (폼빌더)' :
                activeSection === 'tie-breaker' ? 'Tie-breaker 가중치 제어기' : 
-               activeSection === 'overview' ? '대회 요강 내용 편집기' : '개최공시서(NOR) 편집기'}
+               activeSection === 'overview' ? '대회 요강 내용 편집기' : '개최공시서 업로드'}
             </h1>
             <p style={{ color: 'var(--text-muted)' }}>{activeTournament.title}</p>
           </div>
@@ -2020,101 +2020,6 @@ interface NoticeEditorProps {
 }
 
 function NoticeEditor({ tenant, subdomain, onSaveSuccess }: NoticeEditorProps) {
-  const defaultNoticeText = `제20회 미추홀구청장배 전국핀수영대회 개최공시서
-
-제1조 (대회 개요)
-1.1 대 회 명 : 제20회 미추홀구청장배 전국핀수영대회
-1.2 주 최 : 인천광역시 미추홀구
-1.3 주 관 : 인천광역시핀수영협회, 미추홀구체육회
-1.4 기 간 : 2026년 9월 12일(토) ~ 13일(일) (2일간)
-1.5 장 소 : 문학박태환수영장 (인천광역시 미추홀구 경원대로 526)
-1.6 참가인원 : 300명
-
-제2조 (대회 일정)
-- 9. 12(토)
-  • 10:00 ~ 12:00 : 선수단 현장등록 및 웜업 (문학박태환수영장)
-  • 12:00 ~ 13:00 : 중식
-  • 13:00 ~ 13:30 : 개회식 (수영장 특설무대)
-  • 13:30 ~ 18:00 : 1일차 경기 (문학박태환수영장)
-- 9. 13(일)
-  • 09:00 ~ 12:00 : 2일차 경기 (문학박태환수영장)
-  • 12:00 ~ 13:00 : 중식
-  • 13:00 ~ 18:00 : 2일차 경기 및 시상식 (문학박태환수영장)
-  • 18:00 ~ : 폐회식 및 해산 (수영장 특설무대)
-※ 기상 악화 및 수영장 사정에 따라 경기 시간은 변경될 수 있으며, 세부 일정은 상황에 따라 조정 및 변경될 수 있음.
-
-제3조 (경기 종목 및 참가 자격)
-- 일반부 : 대학/일반
-- 청소년부 : 고등부, 중등부, 초등부
-- 마스터즈 : 마스터즈 1부, 마스터즈 2부, 마스터즈 3부
-  ※ 1부 (만 20~29세), 2부 (만 30~39세), 3부 (만 40세 이상)
-- 엘리트 : 등록선수 (학생/일반)
-- 단체전 : 각 클럽/동호회팀별 릴레이
-※ 참가 신청 시 소속 클럽 명확히 작성 필수.
-※ 단체전은 남녀 혼성 계영 4x50m 및 4x100m로 진행함.
-※ 모든 나이는 2026년 9월 12일을 기준으로 함.
-
-제4조 (참가 신청)
-4.1 신청기간 : 2026년 8월 24일(월) 까지
-4.2 신청방법 : 홈페이지를 통한 온라인 참가신청서 접수
-※ 참가인원은 선착순으로 300명이 충족되면 참가접수기한이 조기에 마감될 수 있다.
-※ 참가비가 납부되어야 정식 등록이 완료되며 기한 내 미납 시 참가가 자동 취소됩니다.
-4.3 참가비 : 개인전 1종목당 20,000원, 단체전 팀당 50,000원
-※ 1인 최대 2종목까지 신청 가능 (단체전 제외).
-※ 참가비 입금 시 반드시 '소속_대표자명' 또는 '선수명'으로 입금.
-※ 신청기간 이후에는 취소 및 참가비 환불이 불가합니다.
-
-제5조 (시상)
-- 개인전 (전 클래스) : 1위: 상장 및 메달, 2위: 상장 및 메달, 3위: 상장 및 메달
-- 단체전 (각 클래스별 릴레이) : 1위: 상패 및 메달, 2위: 상패 및 메달, 3위: 상패 및 메달
-- 종합시상 (종합) : 종합 우승: 우승기 및 트로피, 종합 준우승: 트로피, 종합 3위: 트로피
-※ 각 클래스별 참가자가 3명 미만일 경우 시상만 하고 메달 수여는 제외될 수 있습니다.
-※ 종합시상은 각 종목별 점수를 합산하여 산출함 (1위 9점, 2위 7점, 3위 6점, 4위 5점, 5위 4점, 6위 3점, 7위 2점, 8위 1점. 단체전은 배점 2배).
-
-제6조 (제출)
-6.1 온라인 참가신청 시 서약서 동의 및 서명 제출
-6.2 참가 선수 전원 단체 보험 가입 필수 (소속 동호회/클럽 개별 가입 권장)
-6.3 주민등록초본 또는 학생증 사본 (본인 확인용)
-6.4 경기 당일 신분증 (주민등록증, 운전면허증 등) 지참 필수
-
-제7조 (경기규칙 및 안전수칙)
-7.1 본 대회는 대한수중핀수영협회(KUA) 및 세계수중연맹(CMAS) 핀수영 경기 규칙을 적용합니다.
-7.2 안전을 위해 경기 중 안전요원의 통제에 적극 협조해야 하며, 이를 위반 시 퇴장 조치될 수 있습니다.
-7.3 준비운동을 철저히 하고 경기 전 심신상태를 점검해 사고를 예방해야 합니다.
-
-제8조 (보험)
-8.1 대회 주최측은 대회 참가자를 위한 스포츠안전재단 주최자배상책임공제에 가입합니다.
-8.2 참가 선수는 개인 실손의료보험 가입을 적극 권장하며, 경기 중 발생하는 부상에 대해 주최측은 응급조치 외 책임을 지지 않습니다.
-8.3 장비 파손 및 분실에 대한 책임은 선수 본인에게 있습니다.
-
-제9조 (항의)
-9.1 항의는 각 종목 경기 종료 후 30분 이내에 서면으로 제출해야 합니다.
-9.2 이의신청 시 이의신청비 50,000원을 동봉해야 하며, 기각 시 반환하지 않고 협회 기금으로 귀속됩니다.
-9.3 심판위원회의 판정이 최종 결정이며, 추가 이의제기는 불가합니다.
-
-제10조 (장비)
-10.1 대회 공인 장비(핀, 스노클, 수영복 등) 규정을 준수해야 합니다.
-10.2 승인되지 않은 비공인 장비 사용 시 실격 처리될 수 있습니다.
-※ 필수 장비 누락 시 경기 참가가 제한될 수 있습니다.
-
-제11조 (기타)
-11.1 대회 참가자 전원에게 기념 티셔츠 및 참가 기념품을 제공합니다.
-11.2 수영장 내 취사 행위는 절대 금지되며, 쓰레기는 지정된 장소에 분리배출 해야 합니다.
-11.3 기타 문의 사항은 인천광역시 핀수영협회 사무국(032-888-2940)으로 문의 바랍니다.
-
-제12조 (오시는길)
-문학박태환수영장 (인천광역시 미추홀구 경원대로 526)
-※ 위치 및 주차 안내: 수영장 내 지하/지상 주차장 이용 가능하며 당일 참가 선수는 주차료 면제 또는 할인이 제공될 수 있습니다.`;
-
-  const [noticeText, setNoticeText] = useState(
-    tenant?.overviewConfig?.noticeText || defaultNoticeText
-  );
-  const [noticeType, setNoticeType] = useState<'text' | 'image'>(
-    tenant?.overviewConfig?.noticeType || 'text'
-  );
-  const [noticeImageUrl, setNoticeImageUrl] = useState<string>(
-    tenant?.overviewConfig?.noticeImageUrl || ''
-  );
   const [noticeHwpData, setNoticeHwpData] = useState<string>(
     tenant?.overviewConfig?.noticeHwpData || ''
   );
@@ -2131,47 +2036,12 @@ function NoticeEditor({ tenant, subdomain, onSaveSuccess }: NoticeEditorProps) {
 
   useEffect(() => {
     if (tenant?.overviewConfig) {
-      if (tenant.overviewConfig.noticeText) setNoticeText(tenant.overviewConfig.noticeText);
-      if (tenant.overviewConfig.noticeType) setNoticeType(tenant.overviewConfig.noticeType);
-      if (tenant.overviewConfig.noticeImageUrl) setNoticeImageUrl(tenant.overviewConfig.noticeImageUrl);
       if (tenant.overviewConfig.noticeHwpData) setNoticeHwpData(tenant.overviewConfig.noticeHwpData);
       if (tenant.overviewConfig.noticeHwpName) setNoticeHwpName(tenant.overviewConfig.noticeHwpName);
       if (tenant.overviewConfig.noticePdfData) setNoticePdfData(tenant.overviewConfig.noticePdfData);
       if (tenant.overviewConfig.noticePdfName) setNoticePdfName(tenant.overviewConfig.noticePdfName);
     }
   }, [tenant]);
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-        const MAX_WIDTH = 1200;
-        
-        if (width > MAX_WIDTH) {
-          height = Math.round((height * MAX_WIDTH) / width);
-          width = MAX_WIDTH;
-        }
-        
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, width, height);
-          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.75);
-          setNoticeImageUrl(compressedBase64);
-        }
-      };
-      img.src = event.target?.result as string;
-    };
-    reader.readAsDataURL(file);
-  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'hwp' | 'pdf') => {
     const file = e.target.files?.[0];
@@ -2206,9 +2076,6 @@ function NoticeEditor({ tenant, subdomain, onSaveSuccess }: NoticeEditorProps) {
         body: JSON.stringify({
           overviewConfig: {
             ...currentConfig,
-            noticeText,
-            noticeType,
-            noticeImageUrl,
             noticeHwpData,
             noticeHwpName,
             noticePdfData,
@@ -2218,7 +2085,7 @@ function NoticeEditor({ tenant, subdomain, onSaveSuccess }: NoticeEditorProps) {
       });
       const data = await res.json();
       if (res.ok) {
-        alert('개최공시서 설정이 성공적으로 업데이트되어 홈페이지에 반영되었습니다!');
+        alert('개최공시서 파일이 성공적으로 업로드 및 저장되었습니다!');
         onSaveSuccess();
       } else {
         alert(data.error || '저장 실패');
@@ -2235,8 +2102,8 @@ function NoticeEditor({ tenant, subdomain, onSaveSuccess }: NoticeEditorProps) {
       <div className="glass-panel" style={{ background: 'white', padding: '30px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', borderBottom: '1px solid var(--border-color)', paddingBottom: '16px' }}>
           <div>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: '800', margin: 0 }}>개최공시서(NOR) 자유 편집기</h3>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>글을 직접 입력하거나 그림파일(이미지)을 직접 업로드하여 게시할 수 있습니다.</p>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '800', margin: 0, color: 'black' }}>개최공시서 파일 업로드</h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>홈페이지 개최공시서 메뉴에 제공될 한글(.hwp) 및 PDF(.pdf) 파일을 등록합니다. (개별 파일 최대 800KB 제한)</p>
           </div>
           <button
             onClick={handleSave}
@@ -2248,97 +2115,7 @@ function NoticeEditor({ tenant, subdomain, onSaveSuccess }: NoticeEditorProps) {
             개최공시서 저장하기
           </button>
         </div>
-
-        {/* 1. 공시서 형식 선택 라디오 */}
-        <div style={{ display: 'flex', gap: '20px', marginBottom: '24px', background: '#f8fafc', padding: '16px', borderRadius: '10px', border: '1px solid var(--border-color)', color: 'black' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem' }}>
-            <input
-              type="radio"
-              name="noticeType"
-              value="text"
-              checked={noticeType === 'text'}
-              onChange={() => setNoticeType('text')}
-              style={{ width: '18px', height: '18px' }}
-            />
-            <span>글로 직접 입력하기 (텍스트 방식)</span>
-          </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem' }}>
-            <input
-              type="radio"
-              name="noticeType"
-              value="image"
-              checked={noticeType === 'image'}
-              onChange={() => setNoticeType('image')}
-              style={{ width: '18px', height: '18px' }}
-            />
-            <span>그림파일로 업로드하기 (이미지 방식)</span>
-          </label>
-        </div>
-
-        {/* 2. 형식별 렌더링 */}
-        {noticeType === 'text' ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', color: 'black' }}>
-            <label style={{ fontSize: '0.9rem', fontWeight: '700' }}>개최공시서 본문</label>
-            <textarea
-              style={{
-                minHeight: '600px',
-                lineHeight: '1.8',
-                fontSize: '0.95rem',
-                width: '100%',
-                padding: '20px',
-                border: '1px solid var(--border-color)',
-                borderRadius: '8px',
-                fontFamily: 'monospace',
-                background: '#f8fafc'
-              }}
-              value={noticeText}
-              onChange={e => setNoticeText(e.target.value)}
-              placeholder="개최공시서 내용을 입력하세요..."
-            />
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', color: 'black' }}>
-            <label style={{ fontSize: '0.9rem', fontWeight: '700' }}>공시서 이미지 등록</label>
-            <div style={{ border: '2px dashed var(--border-color)', borderRadius: '10px', padding: '40px', textAlign: 'center', background: '#f8fafc' }}>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                style={{ display: 'none' }}
-                id="notice-image-upload"
-              />
-              <label htmlFor="notice-image-upload" style={{ cursor: 'pointer', background: 'var(--theme-primary)', color: 'white', padding: '10px 20px', borderRadius: '6px', fontSize: '0.9rem', fontWeight: '700', display: 'inline-block', marginBottom: '10px' }}>
-                컴퓨터에서 파일 찾기
-              </label>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>PNG, JPG, JPEG 형식의 그림 파일을 등록할 수 있습니다.</p>
-            </div>
-            {noticeImageUrl && (
-              <div style={{ position: 'relative', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '16px', background: '#ffffff', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)', alignSelf: 'flex-start', marginBottom: '8px' }}>공시서 이미지 미리보기:</span>
-                <img src={noticeImageUrl} alt="NOR Preview" style={{ maxWidth: '100%', height: 'auto', maxHeight: '600px', borderRadius: '6px', border: '1px solid var(--border-color)' }} />
-                <button
-                  type="button"
-                  onClick={() => setNoticeImageUrl('')}
-                  style={{ marginTop: '14px', padding: '8px 16px', background: '#EF4444', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '700' }}
-                >
-                  업로드된 이미지 삭제
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* 3. 다운로드용 파일 업로드 섹션 */}
-        <div style={{ marginTop: '30px', borderTop: '2px solid var(--border-color)', paddingTop: '24px', color: 'black' }}>
-          <h4 style={{ fontSize: '1.05rem', fontWeight: '800', marginBottom: '8px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <FileText size={18} style={{ color: 'var(--theme-primary)' }} />
-            공식 개최공시서 파일 업로드 (한글 / PDF)
-          </h4>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '20px' }}>
-            홈페이지 개최공시서 다운로드 화면에 제공될 한글(.hwp) 및 PDF(.pdf) 파일을 등록합니다. (개별 파일 최대 800KB 제한)
-          </p>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
             {/* 한글 파일 업로드 */}
             <div style={{ padding: '20px', background: '#f8fafc', border: '1px solid var(--border-color)', borderRadius: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
@@ -2437,7 +2214,6 @@ function NoticeEditor({ tenant, subdomain, onSaveSuccess }: NoticeEditorProps) {
               )}
             </div>
           </div>
-        </div>
       </div>
     </div>
   );
