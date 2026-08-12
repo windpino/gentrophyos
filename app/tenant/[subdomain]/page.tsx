@@ -1508,10 +1508,10 @@ export default function TenantPortalPage({
               {/* 오른쪽 사이드바 안내영역 */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 
-                {/* 접수 및 참가비 계좌 */}
+                {/* 접수 안내 */}
                 <div className="glass-panel" style={{ background: 'white' }}>
                   <h3 style={{ fontSize: '1.15rem', fontWeight: '800', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)', margin: 0 }}>
-                    참가 접수 & 참가비
+                    참가 접수
                   </h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', fontSize: '0.9rem', marginTop: '12px' }}>
                     <div>
@@ -1520,18 +1520,6 @@ export default function TenantPortalPage({
                         {overview.deadlineDate}
                       </p>
                       <p style={{ fontSize: '0.8rem', color: '#EF4444', marginTop: '2px', margin: 0 }}>* 선착순 도달 시 조기 마감될 수 있습니다.</p>
-                    </div>
-
-                    <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '12px' }}>
-                      <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem', fontWeight: '700' }}>참가비 정보</span>
-                      <p style={{ fontWeight: '700', color: 'var(--text-main)', marginTop: '4px', margin: 0 }}>- 개인전: {overview.entryFeeIndividual}</p>
-                      <p style={{ fontWeight: '700', color: 'var(--text-main)', marginTop: '2px', margin: 0 }}>- 단체전: {overview.entryFeeGroup}</p>
-                    </div>
-
-                    <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.8rem' }}>
-                      <span style={{ color: 'var(--theme-primary)', fontWeight: '800', display: 'block', marginBottom: '4px' }}>입금 계좌 안내</span>
-                      <p style={{ fontWeight: '700', color: 'var(--text-main)', margin: 0 }}>{overview.bankName} {overview.accountNo}</p>
-                      <p style={{ color: 'var(--text-muted)', marginTop: '2px', margin: 0 }}>예금주: {overview.accountHolder}</p>
                     </div>
                   </div>
                 </div>
