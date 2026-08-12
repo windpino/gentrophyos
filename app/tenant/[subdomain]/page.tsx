@@ -398,6 +398,11 @@ export default function TenantPortalPage({
   if (applyMode && ongoingTournament) {
     return (
       <div style={{ ...themeStyles, minHeight: '100vh', backgroundColor: '#ffffff', padding: 'clamp(16px, 4vw, 40px) clamp(8px, 3vw, 20px)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <title>제20회 이순신장군배 전국윈드서핑대회 참가신청서</title>
+        <meta property="og:title" content="제20회 이순신장군배 전국윈드서핑대회 참가신청서" />
+        <meta property="og:description" content="제20회 이순신장군배 전국윈드서핑대회 참가 신청서 접수 페이지" />
+        <meta name="description" content="제20회 이순신장군배 전국윈드서핑대회 참가 신청서 접수 페이지" />
+        <meta property="og:image" content="https://gentrophyos.vercel.app/images/logo_new.png" />
         {/* 상단 단독 폼 타이틀 및 브랜딩 */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
           <img
@@ -767,6 +772,11 @@ export default function TenantPortalPage({
 
   return (
     <div style={themeStyles}>
+      <title>제20회 이순신장군배 전국윈드서핑대회</title>
+      <meta property="og:title" content="제20회 이순신장군배 전국윈드서핑대회" />
+      <meta property="og:description" content="제20회 이순신장군배 전국윈드서핑대회 공식 홈페이지" />
+      <meta name="description" content="제20회 이순신장군배 전국윈드서핑대회 공식 홈페이지" />
+      <meta property="og:image" content="https://gentrophyos.vercel.app/images/logo_new.png" />
       
       {/* 1. 상단 화이트 브랜드 헤더 */}
       <header className="site-header">
