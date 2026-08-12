@@ -1375,31 +1375,19 @@ export default function TenantPortalPage({
                         </tr>
                       </thead>
                       <tbody>
-                        <tr>
-                          <td style={{ whiteSpace: 'nowrap', fontWeight: '800', color: 'var(--theme-primary)' }}>일반부</td>
-                          <td>대학/일반</td>
-                          <td>-</td>
-                        </tr>
-                        <tr>
-                          <td style={{ whiteSpace: 'nowrap', fontWeight: '800', color: 'var(--theme-primary)' }}>청소년부</td>
-                          <td>고등부, 중등부, 초등부</td>
-                          <td>-</td>
-                        </tr>
-                        <tr>
-                          <td style={{ whiteSpace: 'nowrap', fontWeight: '800', color: 'var(--theme-primary)' }}>마스터즈</td>
-                          <td>마스터즈 1부, 마스터즈 2부, 마스터즈 3부</td>
-                          <td>※ 1부 (만 20~29세), 2부 (만 30~39세), 3부 (만 40세 이상)</td>
-                        </tr>
-                        <tr>
-                          <td style={{ whiteSpace: 'nowrap', fontWeight: '800', color: 'var(--theme-primary)' }}>엘리트</td>
-                          <td>등록선수 (학생/일반)</td>
-                          <td>-</td>
-                        </tr>
-                        <tr>
-                          <td style={{ whiteSpace: 'nowrap', fontWeight: '800', color: 'var(--theme-gold)' }}>단체전 (Relay)</td>
-                          <td>각 클럽/동호회팀별 릴레이</td>
-                          <td>남녀 혼성 계영 4x50m 및 4x100m로 진행함.</td>
-                        </tr>
+                        {(overview.divisionsList || [
+                          { category: '일반부', class: '대학/일반', note: '-' },
+                          { category: '청소년부', class: '고등부, 중등부, 초등부', note: '-' },
+                          { category: '마스터즈', class: '마스터즈 1부, 마스터즈 2부, 마스터즈 3부', note: '※ 1부 (만 20~29세), 2부 (만 30~39세), 3부 (만 40세 이상)' },
+                          { category: '엘리트', class: '등록선수 (학생/일반)', note: '-' },
+                          { category: '단체전 (Relay)', class: '각 클럽/동호회팀별 릴레이', note: '남녀 혼성 계영 4x50m 및 4x100m로 진행함.' }
+                        ]).map((row: any, i: number) => (
+                          <tr key={i}>
+                            <td style={{ whiteSpace: 'nowrap', fontWeight: '800', color: row.category?.includes('단체전') ? 'var(--theme-gold)' : 'var(--theme-primary)' }}>{row.category}</td>
+                            <td>{row.class}</td>
+                            <td>{row.note}</td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                   </div>
@@ -1421,24 +1409,27 @@ export default function TenantPortalPage({
                         </tr>
                       </thead>
                       <tbody>
-                        <tr>
-                          <td style={{ whiteSpace: 'nowrap', fontWeight: '800' }}>개인전</td>
-                          <td style={{ whiteSpace: 'nowrap' }}>전 클래스</td>
-                          <td style={{ whiteSpace: 'nowrap' }}><strong>1위: 상장 및 메달<br/>2위: 상장 및 메달<br/>3위: 상장 및 메달</strong></td>
-                          <td>각 클래스별 참가자가 3명 미만일 경우 시상만 하고 메달 수여는 제외될 수 있습니다.</td>
-                        </tr>
-                        <tr>
-                          <td style={{ whiteSpace: 'nowrap', fontWeight: '800' }}>단체전</td>
-                          <td style={{ whiteSpace: 'nowrap' }}>각 클래스별 릴레이</td>
-                          <td style={{ whiteSpace: 'nowrap' }}><strong>1위: 상패 및 메달<br/>2위: 상패 및 메달<br/>3위: 상패 및 메달</strong></td>
-                          <td>-</td>
-                        </tr>
-                        <tr>
-                          <td style={{ whiteSpace: 'nowrap', fontWeight: '800', color: 'var(--theme-gold)' }}>종합시상</td>
-                          <td style={{ whiteSpace: 'nowrap' }}>종합</td>
-                          <td style={{ whiteSpace: 'nowrap' }}><strong>종합 우승: 우승기 및 트로피<br/>종합 준우승: 트로피<br/>종합 3위: 트로피</strong></td>
-                          <td>각 종목별 점수를 합산하여 산출함 (1위 9점, 2위 7점, 3위 6점, 4위 5점, 5위 4점, 6위 3점, 7위 2점, 8위 1점. 단체전은 배점 2배).</td>
-                        </tr>
+                        {(overview.awardsList || [
+                          { type: '개인전', class: '전 클래스', standard: '1위: 상장 및 메달\n2위: 상장 및 메달\n3위: 상장 및 메달', note: '각 클래스별 참가자가 3명 미만일 경우 시상만 하고 메달 수여는 제외될 수 있습니다.' },
+                          { type: '단체전', class: '각 클래스별 릴레이', standard: '1위: 상패 및 메달\n2위: 상패 및 메달\n3위: 상패 및 메달', note: '-' },
+                          { type: '종합시상', class: '종합', standard: '종합 우승: 우승기 및 트로피\n종합 준우승: 트로피\n종합 3위: 트로피', note: '각 종목별 점수를 합산하여 산출함 (1위 9점, 2위 7점, 3위 6점, 4위 5점, 5위 4점, 6위 3점, 7위 2점, 8위 1점. 단체전은 배점 2배).' }
+                        ]).map((row: any, i: number) => (
+                          <tr key={i}>
+                            <td style={{ whiteSpace: 'nowrap', fontWeight: '800', color: row.type?.includes('종합') ? 'var(--theme-gold)' : 'inherit' }}>{row.type}</td>
+                            <td style={{ whiteSpace: 'nowrap' }}>{row.class}</td>
+                            <td style={{ whiteSpace: 'nowrap' }}>
+                              <strong>
+                                {row.standard ? row.standard.split('\n').map((line: string, lIdx: number) => (
+                                  <React.Fragment key={lIdx}>
+                                    {line}
+                                    {lIdx < row.standard.split('\n').length - 1 && <br />}
+                                  </React.Fragment>
+                                )) : '-'}
+                              </strong>
+                            </td>
+                            <td>{row.note}</td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                   </div>

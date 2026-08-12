@@ -1632,7 +1632,38 @@ function OverviewEditor({ tenant, subdomain, onSaveSuccess }: OverviewEditorProp
   };
 
   const [config, setConfig] = useState(initialConfig);
+  const [divisionsList, setDivisionsList] = useState<any[]>(
+    tenant.overviewConfig?.divisionsList || [
+      { category: '일반부', class: '대학/일반', note: '-' },
+      { category: '청소년부', class: '고등부, 중등부, 초등부', note: '-' },
+      { category: '마스터즈', class: '마스터즈 1부, 마스터즈 2부, 마스터즈 3부', note: '※ 1부 (만 20~29세), 2부 (만 30~39세), 3부 (만 40세 이상)' },
+      { category: '엘리트', class: '등록선수 (학생/일반)', note: '-' },
+      { category: '단체전 (Relay)', class: '각 클럽/동호회팀별 릴레이', note: '남녀 혼성 계영 4x50m 및 4x100m로 진행함.' }
+    ]
+  );
+  const [awardsList, setAwardsList] = useState<any[]>(
+    tenant.overviewConfig?.awardsList || [
+      { type: '개인전', class: '전 클래스', standard: '1위: 상장 및 메달\n2위: 상장 및 메달\n3위: 상장 및 메달', note: '각 클래스별 참가자가 3명 미만일 경우 시상만 하고 메달 수여는 제외될 수 있습니다.' },
+      { type: '단체전', class: '각 클래스별 릴레이', standard: '1위: 상패 및 메달\n2위: 상패 및 메달\n3위: 상패 및 메달', note: '-' },
+      { type: '종합시상', class: '종합', standard: '종합 우승: 우승기 및 트로피\n종합 준우승: 트로피\n종합 3위: 트로피', note: '각 종목별 점수를 합산하여 산출함 (1위 9점, 2위 7점, 3위 6점, 4위 5점, 5위 4점, 6위 3점, 7위 2점, 8위 1점. 단체전은 배점 2배).' }
+    ]
+  );
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (tenant?.overviewConfig) {
+      setConfig({
+        ...defaultOverview,
+        ...tenant.overviewConfig
+      });
+      if (tenant.overviewConfig.divisionsList) {
+        setDivisionsList(tenant.overviewConfig.divisionsList);
+      }
+      if (tenant.overviewConfig.awardsList) {
+        setAwardsList(tenant.overviewConfig.awardsList);
+      }
+    }
+  }, [tenant]);
 
   const handleChange = (field: string, value: string) => {
     setConfig((prev: any) => ({
@@ -1647,7 +1678,13 @@ function OverviewEditor({ tenant, subdomain, onSaveSuccess }: OverviewEditorProp
       const res = await fetch(`/api/tenant/${subdomain}/overview`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ overviewConfig: config })
+        body: JSON.stringify({
+          overviewConfig: {
+            ...config,
+            divisionsList,
+            awardsList
+          }
+        })
       });
       const data = await res.json();
       if (res.ok) {
@@ -1794,6 +1831,138 @@ function OverviewEditor({ tenant, subdomain, onSaveSuccess }: OverviewEditorProp
               value={config.rulesNote}
               onChange={e => handleChange('rulesNote', e.target.value)}
             />
+          </div>
+
+          {/* 5. 경기 종목 및 세부 클래스 설정 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
+            <h4 style={{ color: 'var(--theme-primary)', fontWeight: '800', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '16px' }}>
+              5. 경기 종목 및 세부 클래스 설정 (대회 요강 탭)
+            </h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {divisionsList.map((row, rIdx) => (
+                <div key={rIdx} style={{ display: 'grid', gridTemplateColumns: '2fr 3fr 5fr 60px', gap: '10px', alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={row.category || ''}
+                    onChange={(e) => {
+                      const newD = [...divisionsList];
+                      newD[rIdx].category = e.target.value;
+                      setDivisionsList(newD);
+                    }}
+                    placeholder="경기 종목 (예: 일반부)"
+                  />
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={row.class || ''}
+                    onChange={(e) => {
+                      const newD = [...divisionsList];
+                      newD[rIdx].class = e.target.value;
+                      setDivisionsList(newD);
+                    }}
+                    placeholder="세부 클래스"
+                  />
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={row.note || ''}
+                    onChange={(e) => {
+                      const newD = [...divisionsList];
+                      newD[rIdx].note = e.target.value;
+                      setDivisionsList(newD);
+                    }}
+                    placeholder="비고"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setDivisionsList(divisionsList.filter((_, i) => i !== rIdx))}
+                    style={{ padding: '8px', background: 'rgba(239,68,68,0.1)', color: '#F87171', border: '1px solid #EF4444', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+                  >
+                    삭제
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setDivisionsList([...divisionsList, { category: '', class: '', note: '' }])}
+                className="btn-secondary"
+                style={{ alignSelf: 'flex-start', padding: '8px 16px', fontSize: '0.85rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', color: 'black', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
+              >
+                + 종목 행 추가
+              </button>
+            </div>
+          </div>
+
+          {/* 6. 공식 시상 내역 설정 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
+            <h4 style={{ color: 'var(--theme-primary)', fontWeight: '800', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '16px' }}>
+              6. 공식 시상 내역 설정 (대회 요강 탭)
+            </h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {awardsList.map((row, rIdx) => (
+                <div key={rIdx} style={{ display: 'grid', gridTemplateColumns: '1.5fr 1.5fr 3.5fr 3.5fr 60px', gap: '10px', alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={row.type || ''}
+                    onChange={(e) => {
+                      const newA = [...awardsList];
+                      newA[rIdx].type = e.target.value;
+                      setAwardsList(newA);
+                    }}
+                    placeholder="구분 (예: 개인전)"
+                  />
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={row.class || ''}
+                    onChange={(e) => {
+                      const newA = [...awardsList];
+                      newA[rIdx].class = e.target.value;
+                      setAwardsList(newA);
+                    }}
+                    placeholder="클래스"
+                  />
+                  <textarea
+                    style={{ padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '6px', fontSize: '0.85rem', minHeight: '38px', resize: 'vertical', background: '#f8fafc', color: 'black' }}
+                    value={row.standard || ''}
+                    onChange={(e) => {
+                      const newA = [...awardsList];
+                      newA[rIdx].standard = e.target.value;
+                      setAwardsList(newA);
+                    }}
+                    placeholder="시상 및 기준"
+                  />
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={row.note || ''}
+                    onChange={(e) => {
+                      const newA = [...awardsList];
+                      newA[rIdx].note = e.target.value;
+                      setAwardsList(newA);
+                    }}
+                    placeholder="비고"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setAwardsList(awardsList.filter((_, i) => i !== rIdx))}
+                    style={{ padding: '8px', background: 'rgba(239,68,68,0.1)', color: '#F87171', border: '1px solid #EF4444', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+                  >
+                    삭제
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setAwardsList([...awardsList, { type: '', class: '', standard: '', note: '' }])}
+                className="btn-secondary"
+                style={{ alignSelf: 'flex-start', padding: '8px 16px', fontSize: '0.85rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', color: 'black', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
+              >
+                + 시상 행 추가
+              </button>
+            </div>
           </div>
 
         </div>
