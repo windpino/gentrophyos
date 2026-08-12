@@ -20,6 +20,7 @@ interface GridRow {
   mediaConsent: string;
   paymentStatus: 'PENDING' | 'APPROVED';
   status: 'PENDING' | 'APPROVED';
+  createdAt?: string;
 
   // 편집 제어 플래그
   isEdited?: boolean;
@@ -165,6 +166,7 @@ export default function HostDashboardPage({
           mediaConsent,
           paymentStatus: r.paymentStatus,
           status: r.status,
+          createdAt: r.createdAt ? new Date(r.createdAt).toLocaleString('ko-KR') : '',
         };
       });
 
@@ -215,6 +217,7 @@ export default function HostDashboardPage({
       paymentStatus: 'APPROVED',
       status: 'APPROVED',
       isNew: true, // 신규 추가 행 추적
+      createdAt: new Date().toLocaleString('ko-KR'),
     };
     setGridData([newRow, ...gridData]);
   };
@@ -654,6 +657,7 @@ export default function HostDashboardPage({
                       <th style={{ minWidth: '80px', textAlign: 'center', fontSize: '0.8rem' }}>12.초상권</th>
                       <th style={{ minWidth: '80px' }}>결제 여부</th>
                       <th style={{ minWidth: '80px' }}>승인 상태</th>
+                      <th style={{ minWidth: '150px', textAlign: 'center' }}>신청일시</th>
                       <th style={{ width: '90px', textAlign: 'center' }}>작업</th>
                     </tr>
                   </thead>
@@ -882,6 +886,11 @@ export default function HostDashboardPage({
                             <option value="PENDING" style={{ color: '#F59E0B' }}>대기상태</option>
                             <option value="APPROVED" style={{ color: '#10B981' }}>승인완료</option>
                           </select>
+                        </td>
+
+                        {/* 신청일시 */}
+                        <td style={{ padding: '8px 16px', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                          {row.createdAt || '-'}
                         </td>
 
                         {/* 작업 (상세보기 및 삭제) */}

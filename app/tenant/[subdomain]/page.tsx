@@ -115,8 +115,8 @@ export default function TenantPortalPage({
   const [applicantGender, setApplicantGender] = useState('남자');
   const [applicantPhone, setApplicantPhone] = useState('');
   const [applicantClub, setApplicantClub] = useState('');
-  const [applicantDivision, setApplicantDivision] = useState('윈드포일');
-  const [applicantTshirt, setApplicantTshirt] = useState('L (105)');
+  const [applicantDivision, setApplicantDivision] = useState('윈드포일 (남자부)');
+  const [applicantTshirt, setApplicantTshirt] = useState('남자 L (105)');
   
   // 5가지 체크 동의
   const [vestAgreement, setVestAgreement] = useState(false);
@@ -355,6 +355,9 @@ export default function TenantPortalPage({
       setApplicantBirth('');
       setApplicantPhone('');
       setApplicantClub('');
+      setApplicantGender('남자');
+      setApplicantDivision('윈드포일 (남자부)');
+      setApplicantTshirt('남자 L (105)');
       setVestAgreement(false);
       setPaymentNoticeAgreement(false);
       setLiabilityWaiver(false);
@@ -463,8 +466,7 @@ export default function TenantPortalPage({
                 <p style={{ margin: '8px 0 0 0', paddingLeft: '8px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                   ※ 각 클래스는 생년월일기준으로 편성하며 선수 5명이상 출전 시 시상한다.<br />
                   ※ 단체전을 제외한 종목별 경기의 중복출전은 불가하다.<br />
-                  ※ 단체전은 시,도 클럽별 릴레이식 참가선수 4명이 1개 팀으로 하는 경기방식 채택한다.<br />
-                  ◉ 모든 나이는 2026년 9월 12일을 기준으로 한다.
+                  ※ 단체전은 시,도 클럽별 릴레이식 참가선수 4명이 1개 팀으로 하는 경기방식 채택한다.
                 </p>
               </div>
 
@@ -522,7 +524,17 @@ export default function TenantPortalPage({
                       name="gender_select_apply"
                       value={g}
                       checked={applicantGender === g}
-                      onChange={(e) => setApplicantGender(e.target.value)}
+                      onChange={(e) => {
+                        const newGender = e.target.value;
+                        setApplicantGender(newGender);
+                        if (newGender === '남자') {
+                          setApplicantDivision('윈드포일 (남자부)');
+                          setApplicantTshirt('남자 L (105)');
+                        } else {
+                          setApplicantDivision('윈드포일 (여자부)');
+                          setApplicantTshirt('여자 L (95)');
+                        }
+                      }}
                       style={{ width: '18px', height: '18px' }}
                     />
                     <span>{g}</span>
@@ -567,10 +579,21 @@ export default function TenantPortalPage({
                 required
                 style={{ background: 'white', color: 'var(--text-main)' }}
               >
-                <option value="윈드포일">윈드포일 (남녀오픈)</option>
-                <option value="윙포일">윙포일 (남자부/여자부)</option>
-                <option value="혼합오픈">혼합오픈 (연령대별 편성)</option>
-                <option value="펀엔포뮬러">펀엔포뮬러 (연령대별 편성)</option>
+                {applicantGender === '남자' ? (
+                  <>
+                    <option value="윈드포일 (남자부)">윈드포일 (남자부)</option>
+                    <option value="윙포일 (남자부)">윙포일 (남자부)</option>
+                    <option value="혼합오픈 (남자부)">혼합오픈 (남자부)</option>
+                    <option value="펀엔포뮬러 (남자부)">펀엔포뮬러 (남자부)</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="윈드포일 (여자부)">윈드포일 (여자부)</option>
+                    <option value="윙포일 (여자부)">윙포일 (여자부)</option>
+                    <option value="혼합오픈 (여자부)">혼합오픈 (여자부)</option>
+                    <option value="펀엔포뮬러 (여자부)">펀엔포뮬러 (여자부)</option>
+                  </>
+                )}
               </select>
             </div>
 
@@ -584,10 +607,23 @@ export default function TenantPortalPage({
                 required
                 style={{ background: 'white', color: 'var(--text-main)' }}
               >
-                <option value="S (95)">S (95)</option>
-                <option value="M (100)">M (100)</option>
-                <option value="L (105)">L (105)</option>
-                <option value="XL (110)">XL (110)</option>
+                {applicantGender === '남자' ? (
+                  <>
+                    <option value="남자 S (95)">남자 S (95)</option>
+                    <option value="남자 M (100)">남자 M (100)</option>
+                    <option value="남자 L (105)">남자 L (105)</option>
+                    <option value="남자 XL (110)">남자 XL (110)</option>
+                    <option value="남자 XXL (115)">남자 XXL (115)</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="여자 S (85)">여자 S (85)</option>
+                    <option value="여자 M (90)">여자 M (90)</option>
+                    <option value="여자 L (95)">여자 L (95)</option>
+                    <option value="여자 XL (100)">여자 XL (100)</option>
+                    <option value="여자 XXL (105)">여자 XXL (105)</option>
+                  </>
+                )}
               </select>
             </div>
 
