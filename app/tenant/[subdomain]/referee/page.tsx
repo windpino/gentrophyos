@@ -68,7 +68,8 @@ export default function RefereeMobilePage({
         setIsAuthenticated(true);
         setAuthError('');
       } else {
-        setAuthError('비밀번호가 올바르지 않습니다.');
+        const data = await res.json();
+        setAuthError(data.message || '비밀번호가 올바르지 않습니다.');
         setPasswordInput('');
       }
     } catch {

@@ -69,7 +69,8 @@ export default function HostDashboardPage({
         setIsAuthenticated(true);
         setAuthError('');
       } else {
-        setAuthError('올바르지 않은 비밀번호입니다. 다시 입력해 주세요.');
+        const data = await res.json();
+        setAuthError(data.message || '올바르지 않은 비밀번호입니다. 다시 입력해 주세요.');
         setPasswordInput('');
       }
     } catch {
