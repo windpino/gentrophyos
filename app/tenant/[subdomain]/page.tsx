@@ -116,7 +116,7 @@ export default function TenantPortalPage({
   const [applicantPhone, setApplicantPhone] = useState('');
   const [applicantClub, setApplicantClub] = useState('');
   const [applicantDivision, setApplicantDivision] = useState('윈드포일 (남자부)');
-  const [applicantTshirt, setApplicantTshirt] = useState('남자 L (105)');
+  const [applicantTshirt, setApplicantTshirt] = useState('L (105)');
   
   // 5가지 체크 동의
   const [vestAgreement, setVestAgreement] = useState(false);
@@ -357,7 +357,7 @@ export default function TenantPortalPage({
       setApplicantClub('');
       setApplicantGender('남자');
       setApplicantDivision('윈드포일 (남자부)');
-      setApplicantTshirt('남자 L (105)');
+      setApplicantTshirt('L (105)');
       setVestAgreement(false);
       setPaymentNoticeAgreement(false);
       setLiabilityWaiver(false);
@@ -529,10 +529,8 @@ export default function TenantPortalPage({
                         setApplicantGender(newGender);
                         if (newGender === '남자') {
                           setApplicantDivision('윈드포일 (남자부)');
-                          setApplicantTshirt('남자 L (105)');
                         } else {
                           setApplicantDivision('윈드포일 (여자부)');
-                          setApplicantTshirt('여자 L (95)');
                         }
                       }}
                       style={{ width: '18px', height: '18px' }}
@@ -596,10 +594,7 @@ export default function TenantPortalPage({
             <div className="form-group">
               <label className="form-label">7. 티셔츠(기념품)사이즈 <span style={{ color: '#EF4444' }}>*</span></label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginTop: '8px' }}>
-                {(applicantGender === '남자'
-                  ? ['남자 S (95)', '남자 M (100)', '남자 L (105)', '남자 XL (110)', '남자 XXL (115)']
-                  : ['여자 S (85)', '여자 M (90)', '여자 L (95)', '여자 XL (100)', '여자 XXL (105)']
-                ).map((szOption) => (
+                {['S (95)', 'M (100)', 'L (105)', 'XL (110)', 'XXL (115)'].map((szOption) => (
                   <label key={szOption} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.95rem', fontWeight: '500' }}>
                     <input
                       type="radio"
