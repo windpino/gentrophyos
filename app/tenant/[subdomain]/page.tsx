@@ -572,59 +572,47 @@ export default function TenantPortalPage({
             {/* 6. 참가종목 */}
             <div className="form-group">
               <label className="form-label">6. 참가종목 <span style={{ color: '#EF4444' }}>*</span></label>
-              <select
-                className="form-input"
-                value={applicantDivision}
-                onChange={(e) => setApplicantDivision(e.target.value)}
-                required
-                style={{ background: 'white', color: 'var(--text-main)' }}
-              >
-                {applicantGender === '남자' ? (
-                  <>
-                    <option value="윈드포일 (남자부)">윈드포일 (남자부)</option>
-                    <option value="윙포일 (남자부)">윙포일 (남자부)</option>
-                    <option value="혼합오픈 (남자부)">혼합오픈 (남자부)</option>
-                    <option value="펀엔포뮬러 (남자부)">펀엔포뮬러 (남자부)</option>
-                  </>
-                ) : (
-                  <>
-                    <option value="윈드포일 (여자부)">윈드포일 (여자부)</option>
-                    <option value="윙포일 (여자부)">윙포일 (여자부)</option>
-                    <option value="혼합오픈 (여자부)">혼합오픈 (여자부)</option>
-                    <option value="펀엔포뮬러 (여자부)">펀엔포뮬러 (여자부)</option>
-                  </>
-                )}
-              </select>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '8px' }}>
+                {(applicantGender === '남자' 
+                  ? ['윈드포일 (남자부)', '윙포일 (남자부)', '혼합오픈 (남자부)', '펀엔포뮬러 (남자부)']
+                  : ['윈드포일 (여자부)', '윙포일 (여자부)', '혼합오픈 (여자부)', '펀엔포뮬러 (여자부)']
+                ).map((divOption) => (
+                  <label key={divOption} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.95rem', fontWeight: '500' }}>
+                    <input
+                      type="radio"
+                      name="division_select_apply"
+                      value={divOption}
+                      checked={applicantDivision === divOption}
+                      onChange={(e) => setApplicantDivision(e.target.value)}
+                      style={{ width: '18px', height: '18px' }}
+                    />
+                    <span>{divOption}</span>
+                  </label>
+                ))}
+              </div>
             </div>
 
             {/* 7. 티셔츠 사이즈 */}
             <div className="form-group">
               <label className="form-label">7. 티셔츠(기념품)사이즈 <span style={{ color: '#EF4444' }}>*</span></label>
-              <select
-                className="form-input"
-                value={applicantTshirt}
-                onChange={(e) => setApplicantTshirt(e.target.value)}
-                required
-                style={{ background: 'white', color: 'var(--text-main)' }}
-              >
-                {applicantGender === '남자' ? (
-                  <>
-                    <option value="남자 S (95)">남자 S (95)</option>
-                    <option value="남자 M (100)">남자 M (100)</option>
-                    <option value="남자 L (105)">남자 L (105)</option>
-                    <option value="남자 XL (110)">남자 XL (110)</option>
-                    <option value="남자 XXL (115)">남자 XXL (115)</option>
-                  </>
-                ) : (
-                  <>
-                    <option value="여자 S (85)">여자 S (85)</option>
-                    <option value="여자 M (90)">여자 M (90)</option>
-                    <option value="여자 L (95)">여자 L (95)</option>
-                    <option value="여자 XL (100)">여자 XL (100)</option>
-                    <option value="여자 XXL (105)">여자 XXL (105)</option>
-                  </>
-                )}
-              </select>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginTop: '8px' }}>
+                {(applicantGender === '남자'
+                  ? ['남자 S (95)', '남자 M (100)', '남자 L (105)', '남자 XL (110)', '남자 XXL (115)']
+                  : ['여자 S (85)', '여자 M (90)', '여자 L (95)', '여자 XL (100)', '여자 XXL (105)']
+                ).map((szOption) => (
+                  <label key={szOption} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.95rem', fontWeight: '500' }}>
+                    <input
+                      type="radio"
+                      name="tshirt_select_apply"
+                      value={szOption}
+                      checked={applicantTshirt === szOption}
+                      onChange={(e) => setApplicantTshirt(e.target.value)}
+                      style={{ width: '18px', height: '18px' }}
+                    />
+                    <span>{szOption}</span>
+                  </label>
+                ))}
+              </div>
             </div>
 
             {/* 8. 조끼 배번티 수령 동의 */}
