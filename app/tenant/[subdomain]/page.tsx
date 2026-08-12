@@ -394,7 +394,7 @@ export default function TenantPortalPage({
 
   if (applyMode && ongoingTournament) {
     return (
-      <div style={{ ...themeStyles, minHeight: '100vh', backgroundColor: '#ffffff', padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <div style={{ ...themeStyles, minHeight: '100vh', backgroundColor: '#ffffff', padding: 'clamp(16px, 4vw, 40px) clamp(8px, 3vw, 20px)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         {/* 상단 단독 폼 타이틀 및 브랜딩 */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
           <img
@@ -405,7 +405,7 @@ export default function TenantPortalPage({
         </div>
 
         {/* 단독 폼 카드 */}
-        <div style={{ width: '100%', maxWidth: '650px', background: '#ffffff', borderRadius: '16px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05)', border: '1px solid var(--border-color)', padding: '32px' }}>
+        <div style={{ width: '100%', maxWidth: '650px', background: '#ffffff', borderRadius: '16px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05)', border: '1px solid var(--border-color)', padding: 'clamp(16px, 4vw, 32px) clamp(12px, 4vw, 32px)' }}>
           
           {/* 헤더 버튼 영역 (홈페이지 바로가기 및 링크 복사) */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '16px', marginBottom: '24px' }}>
