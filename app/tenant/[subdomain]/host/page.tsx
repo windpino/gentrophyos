@@ -506,7 +506,7 @@ export default function HostDashboardPage({
 
           <div style={{ display: 'flex', gap: '12px' }}>
             <a
-              href={`/tenant/${subdomain}`}
+              href={typeof window !== 'undefined' && window.location.pathname.startsWith('/tenant/') ? `/tenant/${subdomain}` : '/'}
               className="btn-secondary"
               style={{ fontSize: '0.9rem', padding: '10px 18px', display: 'flex', alignItems: 'center', gap: '6px', background: 'white' }}
             >
