@@ -87,7 +87,7 @@ export default function TenantPortalPage({
     itineraryDay5: '',
     ...(tenant?.overviewConfig || {})
   };
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'notice' | 'intro' | 'live' | 'gallery' | 'archive'>('overview');
   const [activeSubTab, setActiveSubTab] = useState<string>('');
   const [activeDivisionTab, setActiveDivisionTab] = useState<string>('윈드포일');
@@ -394,13 +394,7 @@ export default function TenantPortalPage({
     }
   };
 
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: 'var(--bg-main)' }}>
-        <RefreshCw className="animate-spin" size={48} style={{ color: 'var(--theme-primary)' }} />
-      </div>
-    );
-  }
+  // 로딩 중에도 fallback 데이터로 즉시 렌더링 (스피너 제거)
 
   if (!tenant) {
     return (

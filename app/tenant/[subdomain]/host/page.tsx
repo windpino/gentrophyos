@@ -49,7 +49,7 @@ export default function HostDashboardPage({
   // 기본 정보
   const [tenant, setTenant] = useState<any>(null);
   const [activeTournament, setActiveTournament] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [activeSection, setActiveSection] = useState<'applicants' | 'tie-breaker' | 'overview' | 'notice' | 'form-builder'>('applicants');
 
   // 동적 신청서 폼 양식 (폼빌더) 상태
@@ -360,20 +360,21 @@ export default function HostDashboardPage({
     );
   });
 
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: 'var(--bg-main)' }}>
-        <RefreshCw className="animate-spin" size={48} style={{ color: 'var(--theme-primary)' }} />
-      </div>
-    );
+  if (!isAuthenticated) {
+    // 인증 화면은 이하 조건분기에서 렌더링
   }
 
   if (!tenant || !activeTournament) {
-    return (
-      <div style={{ padding: '80px 20px', textAlign: 'center' }}>
-        <h2 style={{ fontSize: '2rem', color: '#EF4444' }}>관리 대상 채널이 존재하지 않습니다.</h2>
-      </div>
-    );
+    // 인증 후, 데이터 로딩 중 스켈레톤 UI 표시
+    if (isAuthenticated) {
+      return (
+        <div style={{ minHeight: '100vh', backgroundColor: '#f1f5f9', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px', fontFamily: 'system-ui, sans-serif' }}>
+          <div style={{ width: '48px', height: '48px', borderRadius: '50%', border: '4px solid #e2e8f0', borderTop: '4px solid #1f6f8b', animation: 'spin 0.8s linear infinite' }} />
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+          <p style={{ color: '#64748b', fontWeight: '600', fontSize: '1rem' }}>데이터를 불러오는 중입니다...</p>
+        </div>
+      );
+    }
   }
 
   const themeStyles = {
