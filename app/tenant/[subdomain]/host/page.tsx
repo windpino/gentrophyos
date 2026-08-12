@@ -1898,13 +1898,53 @@ function NoticeEditor({ tenant, subdomain, onSaveSuccess }: NoticeEditorProps) {
   const [noticeText, setNoticeText] = useState(
     tenant?.overviewConfig?.noticeText || defaultNoticeText
   );
+  const [noticeType, setNoticeType] = useState<'text' | 'image'>(
+    tenant?.overviewConfig?.noticeType || 'text'
+  );
+  const [noticeImageUrl, setNoticeImageUrl] = useState<string>(
+    tenant?.overviewConfig?.noticeImageUrl || ''
+  );
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (tenant?.overviewConfig?.noticeText) {
-      setNoticeText(tenant.overviewConfig.noticeText);
+    if (tenant?.overviewConfig) {
+      if (tenant.overviewConfig.noticeText) setNoticeText(tenant.overviewConfig.noticeText);
+      if (tenant.overviewConfig.noticeType) setNoticeType(tenant.overviewConfig.noticeType);
+      if (tenant.overviewConfig.noticeImageUrl) setNoticeImageUrl(tenant.overviewConfig.noticeImageUrl);
     }
   }, [tenant]);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const MAX_WIDTH = 1200;
+        
+        if (width > MAX_WIDTH) {
+          height = Math.round((height * MAX_WIDTH) / width);
+          width = MAX_WIDTH;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.75);
+          setNoticeImageUrl(compressedBase64);
+        }
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -1916,13 +1956,15 @@ function NoticeEditor({ tenant, subdomain, onSaveSuccess }: NoticeEditorProps) {
         body: JSON.stringify({
           overviewConfig: {
             ...currentConfig,
-            noticeText: noticeText
+            noticeText,
+            noticeType,
+            noticeImageUrl
           }
         })
       });
       const data = await res.json();
       if (res.ok) {
-        alert('개최공시서 내용이 성공적으로 업데이트되어 홈페이지에 반영되었습니다!');
+        alert('개최공시서 설정이 성공적으로 업데이트되어 홈페이지에 반영되었습니다!');
         onSaveSuccess();
       } else {
         alert(data.error || '저장 실패');
@@ -1940,7 +1982,7 @@ function NoticeEditor({ tenant, subdomain, onSaveSuccess }: NoticeEditorProps) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', borderBottom: '1px solid var(--border-color)', paddingBottom: '16px' }}>
           <div>
             <h3 style={{ fontSize: '1.25rem', fontWeight: '800', margin: 0 }}>개최공시서(NOR) 자유 편집기</h3>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>여기에 입력된 텍스트는 메인 홈페이지의 개최공시서 탭 화면에 실시간으로 반영됩니다.</p>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>글을 직접 입력하거나 그림파일(이미지)을 직접 업로드하여 게시할 수 있습니다.</p>
           </div>
           <button
             onClick={handleSave}
@@ -1953,25 +1995,84 @@ function NoticeEditor({ tenant, subdomain, onSaveSuccess }: NoticeEditorProps) {
           </button>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <label style={{ fontSize: '0.9rem', fontWeight: '700' }}>개최공시서 본문</label>
-          <textarea
-            style={{
-              minHeight: '600px',
-              lineHeight: '1.8',
-              fontSize: '0.95rem',
-              width: '100%',
-              padding: '20px',
-              border: '1px solid var(--border-color)',
-              borderRadius: '8px',
-              fontFamily: 'monospace',
-              background: '#f8fafc'
-            }}
-            value={noticeText}
-            onChange={e => setNoticeText(e.target.value)}
-            placeholder="개최공시서 내용을 입력하세요..."
-          />
+        {/* 1. 공시서 형식 선택 라디오 */}
+        <div style={{ display: 'flex', gap: '20px', marginBottom: '24px', background: '#f8fafc', padding: '16px', borderRadius: '10px', border: '1px solid var(--border-color)', color: 'black' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem' }}>
+            <input
+              type="radio"
+              name="noticeType"
+              value="text"
+              checked={noticeType === 'text'}
+              onChange={() => setNoticeType('text')}
+              style={{ width: '18px', height: '18px' }}
+            />
+            <span>글로 직접 입력하기 (텍스트 방식)</span>
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem' }}>
+            <input
+              type="radio"
+              name="noticeType"
+              value="image"
+              checked={noticeType === 'image'}
+              onChange={() => setNoticeType('image')}
+              style={{ width: '18px', height: '18px' }}
+            />
+            <span>그림파일로 업로드하기 (이미지 방식)</span>
+          </label>
         </div>
+
+        {/* 2. 형식별 렌더링 */}
+        {noticeType === 'text' ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', color: 'black' }}>
+            <label style={{ fontSize: '0.9rem', fontWeight: '700' }}>개최공시서 본문</label>
+            <textarea
+              style={{
+                minHeight: '600px',
+                lineHeight: '1.8',
+                fontSize: '0.95rem',
+                width: '100%',
+                padding: '20px',
+                border: '1px solid var(--border-color)',
+                borderRadius: '8px',
+                fontFamily: 'monospace',
+                background: '#f8fafc'
+              }}
+              value={noticeText}
+              onChange={e => setNoticeText(e.target.value)}
+              placeholder="개최공시서 내용을 입력하세요..."
+            />
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', color: 'black' }}>
+            <label style={{ fontSize: '0.9rem', fontWeight: '700' }}>공시서 이미지 등록</label>
+            <div style={{ border: '2px dashed var(--border-color)', borderRadius: '10px', padding: '40px', textAlign: 'center', background: '#f8fafc' }}>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                style={{ display: 'none' }}
+                id="notice-image-upload"
+              />
+              <label htmlFor="notice-image-upload" style={{ cursor: 'pointer', background: 'var(--theme-primary)', color: 'white', padding: '10px 20px', borderRadius: '6px', fontSize: '0.9rem', fontWeight: '700', display: 'inline-block', marginBottom: '10px' }}>
+                컴퓨터에서 파일 찾기
+              </label>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>PNG, JPG, JPEG 형식의 그림 파일을 등록할 수 있습니다.</p>
+            </div>
+            {noticeImageUrl && (
+              <div style={{ position: 'relative', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '16px', background: '#ffffff', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)', alignSelf: 'flex-start', marginBottom: '8px' }}>공시서 이미지 미리보기:</span>
+                <img src={noticeImageUrl} alt="NOR Preview" style={{ maxWidth: '100%', height: 'auto', maxHeight: '600px', borderRadius: '6px', border: '1px solid var(--border-color)' }} />
+                <button
+                  type="button"
+                  onClick={() => setNoticeImageUrl('')}
+                  style={{ marginTop: '14px', padding: '8px 16px', background: '#EF4444', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '700' }}
+                >
+                  업로드된 이미지 삭제
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

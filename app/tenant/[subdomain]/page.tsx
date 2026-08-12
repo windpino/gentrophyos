@@ -1038,7 +1038,15 @@ export default function TenantPortalPage({
                 <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>Notice of Race (NOR)</p>
               </div>
 
-              {overview.noticeText ? (
+              {overview.noticeType === 'image' && overview.noticeImageUrl ? (
+                <div className="glass-panel" style={{ background: 'white', padding: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                  <img
+                    src={overview.noticeImageUrl}
+                    alt="개최공시서"
+                    style={{ maxWidth: '100%', height: 'auto', borderRadius: '10px', border: '1px solid var(--border-color)' }}
+                  />
+                </div>
+              ) : overview.noticeText ? (
                 <div className="glass-panel" style={{ background: 'white', padding: '28px 32px', whiteSpace: 'pre-wrap', lineHeight: '1.8', fontSize: '0.95rem', color: 'var(--text-main)' }}>
                   {overview.noticeText}
                 </div>
