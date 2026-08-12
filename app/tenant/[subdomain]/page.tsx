@@ -1598,7 +1598,7 @@ export default function TenantPortalPage({
                       <p style={{ fontWeight: '800', color: 'var(--text-main)', marginTop: '4px', fontSize: '1.05rem', margin: 0 }}>
                         {overview.deadlineDate}
                       </p>
-                      <p style={{ fontSize: '0.8rem', color: '#EF4444', marginTop: '2px', margin: 0 }}>* 선착순 도달 시 조기 마감될 수 있습니다.</p>
+                      <p style={{ fontSize: '0.8rem', color: '#EF4444', marginTop: '2px', margin: 0 }}>* 130명 도달시 조기 마감될 수 있습니다.</p>
                     </div>
                   </div>
                 </div>
