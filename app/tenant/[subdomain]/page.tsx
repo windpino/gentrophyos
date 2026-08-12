@@ -1311,10 +1311,10 @@ export default function TenantPortalPage({
                 {/* 세부 대회 일정 (타임라인 카드) */}
                 <div className="glass-panel" style={{ padding: '24px 30px', background: 'white' }}>
                   <h2 style={{ fontSize: '1.4rem', fontWeight: '800', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)' }}>
-                    <Calendar style={{ color: 'var(--theme-primary)' }} size={22} /> 공식 대회 일정표 (5일간)
+                    <Calendar style={{ color: 'var(--theme-primary)' }} size={22} /> 공식 대회 일정표 (2일간)
                   </h2>
                   
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
                     {/* 1일차 */}
                     <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
                       <h4 style={{ fontWeight: '800', color: 'var(--theme-primary)', borderBottom: '2px solid var(--theme-primary)', paddingBottom: '8px', marginBottom: '12px', margin: 0 }}>
