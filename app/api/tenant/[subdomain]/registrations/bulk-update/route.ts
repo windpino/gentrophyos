@@ -55,6 +55,7 @@ export async function POST(
           player: {
             id: row.playerId,
             name: row.name,
+            phone: row.phone || null,
           }
         });
       }
@@ -132,6 +133,7 @@ export async function POST(
           player: {
             id: playerId,
             name: row.name,
+            phone: row.phone || null,
           }
         });
       }

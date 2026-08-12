@@ -49,12 +49,42 @@ export async function GET(
       where('tournamentId', '==', queryTournamentId)
     );
     const regsSnap = await getDocs(regsQuery);
+
+    // 테넌트의 모든 플레이어 조회하여 조인 준비
+    const playersQuery = query(
+      collection(firestore, 'players'),
+      where('tenantId', '==', tenant.id)
+    );
+    const playersSnap = await getDocs(playersQuery);
+    const playersMap = new Map<string, any>();
+    playersSnap.docs.forEach(docSnap => {
+      playersMap.set(docSnap.id, docSnap.data());
+    });
+
     const registrations = regsSnap.docs.map(docSnap => {
       const data = docSnap.data();
+      const playerDoc = playersMap.get(data.playerId);
+      
+      let phoneFromResponses = '';
+      try {
+        if (data.formResponses) {
+          const extra = JSON.parse(data.formResponses);
+          phoneFromResponses = extra.phone || '';
+        }
+      } catch (e) {}
+
+      const phone = phoneFromResponses || playerDoc?.phone || data.player?.phone || '';
+
       return {
         ...data,
         id: docSnap.id,
         createdAt: new Date(data.createdAt),
+        player: {
+          ...(data.player || {}),
+          id: data.playerId,
+          name: data.player?.name || playerDoc?.name || '',
+          phone,
+        }
       };
     }).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
