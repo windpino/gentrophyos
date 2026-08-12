@@ -749,61 +749,26 @@ export default function TenantPortalPage({
   return (
     <div style={themeStyles}>
       
-      {/* 1. 상단 화이트 브랜드 헤더 (로고 배경 흰색 자연 융합) */}
-      <header
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '96px',
-          zIndex: 10,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '0 40px',
-          background: '#ffffff',
-          borderBottom: '1px solid var(--border-color)',
-        }}
-      >
+      {/* 1. 상단 화이트 브랜드 헤더 */}
+      <header className="site-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <img
             src="/images/logo_new.png"
             alt="제20회 이순신장군배 전국윈드서핑대회 로고"
-            style={{ height: '80px', width: 'auto', objectFit: 'contain' }}
+            style={{ height: '70px', width: 'auto', objectFit: 'contain' }}
           />
-
-          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <span style={{
-              fontSize: '0.85rem',
-              fontWeight: '800',
-              color: 'var(--text-main)',
-              lineHeight: '1.25',
-              fontFamily: 'var(--font-title)',
-            }}>
+          <div className="brand-text" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: '800', color: 'var(--text-main)', lineHeight: '1.25', fontFamily: 'var(--font-title)' }}>
               제20회 이순신장군배
             </span>
-            <span style={{
-              fontSize: '0.85rem',
-              fontWeight: '800',
-              color: 'var(--theme-primary)',
-              lineHeight: '1.25',
-              fontFamily: 'var(--font-title)',
-            }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: '800', color: 'var(--theme-primary)', lineHeight: '1.25', fontFamily: 'var(--font-title)' }}>
               전국윈드서핑대회
             </span>
           </div>
         </div>
 
-        {/* 탭 네비게이션 메뉴 (상단 GNB 구조화) */}
-        <nav
-          style={{
-            display: 'flex',
-            gap: '8px',
-            height: '100%',
-            alignItems: 'center',
-          }}
-        >
+        {/* 탭 네비게이션 메뉴 (PC 상단 GNB) */}
+        <nav className="header-nav">
           {[
             {
               id: 'overview',
@@ -883,6 +848,7 @@ export default function TenantPortalPage({
             return (
               <button
                 key={tab.id}
+                className="header-nav-btn"
                 onClick={() => {
                   if (!tab.disabled) {
                     setActiveTab(tab.id as any);
@@ -891,19 +857,9 @@ export default function TenantPortalPage({
                 }}
                 disabled={tab.disabled}
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '0 16px',
-                  height: '100%',
-                  border: 'none',
-                  background: 'none',
                   color: tab.disabled ? 'rgba(0,0,0,0.15)' : (active ? 'var(--theme-primary)' : 'var(--text-muted)'),
-                  borderBottom: active ? `3px solid var(--theme-primary)` : '3px solid transparent',
+                  borderBottom: active ? '3px solid var(--theme-primary)' : '3px solid transparent',
                   cursor: tab.disabled ? 'not-allowed' : 'pointer',
-                  fontWeight: '800',
-                  fontSize: '0.9rem',
-                  transition: 'var(--transition-smooth)',
                 }}
               >
                 {tab.icon}
@@ -913,52 +869,18 @@ export default function TenantPortalPage({
           })}
         </nav>
 
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <a
-            href="/host"
-            className="btn-secondary"
-            style={{
-              padding: '8px 16px',
-              fontSize: '0.85rem',
-              background: '#f8fafc',
-              border: '1px solid var(--border-color)',
-              color: 'var(--text-main)',
-            }}
-          >
+        <div className="header-actions">
+          <a href="/host" className="btn-secondary" style={{ padding: '8px 16px', fontSize: '0.85rem', background: '#f8fafc', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}>
             주최자 ERP
           </a>
-          <a
-            href="/referee"
-            className="btn-primary"
-            style={{
-              padding: '8px 16px',
-              fontSize: '0.85rem',
-              background: 'var(--theme-primary)',
-              color: 'white',
-              boxShadow: 'none',
-            }}
-          >
+          <a href="/referee" className="btn-primary" style={{ padding: '8px 16px', fontSize: '0.85rem', background: 'var(--theme-primary)', color: 'white', boxShadow: 'none' }}>
             심판 입력기
           </a>
         </div>
       </header>
 
-      {/* 2. 웅장한 거북선 윈드서핑 일러스트 히어로 배너 (사용자 커스텀 배경 이미지 적용) */}
-      <section
-        style={{
-          position: 'relative',
-          height: '530px', // 세로 높이 약간 축소
-          backgroundImage: "url('/images/windsurfing_hero.jpg')",
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'flex-end',
-          padding: '96px 40px 40px 40px',
-          borderBottom: '1px solid var(--border-color)',
-        }}
-        className="animate-fade-in"
-      >
+      {/* 2. 히어로 배너 */}
+      <section className="hero-section animate-fade-in">
         {/* 어두운 반투명 그라데이션 오버레이 (글씨 가독성 확보) */}
         <div
           style={{
@@ -988,9 +910,8 @@ export default function TenantPortalPage({
             </span>
           </div>
 
-          <h1 style={{
+          <h1 className="hero-title" style={{
             fontFamily: 'var(--font-title)',
-            fontSize: '4rem',
             fontWeight: '900',
             lineHeight: '1.1',
             marginBottom: '20px',
@@ -1001,18 +922,17 @@ export default function TenantPortalPage({
             <span style={{ color: 'var(--theme-gold)' }}>전국윈드서핑대회</span>
           </h1>
           
-          <p style={{
+          <p className="hero-subtitle" style={{
             color: 'rgba(255, 255, 255, 0.7)',
-            fontSize: '1.25rem',
             maxWidth: '650px',
-            marginBottom: '32px',
+            marginBottom: '24px',
             lineHeight: '1.6',
             textShadow: '0 2px 4px rgba(0,0,0,0.4)'
           }}>
             이순신 장군의 한산도 바다 위, 거북선 엠블럼과 함께 수륙해수욕장에서 화려하게 펼쳐지는 대한민국 윈드서핑 축제.
           </p>
 
-          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+          <div className="hero-buttons">
             <button
               onClick={() => {
                 if (ongoingTournament) {
@@ -1055,16 +975,16 @@ export default function TenantPortalPage({
         </div>
       </section>
 
-      {/* 3. 아래쪽 내용 (옅은 배경색으로 시각적 대비 확보) */}
-      <div style={{ background: '#f1f5f9', borderTop: '1px solid var(--border-color)', padding: '40px 0 100px 0', width: '100%' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px' }}>
+      {/* 3. 본문 콘텐츠 */}
+      <div className="content-wrapper">
+        <div className="content-inner">
 
           {/* 가로형 서브 탭 네비게이션 Pill Bar */}
           {activeTab !== 'overview' && activeTab !== 'notice' && (
-            <div style={{
+            <div className="subtab-bar" style={{
               display: 'flex',
               gap: '10px',
-              marginBottom: '30px',
+              marginBottom: '24px',
               padding: '12px 20px',
               background: '#ffffff',
               borderRadius: '12px',
@@ -1650,6 +1570,36 @@ export default function TenantPortalPage({
         </main>
       </div>
       </div>
+
+      {/* ── 모바일 전용 하단 탭바 ── */}
+      <div className="mobile-tabbar">
+        <div className="mobile-tabbar-inner">
+          {[
+            { id: 'overview', label: '대회요강', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>, defaultSubTab: '' },
+            { id: 'notice', label: '공시서', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>, defaultSubTab: '' },
+            { id: 'intro', label: '대회소개', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>, defaultSubTab: 'intro-greeting' },
+            { id: 'live', label: '경기운영', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>, defaultSubTab: 'live-leaderboard', disabled: !ongoingTournament },
+            { id: 'gallery', label: '미디어', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>, defaultSubTab: 'gallery-photos' },
+            { id: 'archive', label: '역대기록', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.45 1-1 1H4v2h16v-2h-5c-.55 0-1-.45-1-1v-2.34M12 2a7 7 0 0 1 7 7v4.66a5 5 0 0 1-5 4.67h-4a5 5 0 0 1-5-4.67V9a7 7 0 0 1 7-7z"/></svg>, defaultSubTab: 'archive-home' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              className={`mobile-tabbar-btn${activeTab === tab.id ? ' active' : ''}`}
+              onClick={() => {
+                if (!tab.disabled) {
+                  setActiveTab(tab.id as any);
+                  setActiveSubTab(tab.defaultSubTab);
+                }
+              }}
+              disabled={tab.disabled}
+            >
+              {tab.icon}
+              <span>{tab.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
     </div>
   );
 }

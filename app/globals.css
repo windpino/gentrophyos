@@ -248,3 +248,189 @@ button, input, select, textarea {
     transform: translateY(0);
   }
 }
+
+/* ──────────────────────────────────────────
+   홈페이지 반응형 레이아웃
+────────────────────────────────────────── */
+
+/* 헤더 */
+.site-header {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 64px;
+  z-index: 100;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 32px;
+  background: #ffffff;
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* PC 전용 헤더 우측 버튼 */
+.header-actions { display: flex; gap: 12px; }
+
+/* PC 전용 상단 네비 */
+.header-nav {
+  display: flex;
+  gap: 4px;
+  height: 100%;
+  align-items: center;
+}
+.header-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  height: 100%;
+  border: none;
+  background: none;
+  font-weight: 800;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  white-space: nowrap;
+}
+
+/* 히어로 섹션 */
+.hero-section {
+  position: relative;
+  height: 530px;
+  background-image: url('/images/windsurfing_hero.jpg');
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 64px 40px 40px 40px;
+  border-bottom: 1px solid var(--border-color);
+}
+.hero-title { font-size: 3.5rem; }
+.hero-subtitle { font-size: 1.15rem; }
+.hero-buttons { display: flex; gap: 16px; flex-wrap: wrap; }
+
+/* 본문 래퍼 */
+.content-wrapper {
+  background: #f1f5f9;
+  border-top: 1px solid var(--border-color);
+  padding: 32px 0 100px 0;
+  width: 100%;
+}
+.content-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* 모바일 하단 탭바 (모바일 전용, 기본 숨김) */
+.mobile-tabbar {
+  display: none;
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 200;
+  background: #ffffff;
+  border-top: 1px solid var(--border-color);
+  padding: 6px 0 env(safe-area-inset-bottom, 6px);
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+}
+.mobile-tabbar-inner {
+  display: flex;
+  justify-content: space-around;
+  align-items: stretch;
+}
+.mobile-tabbar-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 6px 2px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  transition: color 0.2s;
+  min-width: 0;
+}
+.mobile-tabbar-btn.active { color: var(--theme-primary); }
+.mobile-tabbar-btn svg { flex-shrink: 0; }
+
+/* ──────────────────────────────────────────
+   모바일 반응형 (768px 이하)
+────────────────────────────────────────── */
+@media (max-width: 768px) {
+
+  /* 헤더: 높이 줄이고 패딩 축소 */
+  .site-header {
+    height: 56px;
+    padding: 0 16px;
+  }
+
+  /* 헤더 로고 작게 */
+  .site-header img { height: 44px !important; }
+  .site-header .brand-text { display: none; }
+
+  /* 상단 네비 & 우측 버튼 숨기기 */
+  .header-nav { display: none !important; }
+  .header-actions { display: none !important; }
+
+  /* 모바일 하단 탭바 표시 */
+  .mobile-tabbar { display: block; }
+
+  /* 히어로 섹션: 높이 줄이고 패딩 축소 */
+  .hero-section {
+    height: 420px;
+    padding: 56px 20px 24px 20px;
+  }
+  .hero-title { font-size: 2rem !important; }
+  .hero-subtitle { font-size: 0.95rem !important; max-width: 100% !important; }
+  .hero-hero-badge { font-size: 0.75rem !important; letter-spacing: 0.1em !important; }
+
+  /* 히어로 버튼 세로 배치 */
+  .hero-buttons {
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+  .hero-buttons button {
+    padding: 12px 20px !important;
+    font-size: 0.9rem !important;
+    text-align: center;
+    justify-content: center;
+  }
+
+  /* 본문 패딩 축소, 하단 탭바 공간 확보 */
+  .content-wrapper { padding: 16px 0 80px 0; }
+  .content-inner { padding: 0 12px; }
+
+  /* 서브탭 바 스크롤 */
+  .subtab-bar {
+    gap: 6px !important;
+    padding: 10px 12px !important;
+  }
+  .subtab-bar button {
+    padding: 6px 12px !important;
+    font-size: 0.78rem !important;
+    white-space: nowrap;
+  }
+
+  /* 카드/패널 패딩 축소 */
+  .glass-panel { padding: 16px !important; }
+
+  /* 대회 요강 인포 카드 그리드 */
+  .overview-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* 테이블 오버플로우 */
+  table { font-size: 0.8rem !important; }
+}
+
+/* 아주 작은 화면 (375px) */
+@media (max-width: 400px) {
+  .hero-title { font-size: 1.7rem !important; }
+  .hero-section { height: 380px; }
+  .mobile-tabbar-btn { font-size: 0.55rem; }
+}
