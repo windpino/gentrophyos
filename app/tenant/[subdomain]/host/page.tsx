@@ -360,19 +360,13 @@ export default function HostDashboardPage({
     );
   });
 
-  // 1) 인증 전: 인증 화면은 이하에서 렌더링 (스킬로다운 후 렌더)
-  // 2) 인증 후 데이터 로딩 중: 아무것도 표시 안 해 깜빡임 방지
-  if (loading && !tenant) {
-    // 인증 화면은 다음 조건에서 렌더링
-    if (!isAuthenticated) {
-      // fall through to auth screen below
-    } else {
-      return null;
-    }
+  // 2) 인증 후 데이터 로딩 중: null 반환으로 깜빡임 방지
+  if (isAuthenticated && !tenant) {
+    return null;
   }
 
   const themeStyles = {
-    '--theme-primary': tenant.primaryColor || '#1f6f8b',
+    '--theme-primary': (tenant?.primaryColor) || '#1f6f8b',
     '--theme-primary-hover': '#154e62',
     '--theme-primary-rgb': '31, 111, 139',
     '--theme-gold': '#c5a880',
