@@ -2058,21 +2058,30 @@ function NoticeEditor({ tenant, subdomain, onSaveSuccess }: NoticeEditorProps) {
     setUploading(prev => ({ ...prev, [type]: true }));
 
     try {
-      const fileExt = file.name.split('.').pop() || type;
-      const storageRef = ref(storage, `${subdomain}/notices/${Date.now()}_notice.${fileExt}`);
-      const snapshot = await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(snapshot.ref);
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('type', type);
+
+      const res = await fetch(`/api/tenant/${subdomain}/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || '업로드 실패');
+      }
 
       if (type === 'hwp') {
-        setNoticeHwpData(downloadURL);
-        setNoticeHwpName(file.name);
+        setNoticeHwpData(data.downloadURL);
+        setNoticeHwpName(data.fileName);
       } else {
-        setNoticePdfData(downloadURL);
-        setNoticePdfName(file.name);
+        setNoticePdfData(data.downloadURL);
+        setNoticePdfName(data.fileName);
       }
       alert(`${type === 'hwp' ? '한글' : 'PDF'} 파일이 파이어베이스 스토리지에 성공적으로 업로드되었습니다. 저장하기 버튼을 눌러 확정해주세요.`);
     } catch (error: any) {
-      console.error('Firebase Storage upload error:', error);
+      console.error('File upload error:', error);
       alert(`파일 업로드 실패: ${error.message}`);
     } finally {
       setUploading(prev => ({ ...prev, [type]: false }));
