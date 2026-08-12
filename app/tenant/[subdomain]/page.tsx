@@ -1413,7 +1413,7 @@ export default function TenantPortalPage({
                           { type: '개인전', class: '전 클래스', standard: '1위: 상장 및 메달\n2위: 상장 및 메달\n3위: 상장 및 메달', note: '각 클래스별 참가자가 3명 미만일 경우 시상만 하고 메달 수여는 제외될 수 있습니다.' },
                           { type: '단체전', class: '각 클래스별 릴레이', standard: '1위: 상패 및 메달\n2위: 상패 및 메달\n3위: 상패 및 메달', note: '-' },
                           { type: '종합시상', class: '종합', standard: '종합 우승: 우승기 및 트로피\n종합 준우승: 트로피\n종합 3위: 트로피', note: '각 종목별 점수를 합산하여 산출함 (1위 9점, 2위 7점, 3위 6점, 4위 5점, 5위 4점, 6위 3점, 7위 2점, 8위 1점. 단체전은 배점 2배).' }
-                        ]).map((row: any, i: number) => (
+                        ]).map((row: any, i: number, arr: any[]) => (
                           <tr key={i}>
                             <td style={{ whiteSpace: 'nowrap', fontWeight: '800', color: row.type?.includes('종합') ? 'var(--theme-gold)' : 'inherit' }}>{row.type}</td>
                             <td style={{ whiteSpace: 'nowrap' }}>{row.class}</td>
@@ -1427,7 +1427,20 @@ export default function TenantPortalPage({
                                 )) : '-'}
                               </strong>
                             </td>
-                            <td>{row.note}</td>
+                            {i === 0 && (
+                              <td rowSpan={arr.length} style={{ verticalAlign: 'middle', background: '#f8fafc', fontSize: '0.85rem', color: 'var(--text-muted)', padding: '16px', minWidth: '220px' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                  {arr
+                                    .map(r => r.note)
+                                    .filter(note => note && note !== '-' && note.trim() !== '')
+                                    .map((note, noteIdx) => (
+                                      <p key={noteIdx} style={{ margin: 0, lineHeight: '1.6', color: 'black' }}>
+                                        • {note}
+                                      </p>
+                                    ))}
+                                </div>
+                              </td>
+                            )}
                           </tr>
                         ))}
                       </tbody>
