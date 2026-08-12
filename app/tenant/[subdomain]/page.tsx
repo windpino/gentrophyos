@@ -715,18 +715,6 @@ export default function TenantPortalPage({
               disabled: false
             },
             {
-              id: 'notice',
-              label: '개최공시서',
-              icon: (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                  <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
-                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-                </svg>
-              ),
-              defaultSubTab: '',
-              disabled: false
-            },
-            {
               id: 'intro',
               label: '대회소개',
               icon: (
@@ -773,6 +761,19 @@ export default function TenantPortalPage({
               defaultSubTab: 'archive-home',
               disabled: false
             },
+            {
+              id: 'notice',
+              label: '개최공시서',
+              icon: (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                  <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                  <polyline points="7 3 7 8 15 8"></polyline>
+                </svg>
+              ),
+              defaultSubTab: '',
+              disabled: false
+            },
           ].map((tab) => {
             const active = activeTab === tab.id;
             return (
@@ -786,11 +787,29 @@ export default function TenantPortalPage({
                   }
                 }}
                 disabled={tab.disabled}
-                style={{
-                  color: tab.disabled ? 'rgba(0,0,0,0.15)' : (active ? 'var(--theme-primary)' : 'var(--text-muted)'),
-                  borderBottom: active ? '3px solid var(--theme-primary)' : '3px solid transparent',
-                  cursor: tab.disabled ? 'not-allowed' : 'pointer',
-                }}
+                style={
+                  tab.id === 'notice'
+                    ? {
+                        color: active ? '#ffffff' : 'var(--theme-primary)',
+                        background: active ? 'linear-gradient(135deg, var(--theme-primary) 0%, #b39366 100%)' : 'rgba(197, 168, 128, 0.15)',
+                        border: '1px dashed rgba(197, 168, 128, 0.6)',
+                        borderRadius: '20px',
+                        padding: '6px 14px',
+                        margin: '6px 4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        height: 'auto',
+                        alignSelf: 'center',
+                        boxShadow: active ? '0 4px 10px rgba(197, 168, 128, 0.3)' : 'none',
+                        transition: 'all 0.2s ease',
+                      }
+                    : {
+                        color: tab.disabled ? 'rgba(0,0,0,0.15)' : (active ? 'var(--theme-primary)' : 'var(--text-muted)'),
+                        borderBottom: active ? '3px solid var(--theme-primary)' : '3px solid transparent',
+                        cursor: tab.disabled ? 'not-allowed' : 'pointer',
+                      }
+                }
               >
                 {tab.icon}
                 <span>{tab.label}</span>
@@ -1160,266 +1179,208 @@ export default function TenantPortalPage({
             </div>
           )}
 
-          {/* NOR. 개최공시서 탭 */}
+          {/* NOR. 개최공시서 탭 - 파일 다운로드 전용 */}
           {activeTab === 'notice' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '30px', maxWidth: '800px', margin: '0 auto', width: '100%' }} className="animate-fade-in">
               {/* 공시서 헤더 */}
-              <div className="glass-panel" style={{ background: 'white', padding: '28px 32px', borderTop: '4px solid var(--theme-primary)' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: '900', textAlign: 'center', color: 'var(--text-main)', marginBottom: '4px' }}>
+              <div className="glass-panel" style={{ background: 'white', padding: '35px 32px', borderTop: '4px solid var(--theme-primary)', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '64px', height: '64px', background: 'rgba(197, 168, 128, 0.1)', border: '1px solid rgba(197, 168, 128, 0.3)', borderRadius: '50%', marginBottom: '10px' }}>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--theme-primary)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                    <polyline points="7 3 7 8 15 8"></polyline>
+                  </svg>
+                </div>
+                <h2 style={{ fontSize: '1.6rem', fontWeight: '900', color: 'var(--text-main)', margin: 0 }}>
                   {overview.title} 개최공시서
                 </h2>
-                <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>Notice of Race (NOR)</p>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', margin: 0, lineHeight: '1.6', maxWidth: '600px' }}>
+                  대회 참가 및 운영에 관한 공식 개최공시서(Notice of Race) 파일 다운로드 페이지입니다.<br />
+                  원하시는 파일 형식을 클릭하여 문서를 다운로드 받으실 수 있습니다.
+                </p>
               </div>
 
-              {overview.noticeType === 'image' && overview.noticeImageUrl ? (
-                <div className="glass-panel" style={{ background: 'white', padding: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                  <img
-                    src={overview.noticeImageUrl}
-                    alt="개최공시서"
-                    style={{ maxWidth: '100%', height: 'auto', borderRadius: '10px', border: '1px solid var(--border-color)' }}
-                  />
-                </div>
-              ) : overview.noticeText ? (
-                <div className="glass-panel" style={{ background: 'white', padding: '28px 32px', whiteSpace: 'pre-wrap', lineHeight: '1.8', fontSize: '0.95rem', color: 'var(--text-main)' }}>
-                  {overview.noticeText}
-                </div>
-              ) : (
-                <>
+              {/* 다운로드 버튼 2개 */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
+                
+                {/* 한글 파일 다운로드 카드 */}
+                {overview.noticeHwpData ? (
+                  <a
+                    href={overview.noticeHwpData}
+                    download={overview.noticeHwpName || `${overview.title || '대회개최공시서'}.hwp`}
+                    style={{
+                      background: 'white',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '16px',
+                      padding: '30px 24px',
+                      textDecoration: 'none',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      textAlign: 'center',
+                      gap: '16px',
+                      transition: 'all 0.25s ease',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.03)'
+                    }}
+                    className="download-card-hwp"
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = '#0284c7';
+                      e.currentTarget.style.transform = 'translateY(-4px)';
+                      e.currentTarget.style.boxShadow = '0 12px 20px rgba(2, 132, 199, 0.08)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--border-color)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.03)';
+                    }}
+                  >
+                    <div style={{ width: '64px', height: '64px', background: '#f0f9ff', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#0284c7" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: 'var(--text-main)', margin: '0 0 6px 0' }}>한글 파일 (.HWP)</h3>
+                      <p style={{ fontSize: '0.8rem', color: '#0284c7', fontWeight: '700', margin: 0 }}>
+                        {overview.noticeHwpName || '개최공시서_한글파일.hwp'}
+                      </p>
+                    </div>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#0284c7', color: 'white', padding: '10px 20px', borderRadius: '8px', fontSize: '0.88rem', fontWeight: '800', marginTop: '10px', width: '100%', justifyContent: 'center' }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                      </svg>
+                      다운로드 받기
+                    </span>
+                  </a>
+                ) : (
+                  <div
+                    style={{
+                      background: '#f8fafc',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '16px',
+                      padding: '30px 24px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      textAlign: 'center',
+                      gap: '16px',
+                      opacity: 0.65
+                    }}
+                  >
+                    <div style={{ width: '64px', height: '64px', background: '#e2e8f0', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#64748b', margin: '0 0 6px 0' }}>한글 파일 (.HWP)</h3>
+                      <p style={{ fontSize: '0.8rem', color: '#64748b', margin: 0 }}>등록된 파일이 없습니다</p>
+                    </div>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#cbd5e1', color: '#64748b', padding: '10px 20px', borderRadius: '8px', fontSize: '0.88rem', fontWeight: '800', marginTop: '10px', width: '100%', justifyContent: 'center', cursor: 'not-allowed' }}>
+                      준비 중
+                    </span>
+                  </div>
+                )}
 
-              {/* 제1조 총칙 */}
-              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제1조 (대회 개요)</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7' }}>
-                  <p style={{ margin: 0 }}>1.1 대 회 명 : 제20회 미추홀구청장배 전국핀수영대회</p>
-                  <p style={{ margin: 0 }}>1.2 주 최 : 인천광역시 미추홀구</p>
-                  <p style={{ margin: 0 }}>1.3 주 관 : 인천광역시핀수영협회, 미추홀구체육회</p>
-                  <p style={{ margin: 0 }}>1.4 기 간 : 2026년 9월 12일(토) ~ 13일(일) (2일간)</p>
-                  <p style={{ margin: 0 }}>1.5 장 소 : 문학박태환수영장 (인천광역시 미추홀구 경원대로 526)</p>
-                  <p style={{ margin: 0 }}>1.6 참가인원 : 300명</p>
-                </div>
+                {/* PDF 파일 다운로드 카드 */}
+                {overview.noticePdfData ? (
+                  <a
+                    href={overview.noticePdfData}
+                    download={overview.noticePdfName || `${overview.title || '대회개최공시서'}.pdf`}
+                    style={{
+                      background: 'white',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '16px',
+                      padding: '30px 24px',
+                      textDecoration: 'none',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      textAlign: 'center',
+                      gap: '16px',
+                      transition: 'all 0.25s ease',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.03)'
+                    }}
+                    className="download-card-pdf"
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = '#ef4444';
+                      e.currentTarget.style.transform = 'translateY(-4px)';
+                      e.currentTarget.style.boxShadow = '0 12px 20px rgba(239, 68, 68, 0.08)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--border-color)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.03)';
+                    }}
+                  >
+                    <div style={{ width: '64px', height: '64px', background: '#fef2f2', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: 'var(--text-main)', margin: '0 0 6px 0' }}>PDF 파일 (.PDF)</h3>
+                      <p style={{ fontSize: '0.8rem', color: '#ef4444', fontWeight: '700', margin: 0 }}>
+                        {overview.noticePdfName || '개최공시서_PDF파일.pdf'}
+                      </p>
+                    </div>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#ef4444', color: 'white', padding: '10px 20px', borderRadius: '8px', fontSize: '0.88rem', fontWeight: '800', marginTop: '10px', width: '100%', justifyContent: 'center' }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                      </svg>
+                      다운로드 받기
+                    </span>
+                  </a>
+                ) : (
+                  <div
+                    style={{
+                      background: '#f8fafc',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '16px',
+                      padding: '30px 24px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      textAlign: 'center',
+                      gap: '16px',
+                      opacity: 0.65
+                    }}
+                  >
+                    <div style={{ width: '64px', height: '64px', background: '#e2e8f0', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#64748b', margin: '0 0 6px 0' }}>PDF 파일 (.PDF)</h3>
+                      <p style={{ fontSize: '0.8rem', color: '#64748b', margin: 0 }}>등록된 파일이 없습니다</p>
+                    </div>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#cbd5e1', color: '#64748b', padding: '10px 20px', borderRadius: '8px', fontSize: '0.88rem', fontWeight: '800', marginTop: '10px', width: '100%', justifyContent: 'center', cursor: 'not-allowed' }}>
+                      준비 중
+                    </span>
+                  </div>
+                )}
+                
               </div>
 
-              {/* 제2조 일정 */}
-              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제2조 (대회 일정)</h3>
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
-                    <thead>
-                      <tr style={{ background: '#f1f5f9' }}>
-                        <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', borderBottom: '2px solid #e2e8f0', whiteSpace: 'nowrap' }}>구분</th>
-                        <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', borderBottom: '2px solid #e2e8f0', whiteSpace: 'nowrap' }}>시간</th>
-                        <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', borderBottom: '2px solid #e2e8f0' }}>일정</th>
-                        <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', borderBottom: '2px solid #e2e8f0', whiteSpace: 'nowrap' }}>장소</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[
-                        { 구분: '9. 12(토)', 시간: '10:00 ~ 12:00', 일정: '선수단 현장등록 및 웜업', 장소: '문학박태환수영장' },
-                        { 구분: '9. 12(토)', 시간: '12:00 ~ 13:00', 일정: '중식', 장소: '' },
-                        { 구분: '9. 12(토)', 시간: '13:00 ~ 13:30', 일정: '개회식', 장소: '수영장 특설무대' },
-                        { 구분: '9. 12(토)', 시간: '13:30 ~ 18:00', 일정: '1일차 경기', 장소: '문학박태환수영장' },
-                        { 구분: '9. 13(일)', 시간: '09:00 ~ 12:00', 일정: '2일차 경기', 장소: '문학박태환수영장' },
-                        { 구분: '9. 13(일)', 시간: '12:00 ~ 13:00', 일정: '중식', 장소: '' },
-                        { 구분: '9. 13(일)', 시간: '13:00 ~ 18:00', 일정: '2일차 경기 및 시상식', 장소: '문학박태환수영장' },
-                        { 구분: '9. 13(일)', 시간: '18:00 ~', 일정: '폐회식 및 해산', 장소: '수영장 특설무대' },
-                      ].map((row, i) => (
-                        <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                          <td style={{ padding: '10px 14px', fontWeight: '700', whiteSpace: 'nowrap' }}>{row.구분}</td>
-                          <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>{row.시간}</td>
-                          <td style={{ padding: '10px 14px' }}>{row.일정}</td>
-                          <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>{row.장소}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                  <p style={{ margin: 0 }}>※ 기상 악화 및 수영장 사정에 따라 경기 시간은 변경될 수 있으며, 세부 일정은 상황에 따라 조정 및 변경될 수 있음.</p>
-                </div>
+              {/* 하단 주의사항 */}
+              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px', fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.6' }}>
+                <p style={{ margin: '0 0 6px 0', fontWeight: '800', color: 'var(--text-main)' }}>💡 안내 사항</p>
+                <p style={{ margin: 0 }}>• 개최공시서 문서를 열기 위해 한글 뷰어 또는 PDF 리더(Acrobat Reader 등)가 필요할 수 있습니다.</p>
+                <p style={{ margin: 0 }}>• 파일이 정상적으로 다운로드되지 않거나 열리지 않을 경우, 주최측(인천광역시 핀수영협회 사무국)으로 문의주시기 바랍니다.</p>
               </div>
-
-              {/* 제3조 경기 종목 및 참가 자격 */}
-              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제3조 (경기 종목 및 참가 자격)</h3>
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
-                    <thead>
-                      <tr style={{ background: '#f1f5f9' }}>
-                        <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', borderBottom: '2px solid #e2e8f0' }}>구분</th>
-                        <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', borderBottom: '2px solid #e2e8f0' }}>클래스</th>
-                        <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', borderBottom: '2px solid #e2e8f0' }}>비 고</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[
-                        { 구분: '일반부', 클래스: '대학/일반', 비고: '' },
-                        { 구분: '청소년부', 클래스: '고등부, 중등부, 초등부', 비고: '' },
-                        { 구분: '마스터즈', 클래스: '마스터즈 1부, 마스터즈 2부, 마스터즈 3부', 비고: '※ 1부 (만 20~29세), 2부 (만 30~39세), 3부 (만 40세 이상)' },
-                        { 구분: '엘리트', 클래스: '등록선수 (학생/일반)', 비고: '' },
-                        { 구분: '단체전', 클래스: '각 클럽/동호회팀별 릴레이', 비고: '' },
-                      ].map((row, i) => (
-                        <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                          <td style={{ padding: '10px 14px', fontWeight: '700' }}>{row.구분}</td>
-                          <td style={{ padding: '10px 14px' }}>{row.클래스}</td>
-                          <td style={{ padding: '10px 14px', color: 'var(--text-muted)' }}>{row.비고}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                  <p style={{ margin: 0 }}>※ 참가 신청 시 소속 클럽 명확히 작성 필수.</p>
-                  <p style={{ margin: 0 }}>※ 단체전은 남녀 혼성 계영 4x50m 및 4x100m로 진행함.</p>
-                  <p style={{ margin: 0 }}>※ 모든 나이는 2026년 9월 12일을 기준으로 함.</p>
-                </div>
-              </div>
-
-              {/* 제4조 참가 신청 */}
-              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제4조 (참가 신청)</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7' }}>
-                  <p style={{ margin: 0 }}>4.1 신청기간 : 2026년 8월 24일(월) 까지</p>
-                  <p style={{ margin: 0 }}>4.2 신청방법 : 홈페이지를 통한 온라인 참가신청서 접수</p>
-                  <p style={{ margin: 0, color: '#EF4444', fontWeight: '700' }}>※ 참가인원은 선착순으로 300명이 충족되면 참가접수기한이 조기에 마감될 수 있다.</p>
-                  <p style={{ margin: 0, color: '#EF4444', fontWeight: '700' }}>※ 참가비가 납부되어야 정식 등록이 완료되며 기한 내 미납 시 참가가 자동 취소됩니다.</p>
-                  <p style={{ margin: 0 }}>4.3 참가비 : 개인전 1종목당 20,000원, 단체전 팀당 50,000원</p>
-                  <p style={{ margin: 0 }}>※ 1인 최대 2종목까지 신청 가능 (단체전 제외).</p>
-                  <p style={{ margin: 0 }}>※ 참가비 입금 시 반드시 &apos;소속_대표자명&apos; 또는 &apos;선수명&apos;으로 입금.</p>
-                  <p style={{ margin: 0, color: '#EF4444', fontWeight: '700' }}>※ 신청기간 이후에는 취소 및 참가비 환불이 불가합니다.</p>
-                </div>
-              </div>
-
-              {/* 제5조 시상 */}
-              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제5조 (시상)</h3>
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
-                    <thead>
-                      <tr style={{ background: '#f1f5f9' }}>
-                        <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', borderBottom: '2px solid #e2e8f0' }}>구분</th>
-                        <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', borderBottom: '2px solid #e2e8f0' }}>클래스</th>
-                        <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: '800', borderBottom: '2px solid #e2e8f0' }}>시상</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[
-                        { 구분: '개인전', 클래스: '전 클래스', 시상: '1위: 상장 및 메달, 2위: 상장 및 메달, 3위: 상장 및 메달' },
-                        { 구분: '단체전', 클래스: '각 클래스별 릴레이', 시상: '1위: 상패 및 메달, 2위: 상패 및 메달, 3위: 상패 및 메달' },
-                        { 구분: '종합시상', 클래스: '종합', 시상: '종합 우승: 우승기 및 트로피, 종합 준우승: 트로피, 종합 3위: 트로피' },
-                      ].map((row, i) => (
-                        <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                          <td style={{ padding: '10px 14px', fontWeight: '700' }}>{row.구분}</td>
-                          <td style={{ padding: '10px 14px' }}>{row.클래스}</td>
-                          <td style={{ padding: '10px 14px', color: '#b45309', fontWeight: '700' }}>{row.시상}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                  <p style={{ margin: 0 }}>※ 각 클래스별 참가자가 3명 미만일 경우 시상만 하고 메달 수여는 제외될 수 있습니다.</p>
-                  <p style={{ margin: 0 }}>※ 종합시상은 각 종목별 점수를 합산하여 산출함 (1위 9점, 2위 7점, 3위 6점, 4위 5점, 5위 4점, 6위 3점, 7위 2점, 8위 1점. 단체전은 배점 2배).</p>
-                </div>
-              </div>
-
-              {/* 제6조 제출 */}
-              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제6조 (제출)</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7' }}>
-                  <p style={{ margin: 0 }}>6.1 온라인 참가신청 시 서약서 동의 및 서명 제출</p>
-                  <p style={{ margin: 0 }}>6.2 참가 선수 전원 단체 보험 가입 필수 (소속 동호회/클럽 개별 가입 권장)</p>
-                  <p style={{ margin: 0 }}>6.3 주민등록초본 또는 학생증 사본 (본인 확인용)</p>
-                  <p style={{ margin: 0 }}>6.4 경기 당일 신분증 (주민등록증, 운전면허증 등) 지참 필수</p>
-                </div>
-              </div>
-
-              {/* 제7조 경기규칙 및 안전수칙 */}
-              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제7조 (경기규칙 및 안전수칙)</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7' }}>
-                  <p style={{ margin: 0 }}>7.1 본 대회는 대한수중핀수영협회(KUA) 및 세계수중연맹(CMAS) 핀수영 경기 규칙을 적용합니다.</p>
-                  <p style={{ margin: 0 }}>7.2 안전을 위해 경기 중 안전요원의 통제에 적극 협조해야 하며, 이를 위반 시 퇴장 조치될 수 있습니다.</p>
-                  <p style={{ margin: 0 }}>7.3 준비운동을 철저히 하고 경기 전 심신상태를 점검해 사고를 예방해야 합니다.</p>
-                </div>
-              </div>
-
-              {/* 제8조 보험 */}
-              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제8조 (보험)</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7' }}>
-                  <p style={{ margin: 0 }}>8.1 대회 주최측은 대회 참가자를 위한 스포츠안전재단 주최자배상책임공제에 가입합니다.</p>
-                  <p style={{ margin: 0 }}>8.2 참가 선수는 개인 실손의료보험 가입을 적극 권장하며, 경기 중 발생하는 부상에 대해 주최측은 응급조치 외 책임을 지지 않습니다.</p>
-                  <p style={{ margin: 0 }}>8.3 장비 파손 및 분실에 대한 책임은 선수 본인에게 있습니다.</p>
-                </div>
-              </div>
-
-              {/* 제9조 항의 */}
-              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제9조 (항의)</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7' }}>
-                  <p style={{ margin: 0 }}>9.1 항의는 각 종목 경기 종료 후 30분 이내에 서면으로 제출해야 합니다.</p>
-                  <p style={{ margin: 0 }}>9.2 이의신청 시 이의신청비 50,000원을 동봉해야 하며, 기각 시 반환하지 않고 협회 기금으로 귀속됩니다.</p>
-                  <p style={{ margin: 0 }}>9.3 심판위원회의 판정이 최종 결정이며, 추가 이의제기는 불가합니다.</p>
-                </div>
-              </div>
-
-              {/* 제10조 장비 */}
-              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제10조 (장비)</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7' }}>
-                  <p style={{ margin: 0 }}>10.1 대회 공인 장비(핀, 스노클, 수영복 등) 규정을 준수해야 합니다.</p>
-                  <p style={{ margin: 0 }}>10.2 승인되지 않은 비공인 장비 사용 시 실격 처리될 수 있습니다.</p>
-                  <p style={{ margin: 0, color: '#EF4444', fontWeight: '700' }}>※ 필수 장비 누락 시 경기 참가가 제한될 수 있습니다.</p>
-                </div>
-              </div>
-
-              {/* 제11조 기타 */}
-              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>제11조 (기타)</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7' }}>
-                  <p style={{ margin: 0 }}>11.1 대회 참가자 전원에게 기념 티셔츠 및 참가 기념품을 제공합니다.</p>
-                  <p style={{ margin: 0 }}>11.2 수영장 내 취사 행위는 절대 금지되며, 쓰레기는 지정된 장소에 분리배출 해야 합니다.</p>
-                  <p style={{ margin: 0 }}>11.3 기타 문의 사항은 인천광역시 핀수영협회 사무국(032-888-2940)으로 문의 바랍니다.</p>
-                </div>
-              </div>
-
-              {/* 면책 동의 */}
-              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>면책 동의</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7', background: '#fefce8', padding: '16px', borderRadius: '8px', border: '1px solid #fde68a' }}>
-                  <p style={{ margin: 0 }}>본인은 제20회 미추홀구청장배 전국핀수영대회 참가 활동 중 본인의 부주의로 인해 발생할 수 있는 사고, 즉 개인적 부상, 재산상 피해, 의학적인 사고 등 대회기간 중 발생한 사고에 대한 책임은 본인의 자의적인 참가에 의한 본인의 책임이며, 본 대회를 주관하는 관계자 및 기관에 대한 면책은 물론 책임전가를 하지 않을 것을 서약합니다.</p>
-                </div>
-              </div>
-
-              {/* 개인정보 수집 동의 */}
-              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>개인정보 수집 동의</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7' }}>
-                  <p style={{ margin: 0 }}>• 정보수집 및 이용기관 : 인천광역시핀수영협회, 미추홀구체육회</p>
-                  <p style={{ margin: 0 }}>• 전화번호, 생년월일</p>
-                  <p style={{ margin: 0 }}>• 참가선수 관리 및 보험가입 / 대회 안내문자 및 SNS발송</p>
-                  <p style={{ margin: 0 }}>• 대회정산이후 폐기 한다.</p>
-                </div>
-              </div>
-
-              {/* 초상권 및 저작권 사용동의 */}
-              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>초상권 및 저작권 사용동의</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', lineHeight: '1.7' }}>
-                  <p style={{ margin: 0 }}>대회 기간중 촬영된 사진 / 영상은 다음 목적에 사용될 수 있음에 동의합니다.</p>
-                  <p style={{ margin: 0 }}>• 관련 기관의 홈페이지, SNS, 정산보고서, 팜플렛 및 각종 홍보물</p>
-                  <p style={{ margin: 0 }}>• 수집 및 이용기관 : 인천광역시핀수영협회, 미추홀구체육회</p>
-                </div>
-              </div>
-
-              {/* 경기장 위치 이미지 */}
-              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px', textAlign: 'center' }}>
-                <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '14px' }}>경기장 위치도</h3>
-                <img src="/images/map_munhak.jpg" alt="문학박태환수영장 위치도" style={{ maxWidth: '100%', borderRadius: '10px', border: '1px solid var(--border-color)' }} />
-                <p style={{ marginTop: '10px', fontSize: '0.85rem', color: 'var(--text-muted)', margin: '10px 0 0 0' }}>인천광역시 미추홀구 경원대로 526 문학박태환수영장</p>
-              </div>
-                </>
-              )}
             </div>
           )}
 
@@ -1657,11 +1618,11 @@ export default function TenantPortalPage({
         <div className="mobile-tabbar-inner">
           {[
             { id: 'overview', label: '대회요강', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>, defaultSubTab: '' },
-            { id: 'notice', label: '공시서', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>, defaultSubTab: '' },
             { id: 'intro', label: '대회소개', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>, defaultSubTab: 'intro-greeting' },
             { id: 'live', label: '경기운영', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>, defaultSubTab: 'live-leaderboard', disabled: !ongoingTournament },
             { id: 'gallery', label: '미디어', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>, defaultSubTab: 'gallery-photos' },
             { id: 'archive', label: '역대기록', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.45 1-1 1H4v2h16v-2h-5c-.55 0-1-.45-1-1v-2.34M12 2a7 7 0 0 1 7 7v4.66a5 5 0 0 1-5 4.67h-4a5 5 0 0 1-5-4.67V9a7 7 0 0 1 7-7z"/></svg>, defaultSubTab: 'archive-home' },
+            { id: 'notice', label: '공시서', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>, defaultSubTab: '' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -1673,6 +1634,16 @@ export default function TenantPortalPage({
                 }
               }}
               disabled={tab.disabled}
+              style={
+                tab.id === 'notice'
+                  ? {
+                      border: '1px dashed rgba(197, 168, 128, 0.4)',
+                      borderRadius: '8px',
+                      background: activeTab === 'notice' ? 'rgba(197, 168, 128, 0.15)' : 'transparent',
+                      color: activeTab === 'notice' ? 'var(--theme-primary)' : 'var(--text-muted)'
+                    }
+                  : {}
+              }
             >
               {tab.icon}
               <span>{tab.label}</span>

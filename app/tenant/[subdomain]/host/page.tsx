@@ -2115,6 +2115,18 @@ function NoticeEditor({ tenant, subdomain, onSaveSuccess }: NoticeEditorProps) {
   const [noticeImageUrl, setNoticeImageUrl] = useState<string>(
     tenant?.overviewConfig?.noticeImageUrl || ''
   );
+  const [noticeHwpData, setNoticeHwpData] = useState<string>(
+    tenant?.overviewConfig?.noticeHwpData || ''
+  );
+  const [noticeHwpName, setNoticeHwpName] = useState<string>(
+    tenant?.overviewConfig?.noticeHwpName || ''
+  );
+  const [noticePdfData, setNoticePdfData] = useState<string>(
+    tenant?.overviewConfig?.noticePdfData || ''
+  );
+  const [noticePdfName, setNoticePdfName] = useState<string>(
+    tenant?.overviewConfig?.noticePdfName || ''
+  );
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -2122,6 +2134,10 @@ function NoticeEditor({ tenant, subdomain, onSaveSuccess }: NoticeEditorProps) {
       if (tenant.overviewConfig.noticeText) setNoticeText(tenant.overviewConfig.noticeText);
       if (tenant.overviewConfig.noticeType) setNoticeType(tenant.overviewConfig.noticeType);
       if (tenant.overviewConfig.noticeImageUrl) setNoticeImageUrl(tenant.overviewConfig.noticeImageUrl);
+      if (tenant.overviewConfig.noticeHwpData) setNoticeHwpData(tenant.overviewConfig.noticeHwpData);
+      if (tenant.overviewConfig.noticeHwpName) setNoticeHwpName(tenant.overviewConfig.noticeHwpName);
+      if (tenant.overviewConfig.noticePdfData) setNoticePdfData(tenant.overviewConfig.noticePdfData);
+      if (tenant.overviewConfig.noticePdfName) setNoticePdfName(tenant.overviewConfig.noticePdfName);
     }
   }, [tenant]);
 
@@ -2157,6 +2173,29 @@ function NoticeEditor({ tenant, subdomain, onSaveSuccess }: NoticeEditorProps) {
     reader.readAsDataURL(file);
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'hwp' | 'pdf') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 800 * 1024) {
+      alert(`파일 크기가 너무 큽니다 (${(file.size / 1024).toFixed(1)}KB). 용량 제한으로 인해 800KB 이하의 파일만 등록할 수 있습니다.`);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64Data = event.target?.result as string;
+      if (type === 'hwp') {
+        setNoticeHwpData(base64Data);
+        setNoticeHwpName(file.name);
+      } else {
+        setNoticePdfData(base64Data);
+        setNoticePdfName(file.name);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -2169,7 +2208,11 @@ function NoticeEditor({ tenant, subdomain, onSaveSuccess }: NoticeEditorProps) {
             ...currentConfig,
             noticeText,
             noticeType,
-            noticeImageUrl
+            noticeImageUrl,
+            noticeHwpData,
+            noticeHwpName,
+            noticePdfData,
+            noticePdfName
           }
         })
       });
@@ -2284,6 +2327,117 @@ function NoticeEditor({ tenant, subdomain, onSaveSuccess }: NoticeEditorProps) {
             )}
           </div>
         )}
+
+        {/* 3. 다운로드용 파일 업로드 섹션 */}
+        <div style={{ marginTop: '30px', borderTop: '2px solid var(--border-color)', paddingTop: '24px', color: 'black' }}>
+          <h4 style={{ fontSize: '1.05rem', fontWeight: '800', marginBottom: '8px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <FileText size={18} style={{ color: 'var(--theme-primary)' }} />
+            공식 개최공시서 파일 업로드 (한글 / PDF)
+          </h4>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '20px' }}>
+            홈페이지 개최공시서 다운로드 화면에 제공될 한글(.hwp) 및 PDF(.pdf) 파일을 등록합니다. (개별 파일 최대 800KB 제한)
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            {/* 한글 파일 업로드 */}
+            <div style={{ padding: '20px', background: '#f8fafc', border: '1px solid var(--border-color)', borderRadius: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                <span style={{ fontWeight: '700', fontSize: '0.9rem', color: 'var(--text-main)' }}>한글 파일 (.hwp)</span>
+                {noticeHwpData ? (
+                  <span style={{ fontSize: '0.75rem', background: '#e0f2fe', color: '#0369a1', padding: '2px 8px', borderRadius: '20px', fontWeight: '700' }}>등록됨</span>
+                ) : (
+                  <span style={{ fontSize: '0.75rem', background: '#f1f5f9', color: '#64748b', padding: '2px 8px', borderRadius: '20px', fontWeight: '700' }}>미등록</span>
+                )}
+              </div>
+
+              {noticeHwpData ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ background: 'white', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <FileText size={18} style={{ color: '#0284c7' }} />
+                    <span style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>
+                      {noticeHwpName || '개최공시서.hwp'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNoticeHwpData('');
+                      setNoticeHwpName('');
+                    }}
+                    style={{ padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                  >
+                    <Trash2 size={14} /> 파일 삭제
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <input
+                    type="file"
+                    accept=".hwp"
+                    onChange={(e) => handleFileChange(e, 'hwp')}
+                    style={{ display: 'none' }}
+                    id="hwp-file-upload"
+                  />
+                  <label
+                    htmlFor="hwp-file-upload"
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer', background: 'var(--theme-primary)', color: 'white', padding: '10px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700', border: 'none', textAlign: 'center' }}
+                  >
+                    <Upload size={14} /> 한글 파일 선택
+                  </label>
+                </div>
+              )}
+            </div>
+
+            {/* PDF 파일 업로드 */}
+            <div style={{ padding: '20px', background: '#f8fafc', border: '1px solid var(--border-color)', borderRadius: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                <span style={{ fontWeight: '700', fontSize: '0.9rem', color: 'var(--text-main)' }}>PDF 파일 (.pdf)</span>
+                {noticePdfData ? (
+                  <span style={{ fontSize: '0.75rem', background: '#fee2e2', color: '#b91c1c', padding: '2px 8px', borderRadius: '20px', fontWeight: '700' }}>등록됨</span>
+                ) : (
+                  <span style={{ fontSize: '0.75rem', background: '#f1f5f9', color: '#64748b', padding: '2px 8px', borderRadius: '20px', fontWeight: '700' }}>미등록</span>
+                )}
+              </div>
+
+              {noticePdfData ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ background: 'white', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <FileText size={18} style={{ color: '#dc2626' }} />
+                    <span style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>
+                      {noticePdfName || '개최공시서.pdf'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNoticePdfData('');
+                      setNoticePdfName('');
+                    }}
+                    style={{ padding: '8px 12px', background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                  >
+                    <Trash2 size={14} /> 파일 삭제
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    onChange={(e) => handleFileChange(e, 'pdf')}
+                    style={{ display: 'none' }}
+                    id="pdf-file-upload"
+                  />
+                  <label
+                    htmlFor="pdf-file-upload"
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer', background: 'var(--theme-primary)', color: 'white', padding: '10px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700', border: 'none', textAlign: 'center' }}
+                  >
+                    <Upload size={14} /> PDF 파일 선택
+                  </label>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
