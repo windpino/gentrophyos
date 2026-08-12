@@ -412,7 +412,7 @@ export default function HostDashboardPage({
             주최자 ERP 보안 게이트
           </h2>
           <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '32px', lineHeight: '1.5' }}>
-            {tenant.name}<br />
+            {tenant?.name || '대회 관리 시스템'}<br />
             주최자 권한 인증을 진행합니다.
           </p>
 
