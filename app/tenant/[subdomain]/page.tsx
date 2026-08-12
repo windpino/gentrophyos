@@ -1208,6 +1208,8 @@ export default function TenantPortalPage({
                   <a
                     href={overview.noticeHwpData}
                     download={overview.noticeHwpName || `${overview.title || '대회개최공시서'}.hwp`}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     style={{
                       background: 'white',
                       border: '1px solid var(--border-color)',
@@ -1293,6 +1295,8 @@ export default function TenantPortalPage({
                   <a
                     href={overview.noticePdfData}
                     download={overview.noticePdfName || `${overview.title || '대회개최공시서'}.pdf`}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     style={{
                       background: 'white',
                       border: '1px solid var(--border-color)',

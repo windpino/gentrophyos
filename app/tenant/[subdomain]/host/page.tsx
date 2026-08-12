@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, use } from 'react';
 import { Award, Check, X, Upload, Download, Plus, Trash2, ArrowUp, ArrowDown, Users, FileText, Settings, Layers, Calendar, RefreshCw, Save, Search, Eye, ExternalLink } from 'lucide-react';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from '@/src/lib/firebase';
 
 interface GridRow {
   id: string; // 데이터베이스 registration ID 또는 임시 행의 'temp-...' ID
@@ -2033,6 +2035,7 @@ function NoticeEditor({ tenant, subdomain, onSaveSuccess }: NoticeEditorProps) {
     tenant?.overviewConfig?.noticePdfName || ''
   );
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState<{ hwp: boolean; pdf: boolean }>({ hwp: false, pdf: false });
 
   useEffect(() => {
     if (tenant?.overviewConfig) {
@@ -2043,27 +2046,37 @@ function NoticeEditor({ tenant, subdomain, onSaveSuccess }: NoticeEditorProps) {
     }
   }, [tenant]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'hwp' | 'pdf') => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'hwp' | 'pdf') => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 800 * 1024) {
-      alert(`파일 크기가 너무 큽니다 (${(file.size / 1024).toFixed(1)}KB). 용량 제한으로 인해 800KB 이하의 파일만 등록할 수 있습니다.`);
+    if (file.size > 10 * 1024 * 1024) {
+      alert(`파일 크기가 너무 큽니다 (${(file.size / 1024 / 1024).toFixed(1)}MB). 10MB 이하의 파일만 업로드할 수 있습니다.`);
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64Data = event.target?.result as string;
+    setUploading(prev => ({ ...prev, [type]: true }));
+
+    try {
+      const fileExt = file.name.split('.').pop() || type;
+      const storageRef = ref(storage, `${subdomain}/notices/${Date.now()}_notice.${fileExt}`);
+      const snapshot = await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(snapshot.ref);
+
       if (type === 'hwp') {
-        setNoticeHwpData(base64Data);
+        setNoticeHwpData(downloadURL);
         setNoticeHwpName(file.name);
       } else {
-        setNoticePdfData(base64Data);
+        setNoticePdfData(downloadURL);
         setNoticePdfName(file.name);
       }
-    };
-    reader.readAsDataURL(file);
+      alert(`${type === 'hwp' ? '한글' : 'PDF'} 파일이 파이어베이스 스토리지에 성공적으로 업로드되었습니다. 저장하기 버튼을 눌러 확정해주세요.`);
+    } catch (error: any) {
+      console.error('Firebase Storage upload error:', error);
+      alert(`파일 업로드 실패: ${error.message}`);
+    } finally {
+      setUploading(prev => ({ ...prev, [type]: false }));
+    }
   };
 
   const handleSave = async () => {
@@ -2147,21 +2160,27 @@ function NoticeEditor({ tenant, subdomain, onSaveSuccess }: NoticeEditorProps) {
                   </button>
                 </div>
               ) : (
-                <div>
-                  <input
-                    type="file"
-                    accept=".hwp"
-                    onChange={(e) => handleFileChange(e, 'hwp')}
-                    style={{ display: 'none' }}
-                    id="hwp-file-upload"
-                  />
-                  <label
-                    htmlFor="hwp-file-upload"
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer', background: 'var(--theme-primary)', color: 'white', padding: '10px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700', border: 'none', textAlign: 'center' }}
-                  >
-                    <Upload size={14} /> 한글 파일 선택
-                  </label>
-                </div>
+                uploading.hwp ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                    <RefreshCw className="animate-spin" size={16} /> 파일 업로드 중...
+                  </div>
+                ) : (
+                  <div>
+                    <input
+                      type="file"
+                      accept=".hwp"
+                      onChange={(e) => handleFileChange(e, 'hwp')}
+                      style={{ display: 'none' }}
+                      id="hwp-file-upload"
+                    />
+                    <label
+                      htmlFor="hwp-file-upload"
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer', background: 'var(--theme-primary)', color: 'white', padding: '10px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700', border: 'none', textAlign: 'center' }}
+                    >
+                      <Upload size={14} /> 한글 파일 선택
+                    </label>
+                  </div>
+                )
               )}
             </div>
 
@@ -2196,21 +2215,27 @@ function NoticeEditor({ tenant, subdomain, onSaveSuccess }: NoticeEditorProps) {
                   </button>
                 </div>
               ) : (
-                <div>
-                  <input
-                    type="file"
-                    accept=".pdf"
-                    onChange={(e) => handleFileChange(e, 'pdf')}
-                    style={{ display: 'none' }}
-                    id="pdf-file-upload"
-                  />
-                  <label
-                    htmlFor="pdf-file-upload"
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer', background: 'var(--theme-primary)', color: 'white', padding: '10px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700', border: 'none', textAlign: 'center' }}
-                  >
-                    <Upload size={14} /> PDF 파일 선택
-                  </label>
-                </div>
+                uploading.pdf ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                    <RefreshCw className="animate-spin" size={16} /> 파일 업로드 중...
+                  </div>
+                ) : (
+                  <div>
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      onChange={(e) => handleFileChange(e, 'pdf')}
+                      style={{ display: 'none' }}
+                      id="pdf-file-upload"
+                    />
+                    <label
+                      htmlFor="pdf-file-upload"
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer', background: 'var(--theme-primary)', color: 'white', padding: '10px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700', border: 'none', textAlign: 'center' }}
+                    >
+                      <Upload size={14} /> PDF 파일 선택
+                    </label>
+                  </div>
+                )
               )}
             </div>
           </div>
