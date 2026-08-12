@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '@/src/lib/firebase';
 
 export async function POST(
   req: NextRequest,
@@ -18,20 +16,64 @@ export async function POST(
       return NextResponse.json({ error: '업로드할 파일이 없습니다.' }, { status: 400 });
     }
 
-    // Convert File to Buffer then Uint8Array for upload
+    // Convert File to ArrayBuffer and then Buffer
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
     // Generate unique storage path
     const fileExt = file.name.split('.').pop() || (type === 'hwp' ? 'hwp' : 'pdf');
-    const storageRef = ref(storage, `${subdomain}/notices/${Date.now()}_notice.${fileExt}`);
+    const fileName = `${Date.now()}_notice.${fileExt}`;
+    const storagePath = `${subdomain}/notices/${fileName}`;
+    const encodedPath = encodeURIComponent(storagePath);
     
-    // Upload file using server context (bypasses browser CORS policy)
-    const snapshot = await uploadBytes(storageRef, new Uint8Array(buffer), {
-      contentType: file.type || (type === 'hwp' ? 'application/x-hwp' : 'application/pdf')
+    const bucketName = "gentrophyos.firebasestorage.app";
+    const contentType = file.type || (type === 'hwp' ? 'application/x-hwp' : 'application/pdf');
+
+    // Make direct REST API call to Firebase Storage upload endpoint
+    const uploadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodedPath}`;
+    
+    console.log(`Uploading to REST URL: ${uploadUrl}`);
+
+    let response = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': contentType,
+      },
+      body: buffer,
     });
+
+    // If the default bucket .firebasestorage.app fails (e.g. 404), fallback to .appspot.com
+    if (!response.ok && response.status === 404) {
+      const fallbackBucket = "gentrophyos.appspot.com";
+      const fallbackUrl = `https://firebasestorage.googleapis.com/v0/b/${fallbackBucket}/o/${encodedPath}`;
+      console.log(`Retrying upload with fallback URL: ${fallbackUrl}`);
+      response = await fetch(fallbackUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': contentType,
+        },
+        body: buffer,
+      });
+    }
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error('Firebase Storage REST error response:', data);
+      return NextResponse.json({ 
+        error: `Firebase Storage REST upload failed: ${data.error?.message || response.statusText}` 
+      }, { status: response.status });
+    }
+
+    // Firebase Storage public download URL format:
+    // https://firebasestorage.googleapis.com/v0/b/<bucket>/o/<encodedPath>?alt=media&token=<downloadTokens>
+    const finalBucket = data.bucket || bucketName;
+    const downloadTokens = data.downloadTokens;
     
-    const downloadURL = await getDownloadURL(snapshot.ref);
+    let downloadURL = `https://firebasestorage.googleapis.com/v0/b/${finalBucket}/o/${encodedPath}?alt=media`;
+    if (downloadTokens) {
+      downloadURL += `&token=${downloadTokens}`;
+    }
 
     return NextResponse.json({
       success: true,
@@ -39,7 +81,7 @@ export async function POST(
       fileName: file.name
     });
   } catch (error: any) {
-    console.error('Server-side file upload error:', error);
+    console.error('Server-side REST file upload error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
