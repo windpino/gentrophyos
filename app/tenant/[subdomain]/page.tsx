@@ -1715,7 +1715,7 @@ export default function TenantPortalPage({
                   {/* 1. 경기 규칙 및 코스 */}
                   <div className="glass-panel" style={{ background: 'white', padding: '30px', borderTop: '4px solid var(--theme-primary)' }}>
                     <h3 style={{ fontSize: '1.25rem', fontWeight: '900', marginBottom: '18px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '1.4rem' }}>⛵</span> 경기 규칙 및 코스 안내 (제7조)
+                      <span style={{ fontSize: '1.4rem' }}>⛵</span> 경기 규칙 및 코스 안내
                     </h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.9rem', color: 'black', lineHeight: '1.6' }}>
                       <p style={{ margin: 0 }}>
@@ -1736,7 +1736,7 @@ export default function TenantPortalPage({
                   {/* 2. 계측 규정 */}
                   <div className="glass-panel" style={{ background: 'white', padding: '30px' }}>
                     <h3 style={{ fontSize: '1.25rem', fontWeight: '900', marginBottom: '18px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '1.4rem' }}>📏</span> 장비 계측 규정 (제6조)
+                      <span style={{ fontSize: '1.4rem' }}>📏</span> 장비 계측 규정
                     </h3>
                     <div className="premium-table-container">
                       <table className="premium-table" style={{ fontSize: '0.85rem', width: '100%' }}>
@@ -1771,7 +1771,7 @@ export default function TenantPortalPage({
                   {/* 3. 채점 방식 */}
                   <div className="glass-panel" style={{ background: 'white', padding: '30px' }}>
                     <h3 style={{ fontSize: '1.25rem', fontWeight: '900', marginBottom: '18px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '1.4rem' }}>📊</span> 채점 및 순위결정 방식 (제8조)
+                      <span style={{ fontSize: '1.4rem' }}>📊</span> 채점 및 순위결정 방식
                     </h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '0.9rem', color: 'black', lineHeight: '1.6' }}>
                       <div>
@@ -1808,7 +1808,7 @@ export default function TenantPortalPage({
                   {/* 4. 항의 절차 */}
                   <div className="glass-panel" style={{ background: 'white', padding: '30px' }}>
                     <h3 style={{ fontSize: '1.25rem', fontWeight: '900', marginBottom: '18px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '1.4rem' }}>⚖️</span> 항의 절차 및 이의 제기 (제9조)
+                      <span style={{ fontSize: '1.4rem' }}>⚖️</span> 항의 절차 및 이의 제기
                     </h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.9rem', color: 'black', lineHeight: '1.6' }}>
                       <p style={{ margin: 0 }}>
