@@ -1711,49 +1711,124 @@ export default function TenantPortalPage({
               {/* 4. 대회 규정 및 요강 (룰) */}
               {activeSubTab === 'intro-rules' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                  {/* 경기 규칙 카드 */}
+                  
+                  {/* 1. 경기 규칙 및 코스 */}
                   <div className="glass-panel" style={{ background: 'white', padding: '30px', borderTop: '4px solid var(--theme-primary)' }}>
-                    <h3 style={{ fontSize: '1.3rem', fontWeight: '900', marginBottom: '16px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '1.5rem' }}>⛵</span> 경기 규칙 및 안전 의무
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: '900', marginBottom: '18px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '1.4rem' }}>⛵</span> 경기 규칙 및 코스 안내 (제7조)
                     </h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.92rem', color: 'black', lineHeight: '1.6' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.9rem', color: 'black', lineHeight: '1.6' }}>
                       <p style={{ margin: 0 }}>
-                        • <strong>RRS (경기규칙):</strong> 본 대회는 **국제세일링연맹 경기규칙(Racing Rules of Sailing)**을 철저히 준수 및 적용합니다.
+                        • <strong>공식 규칙 적용:</strong> 본 대회의 경기는 **IWA (International Windsurfing Association) 세일링 경기규칙** 및 범주지시서에 의거하여 진행됩니다.
+                      </p>
+                      <p style={{ margin: 0 }}>
+                        • <strong>다양한 경기 코스:</strong> 공식 경기 코스는 **사각코스, 삼각코스 및 풍상풍하 코스**로 운영되며, 당일 기상 및 해상 상황에 따라 신축적으로 변경될 수 있습니다.
+                      </p>
+                      <p style={{ margin: 0 }}>
+                        • <strong>훈련 전면 개방:</strong> 참가 선수들의 현지 적응 및 사전 연습을 돕기 위해 대회 경기장은 항상 개방되어 운영됩니다.
                       </p>
                       <p style={{ margin: 0, fontWeight: '700', color: '#e11d48' }}>
-                        • <strong>구명동의 착용 필수:</strong> 해상 안전 사고 예방을 위해 모든 참가 선수는 경기 중 반드시 **구명동의(Life Jacket)**를 바르게 착용하여야 합니다. 미착용 혹은 임의 탈거 적발 시 즉시 실격(DSQ) 처리됩니다.
+                        • <strong>구명동의 착용 필수:</strong> 모든 참가 선수는 경기 중 반드시 **구명동의(Life Jacket)**를 착용하여야 하며, 미착용 시 즉시 실격(DSQ) 처리됩니다.
                       </p>
                     </div>
                   </div>
 
-                  {/* 채점 및 순위결정 방식 카드 */}
+                  {/* 2. 계측 규정 */}
                   <div className="glass-panel" style={{ background: 'white', padding: '30px' }}>
-                    <h3 style={{ fontSize: '1.3rem', fontWeight: '900', marginBottom: '16px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '1.5rem' }}>📊</span> 채점 및 순위결정 방식
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: '900', marginBottom: '18px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '1.4rem' }}>📏</span> 장비 계측 규정 (제6조)
                     </h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '0.92rem', color: 'black', lineHeight: '1.6' }}>
+                    <div className="premium-table-container">
+                      <table className="premium-table" style={{ fontSize: '0.85rem', width: '100%' }}>
+                        <thead>
+                          <tr>
+                            <th style={{ width: '120px' }}>구분</th>
+                            <th>계측 및 제한 규정</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td style={{ fontWeight: '800', color: 'var(--theme-primary)' }}>혼합오픈 (Mixed Open)</td>
+                            <td>보드(Board)와 세일(Sail)에 특별한 제한 규정을 두지 않고 자유롭게 참가 가능합니다.</td>
+                          </tr>
+                          <tr>
+                            <td style={{ fontWeight: '800', color: 'var(--theme-primary)' }}>펀 & 포뮬러 (Fun & Formula)</td>
+                            <td>보드 길이는 **3m 이내**로 제한하며, 세일 면적에는 제한을 두지 않습니다.</td>
+                          </tr>
+                          <tr>
+                            <td style={{ fontWeight: '800', color: 'var(--theme-primary)' }}>단체전 (Relay)</td>
+                            <td>모든 단체전 주자는 **롱보드(Long Board)**를 장비로 사용하여야 합니다.</td>
+                          </tr>
+                          <tr>
+                            <td style={{ fontWeight: '800', color: 'var(--theme-primary)' }}>개인식별번호</td>
+                            <td>공식 식별용 개인식별번호는 주최측에서 직접 배부한 **배번티**로 정합니다.</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* 3. 채점 방식 */}
+                  <div className="glass-panel" style={{ background: 'white', padding: '30px' }}>
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: '900', marginBottom: '18px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '1.4rem' }}>📊</span> 채점 및 순위결정 방식 (제8조)
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '0.9rem', color: 'black', lineHeight: '1.6' }}>
                       <div>
-                        <strong>1. Sailing Low-Point System (저점법 채점)</strong>
-                        <p style={{ margin: '4px 0 0 12px', fontSize: '0.88rem', color: 'var(--text-muted)' }}>
+                        <strong>1. Sailing Low-Point System (저점법 채점) 적용</strong>
+                        <p style={{ margin: '4px 0 0 12px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                           - 각 라운드 피니시 순위(1위 = 1점, 2위 = 2점...)가 벌점이 되며, 전체 경기 벌점의 총합이 낮을수록 최종 순위가 높게 매겨집니다.
                         </p>
                       </div>
-                      
+
                       <div>
-                        <strong>2. DNS / DNF 패널티 벌점 기준</strong>
-                        <p style={{ margin: '4px 0 0 12px', fontSize: '0.88rem', color: 'var(--text-muted)' }}>
-                          - 경기 도중 부정출발 및 미출발(**DNS**) 혹은 미완주/리타이어(**DNF**)가 발생한 라운드의 경우, **해당 부서(종목)의 전체 등록/참가자 총원**에 해당하는 벌점이 가산되어 적용됩니다.
+                        <strong>2. 대회 성립 조건 및 감점 제외 (Discard)</strong>
+                        <p style={{ margin: '4px 0 0 12px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                          - 공식 대회의 성립을 위해서는 최소한 **1경기**를 완료하여야 합니다.<br />
+                          - 경기 수가 **4경기 이상** 진행될 시, 가장 성적이 나쁜 1경기를 제외한 나머지 스코어의 합계로 최종 순위를 정합니다.
                         </p>
                       </div>
 
                       <div>
-                        <strong>3. 가장 저조한 성적 1회 자동 제외 (Discard)</strong>
-                        <p style={{ margin: '4px 0 0 12px', fontSize: '0.88rem', color: 'var(--text-muted)' }}>
-                          - 총 4라운드(4R) 이상의 경기가 정상 완료되면, 각 참가자의 라운드 기록 중 가장 저조한 성적(가장 벌점이 높게 매겨진 1개 라운드, 예: DNS/DNF 라운드 등)을 자동 제외하고 합산합니다.
+                        <strong>3. DNS / DNF 패널티 벌점 기준</strong>
+                        <p style={{ margin: '4px 0 0 12px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                          - 부정출발/미출발(**DNS**) 및 미완주/리타이어(**DNF**)의 경우, **해당 부서(종목)의 전체 등록/참가자 총원**에 해당하는 패널티 벌점이 가산되어 합계에 적용됩니다.
+                        </p>
+                      </div>
+
+                      <div>
+                        <strong>4. 펀 & 포뮬러 특별 규정</strong>
+                        <p style={{ margin: '4px 0 0 12px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                          - 펀&포뮬러 클래스의 대회 성립 요건은 대회 당일 경기위원회에서 별도로 정하며, 세계윈드서핑선수협회(**PWA**) 공식 룰을 따릅니다.
                         </p>
                       </div>
                     </div>
                   </div>
+
+                  {/* 4. 항의 절차 */}
+                  <div className="glass-panel" style={{ background: 'white', padding: '30px' }}>
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: '900', marginBottom: '18px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '1.4rem' }}>⚖️</span> 항의 절차 및 이의 제기 (제9조)
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.9rem', color: 'black', lineHeight: '1.6' }}>
+                      <p style={{ margin: 0 }}>
+                        • <strong>항의처리위원회 구성:</strong> 접수된 모든 항의 및 구제 요청은 본 연맹의 공식 **심판위원회 위원**들로 구성된 항의처리위원회에서 심의합니다.
+                      </p>
+                      <p style={{ margin: 0 }}>
+                        • <strong>신속한 서면 제출:</strong> 모든 항의, 구제요청 및 청문 재개 요청은 경기 규칙이 규정하는 적절한 서식에 따라 **대회본부**에 직접 제출되어야 합니다.
+                      </p>
+                      <p style={{ margin: 0, fontWeight: '700', color: '#e11d48' }}>
+                        • <strong>항의 제출 마감시간:</strong> 당일 마지막 경기에서 해당 클래스의 마지막 경기정이 피니시 라인을 통과한 시간으로부터 **30분 이내**에 반드시 제출해야 합니다.
+                      </p>
+                      <p style={{ margin: 0 }}>
+                        • <strong>항의 배의 의사 표시 의무:</strong> 항의하고자 하는 경기정은 해당 경기를 마친 직후, 피니시 라인 근처에 대기 중인 경기위원회 선박에 항의 대상 선수를 지목하여 구두로 항의 의사를 통보해야 합니다. 만약 해상 통보가 불가피하게 지연된 경우, 육상 계류장에 도착하는 즉시 사유서와 함께 항의서를 위원회에 신속히 제출하여야 합니다.
+                      </p>
+                      <p style={{ margin: 0, fontWeight: '700' }}>
+                        • <strong>최종 판결:</strong> 항의위원회에서 의결하고 내린 모든 최종 판결은 번복할 수 없는 **최종적(Final)** 효력을 지닙니다.
+                      </p>
+                    </div>
+                  </div>
+
                 </div>
               )}
 
