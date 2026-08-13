@@ -95,9 +95,11 @@ export default function TenantPortalPage({
   // 대회 선택 (진행중인 대회)
   const [activeTournamentId, setActiveTournamentId] = useState<string>('');
   
-  // 리더보드 데이터
-  const [leaderboard, setLeaderboard] = useState<LeaderboardItem[]>([]);
+  // 리더보드 및 참가자 데이터
+  const [leaderboards, setLeaderboards] = useState<Record<string, any[]>>({});
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  const [registrations, setRegistrations] = useState<any[]>([]);
+  const [regsLoading, setRegsLoading] = useState(false);
   const [liveStatus, setLiveStatus] = useState<'connected' | 'reconnecting' | 'disconnected'>('disconnected');
 
   // 대진표 데이터
@@ -186,6 +188,7 @@ export default function TenantPortalPage({
         console.log('실시간 데이터 수신:', data);
         fetchLeaderboard(activeTournamentId);
         fetchMatches(activeTournamentId);
+        fetchRegistrations(activeTournamentId);
       } catch (e) {
         console.error(e);
       }
@@ -198,17 +201,18 @@ export default function TenantPortalPage({
     return () => {
       eventSource.close();
     };
-  }, [subdomain, activeTab, activeTournamentId, activeDivisionTab]);
+  }, [subdomain, activeTab, activeTournamentId]);
 
-  // 탭 및 대회 ID 변경시 로드 (activeDivisionTab 의존성 추가)
+  // 탭 및 대회 ID 변경시 로드
   useEffect(() => {
     if (activeTournamentId) {
       if (activeTab === 'live') {
         fetchLeaderboard(activeTournamentId);
         fetchMatches(activeTournamentId);
+        fetchRegistrations(activeTournamentId);
       }
     }
-  }, [activeTab, activeTournamentId, activeDivisionTab]);
+  }, [activeTab, activeTournamentId]);
 
   useEffect(() => {
     if (selectedArchiveId && activeTab === 'archive') {
@@ -242,18 +246,66 @@ export default function TenantPortalPage({
     }
   };
 
+  const getDivisionTabs = () => {
+    const divisionField = formFields.find((f: any) => f.id === 'division');
+    const configuredDivisions = divisionField?.options || [];
+    if (configuredDivisions.length > 0) {
+      return configuredDivisions;
+    }
+    return [
+      '윈드포일 (남자부)',
+      '윈드포일 (여자부)',
+      '윙포일 (남자부)',
+      '윙포일 (여자부)',
+      '혼합오픈 (남자부)',
+      '혼합오픈 (여자부)',
+      '펀엔포뮬러 (남자부)',
+      '펀엔포뮬러 (여자부)'
+    ];
+  };
+
   const fetchLeaderboard = async (tId: string) => {
     setLeaderboardLoading(true);
     try {
-      const res = await fetch(`/api/tenant/${subdomain}/leaderboard?tournamentId=${tId}&division=${encodeURIComponent(activeDivisionTab)}`);
-      const data = await res.json();
-      if (data.leaderboard) {
-        setLeaderboard(data.leaderboard);
-      }
+      const divisionList = getDivisionTabs();
+      const results = await Promise.all(
+        divisionList.map(async (div: string) => {
+          try {
+            const res = await fetch(`/api/tenant/${subdomain}/leaderboard?tournamentId=${tId}&division=${encodeURIComponent(div)}`);
+            const data = await res.json();
+            return { division: div, list: data.leaderboard || [] };
+          } catch (e) {
+            console.error(`Failed to fetch leaderboard for ${div}:`, e);
+            return { division: div, list: [] };
+          }
+        })
+      );
+      
+      const newLeaderboards: Record<string, any[]> = {};
+      results.forEach(r => {
+        newLeaderboards[r.division] = r.list;
+      });
+      setLeaderboards(newLeaderboards);
     } catch (e) {
       console.error(e);
     } finally {
       setLeaderboardLoading(false);
+    }
+  };
+
+  const fetchRegistrations = async (tId: string) => {
+    setRegsLoading(true);
+    try {
+      const res = await fetch(`/api/tenant/${subdomain}/registrations?tournamentId=${tId}`);
+      const data = await res.json();
+      if (data.registrations) {
+        const approved = data.registrations.filter((r: any) => r.status === 'APPROVED');
+        setRegistrations(approved);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setRegsLoading(false);
     }
   };
 
@@ -1029,143 +1081,275 @@ export default function TenantPortalPage({
                 <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>Notice of Race (NOR) / 공식 실시간 순위 및 라운드별 경기 결과</p>
               </div>
 
-              {/* 종목 탭바 */}
-              <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
-                {(() => {
-                  const divisionField = formFields.find((f: any) => f.id === 'division');
-                  const divisionTabs = divisionField?.options || [
-                    '윈드포일 (남자부)',
-                    '윈드포일 (여자부)',
-                    '윙포일 (남자부)',
-                    '윙포일 (여자부)',
-                    '혼합오픈 (남자부)',
-                    '혼합오픈 (여자부)',
-                    '펀엔포뮬러 (남자부)',
-                    '펀엔포뮬러 (여자부)'
-                  ];
-                  return divisionTabs.map((div: string) => {
-                    const active = activeDivisionTab === div;
-                    return (
-                      <button
-                        key={div}
-                        onClick={() => setActiveDivisionTab(div)}
-                        style={{
-                          padding: '10px 20px',
-                          borderRadius: '24px',
-                          background: active ? 'var(--theme-primary)' : '#ffffff',
-                          border: active ? 'none' : '1px solid var(--border-color)',
-                          color: active ? '#ffffff' : 'var(--text-muted)',
-                          fontSize: '0.85rem',
-                          fontWeight: '800',
-                          cursor: 'pointer',
-                          whiteSpace: 'nowrap',
-                          transition: 'all 0.2s ease-in-out',
-                          boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
-                        }}
-                      >
-                        {div}
-                      </button>
-                    );
-                  });
-                })()}
-              </div>
-
               {leaderboardLoading ? (
                 <div className="glass-panel" style={{ background: 'white', padding: '60px 0', textAlign: 'center' }}>
                   <RefreshCw className="animate-spin" size={32} style={{ color: 'var(--theme-primary)', margin: '0 auto 12px auto' }} />
                   <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>리더보드 집계 정보를 불러오는 중입니다...</p>
                 </div>
-              ) : leaderboard.length === 0 ? (
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                  {(() => {
+                    const divisionList = getDivisionTabs();
+                    return divisionList.map((div: string) => {
+                      const list = leaderboards[div] || [];
+                      return (
+                        <div key={div} className="glass-panel" style={{ background: 'white', padding: '24px 30px', borderTop: '4px solid var(--theme-primary)' }}>
+                          <h3 style={{ fontSize: '1.2rem', fontWeight: '900', color: 'var(--text-main)', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '1.3rem' }}>🏆</span> {div}
+                          </h3>
+                          {list.length === 0 ? (
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '10px 0' }}>
+                              해당 종목의 등록/확정된 순위표가 없습니다.
+                            </p>
+                          ) : (
+                            <div className="premium-table-container">
+                              <table className="premium-table" style={{ fontSize: '0.9rem', width: '100%', borderCollapse: 'collapse', color: 'black' }}>
+                                <thead>
+                                  <tr style={{ background: '#f8fafc' }}>
+                                    <th style={{ width: '70px', textAlign: 'center', fontWeight: '800' }}>순위</th>
+                                    <th style={{ minWidth: '90px', fontWeight: '800' }}>성명</th>
+                                    <th style={{ minWidth: '90px', fontWeight: '800' }}>배번</th>
+                                    <th style={{ minWidth: '100px', fontWeight: '800' }}>생년월일</th>
+                                    {['1R', '2R', '3R', '4R', '5R', '6R'].map(r => (
+                                      <th key={r} style={{ width: '60px', textAlign: 'center', fontWeight: '800' }}>{r}</th>
+                                    ))}
+                                    <th style={{ width: '80px', textAlign: 'center', fontWeight: '800', color: 'var(--theme-primary)' }}>총점</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {list.map((row: any, rIdx: number) => {
+                                    const rounds = [row.r1, row.r2, row.r3, row.r4, row.r5, row.r6];
+                                    const numericScores = rounds.map(val => {
+                                      if (val === null || val === undefined || val === '') return null;
+                                      if (val === 'DNS' || val === 'DNF') return list.length;
+                                      const num = Number(val);
+                                      return isNaN(num) ? null : num;
+                                    });
+                                    const validScoresCount = numericScores.filter(val => val !== null).length;
+                                    
+                                    let discardIdx = -1;
+                                    if (validScoresCount >= 4) {
+                                      let maxVal = -1;
+                                      for (let i = 0; i < rounds.length; i++) {
+                                        const val = numericScores[i];
+                                        if (val !== null) {
+                                          if (val > maxVal) {
+                                            maxVal = val;
+                                            discardIdx = i;
+                                          }
+                                        }
+                                      }
+                                    }
+
+                                    return (
+                                      <tr key={rIdx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                        <td style={{ textAlign: 'center', fontWeight: '800' }}>
+                                          <span style={{
+                                            display: 'inline-block',
+                                            width: '28px',
+                                            height: '28px',
+                                            lineHeight: '28px',
+                                            borderRadius: '50%',
+                                            background: row.rank === 1 ? 'var(--theme-gold)' : row.rank === 2 ? '#cbd5e1' : row.rank === 3 ? '#b45309' : '#f1f5f9',
+                                            color: row.rank <= 3 ? 'white' : 'var(--text-main)',
+                                            fontSize: '0.85rem'
+                                          }}>
+                                            {row.rank}
+                                          </span>
+                                        </td>
+                                        <td style={{ fontWeight: '800' }}>{row.name}</td>
+                                        <td>{row.bibNumber || '-'}</td>
+                                        <td>{row.birth || '-'}</td>
+                                        {rounds.map((val, idx) => {
+                                          const isDiscarded = idx === discardIdx;
+                                          const displayVal = val !== null && val !== undefined && val !== '' ? val : '-';
+                                          return (
+                                            <td key={idx} style={{
+                                              textAlign: 'center',
+                                              color: isDiscarded ? '#94a3b8' : 'inherit',
+                                              textDecoration: isDiscarded ? 'line-through' : 'none',
+                                              fontWeight: isDiscarded ? 'normal' : '600'
+                                            }}>
+                                              {displayVal}
+                                              {isDiscarded && <span style={{ fontSize: '0.7rem', display: 'block', textDecoration: 'none', color: '#f43f5e', fontWeight: '800' }}>(제외)</span>}
+                                            </td>
+                                          );
+                                        })}
+                                        <td style={{ textAlign: 'center', fontWeight: '900', color: 'var(--theme-primary)', fontSize: '1.05rem' }}>{row.total}점</td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    });
+                  })()}
+                  <div className="glass-panel" style={{ background: 'white', padding: '20px 24px' }}>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>※ Sailing Low-Point 채점 기준: 각 라운드 순위가 점수가 되며(1위=1점, DNF/DNS 등은 참가자 인원만큼 벌점 부여), 총점이 낮을수록 최종 순위가 높습니다.</p>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>※ 경기 수 4회 이상(4R~) 진행 시, 참가자의 성적 중 가장 성적이 낮은 라운드(가장 높은 벌점) 1개를 자동 제외하고 합산합니다.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* LIVE. 경기운영 / 대진표 및 조 편성표 탭 */}
+          {activeTab === 'live' && activeSubTab === 'live-brackets' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {/* 대진표 및 조 편성표 헤더 */}
+              <div className="glass-panel" style={{ background: 'white', padding: '28px 32px', borderTop: '4px solid var(--theme-primary)' }}>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: '900', textAlign: 'center', color: 'var(--text-main)', marginBottom: '4px' }}>
+                  {overview.title} 대진표 및 조 편성표
+                </h2>
+                <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>각 종목별, 성별, 세부 클래스별 조 편성 및 공식 참가 선수 목록</p>
+              </div>
+
+              {regsLoading ? (
+                <div className="glass-panel" style={{ background: 'white', padding: '60px 0', textAlign: 'center' }}>
+                  <RefreshCw className="animate-spin" size={32} style={{ color: 'var(--theme-primary)', margin: '0 auto 12px auto' }} />
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>참가 선수 및 조 편성표 데이터를 불러오는 중입니다...</p>
+                </div>
+              ) : registrations.length === 0 ? (
                 <div className="glass-panel" style={{ background: 'white', padding: '60px 0', textAlign: 'center', color: 'var(--text-muted)' }}>
-                  <p style={{ fontSize: '1rem', fontWeight: '700', margin: '0 0 4px 0' }}>등록된 순위표가 없습니다.</p>
-                  <p style={{ fontSize: '0.85rem', margin: 0 }}>심판이 공식 순위를 확정하면 여기에 실시간으로 표시됩니다.</p>
+                  <p style={{ fontSize: '1rem', fontWeight: '700', margin: '0 0 4px 0' }}>승인 완료된 참가 선수가 없습니다.</p>
+                  <p style={{ fontSize: '0.85rem', margin: 0 }}>대회 주최측에서 참가 신청을 승인하면 대진 및 조 편성이 여기에 실시간으로 표시됩니다.</p>
                 </div>
               ) : (
-                <div className="glass-panel" style={{ background: 'white', padding: '24px 30px' }}>
-                  <div className="premium-table-container">
-                    <table className="premium-table" style={{ fontSize: '0.9rem', width: '100%', borderCollapse: 'collapse', color: 'black' }}>
-                      <thead>
-                        <tr style={{ background: '#f8fafc' }}>
-                          <th style={{ width: '70px', textAlign: 'center', fontWeight: '800' }}>순위</th>
-                          <th style={{ minWidth: '90px', fontWeight: '800' }}>성명</th>
-                          <th style={{ minWidth: '90px', fontWeight: '800' }}>배번티번호</th>
-                          <th style={{ minWidth: '100px', fontWeight: '800' }}>생년월일</th>
-                          {['1R', '2R', '3R', '4R', '5R', '6R'].map(r => (
-                            <th key={r} style={{ width: '60px', textAlign: 'center', fontWeight: '800' }}>{r}</th>
-                          ))}
-                          <th style={{ width: '80px', textAlign: 'center', fontWeight: '800', color: 'var(--theme-primary)' }}>총점</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {leaderboard.map((row: any, rIdx: number) => {
-                          const rounds = [row.r1, row.r2, row.r3, row.r4, row.r5, row.r6];
-                          const numericScores = rounds.map(val => {
-                            if (val === null || val === undefined || val === '') return null;
-                            if (val === 'DNS' || val === 'DNF') return leaderboard.length;
-                            const num = Number(val);
-                            return isNaN(num) ? null : num;
-                          });
-                          const validScoresCount = numericScores.filter(val => val !== null).length;
-                          
-                          let discardIdx = -1;
-                          if (validScoresCount >= 4) {
-                            let maxVal = -1;
-                            for (let i = 0; i < rounds.length; i++) {
-                              const val = numericScores[i];
-                              if (val !== null) {
-                                  if (val > maxVal) {
-                                    maxVal = val;
-                                    discardIdx = i;
-                                  }
-                              }
-                            }
-                          }
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
+                  {(() => {
+                    // 1. Parse player data with subclass categorization
+                    const parsedPlayers = registrations.map((r: any) => {
+                      let birth = '';
+                      let division = '';
+                      let gender = '';
+                      let subclass = '통합부';
+                      
+                      try {
+                        if (r.formResponses) {
+                          const extra = JSON.parse(r.formResponses);
+                          birth = extra.birthDate || extra.birth || '';
+                          division = extra.division || '';
+                          gender = extra.gender || '';
+                          subclass = extra.subclass || extra.class || extra.category || extra.subDivision || '통합부';
+                        }
+                      } catch (e) {}
 
-                          return (
-                            <tr key={rIdx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                              <td style={{ textAlign: 'center', fontWeight: '800' }}>
-                                <span style={{
-                                  display: 'inline-block',
-                                  width: '28px',
-                                  height: '28px',
-                                  lineHeight: '28px',
-                                  borderRadius: '50%',
-                                  background: row.rank === 1 ? 'var(--theme-gold)' : row.rank === 2 ? '#cbd5e1' : row.rank === 3 ? '#b45309' : '#f1f5f9',
-                                  color: row.rank <= 3 ? 'white' : 'var(--text-main)',
-                                  fontSize: '0.85rem'
-                                }}>
-                                  {row.rank}
-                                </span>
-                              </td>
-                              <td style={{ fontWeight: '800' }}>{row.name}</td>
-                              <td>{row.bibNumber || '-'}</td>
-                              <td>{row.birth || '-'}</td>
-                              {rounds.map((val, idx) => {
-                                const isDiscarded = idx === discardIdx;
-                                const displayVal = val !== null && val !== undefined && val !== '' ? val : '-';
-                                return (
-                                  <td key={idx} style={{
-                                    textAlign: 'center',
-                                    color: isDiscarded ? '#94a3b8' : 'inherit',
-                                    textDecoration: isDiscarded ? 'line-through' : 'none',
-                                    fontWeight: isDiscarded ? 'normal' : '600'
-                                  }}>
-                                    {displayVal}
-                                    {isDiscarded && <span style={{ fontSize: '0.7rem', display: 'block', textDecoration: 'none', color: '#f43f5e', fontWeight: '800' }}>(제외)</span>}
-                                  </td>
-                                );
-                              })}
-                              <td style={{ textAlign: 'center', fontWeight: '900', color: 'var(--theme-primary)', fontSize: '1.05rem' }}>{row.total}점</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div style={{ marginTop: '16px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                    <p style={{ margin: '4px 0 0 0' }}>※ Sailing Low-Point 채점 기준: 각 라운드 순위가 점수가 되며(1위=1점, DNF 등은 감점 패널티 부여), 총점이 낮을수록 최종 순위가 높습니다.</p>
-                    <p style={{ margin: '2px 0 0 0' }}>※ 경기 수 4회 이상(4R~) 진행 시, 참가자의 성적 중 가장 성적이 낮은 라운드(가장 높은 점수) 1개를 자동 제외하고 합산합니다.</p>
-                  </div>
+                      if (!division) division = '미분류 종목';
+                      if (!gender) {
+                        if (division.includes('남자')) gender = '남자부';
+                        else if (division.includes('여자')) gender = '여자부';
+                        else gender = '남자부';
+                      } else {
+                        gender = gender.includes('부') ? gender : `${gender}부`;
+                      }
+                      
+                      let rootDivision = division;
+                      if (division.includes('윈드포일')) rootDivision = '윈드포일';
+                      else if (division.includes('윙포일')) rootDivision = '윙포일';
+                      else if (division.includes('혼합오픈')) rootDivision = '혼합오픈';
+                      else if (division.includes('펀엔포뮬러') || division.includes('펀&포뮬러')) rootDivision = '펀&포뮬러';
+
+                      return {
+                        id: r.id,
+                        name: r.player.name,
+                        bibNumber: r.bibNumber || '-',
+                        birth,
+                        division: rootDivision,
+                        gender,
+                        subclass
+                      };
+                    });
+
+                    // 2. Group by rootDivision -> gender -> subclass
+                    const grouped: Record<string, Record<string, Record<string, any[]>>> = {};
+                    parsedPlayers.forEach(p => {
+                      if (!grouped[p.division]) grouped[p.division] = {};
+                      if (!grouped[p.division][p.gender]) grouped[p.division][p.gender] = {};
+                      if (!grouped[p.division][p.gender][p.subclass]) grouped[p.division][p.gender][p.subclass] = [];
+                      
+                      grouped[p.division][p.gender][p.subclass].push(p);
+                    });
+
+                    // Sort order for root divisions
+                    const divisionOrder = ['윈드포일', '윙포일', '혼합오픈', '펀&포뮬러'];
+                    const sortedDivisions = Object.keys(grouped).sort((a, b) => {
+                      const idxA = divisionOrder.indexOf(a);
+                      const idxB = divisionOrder.indexOf(b);
+                      if (idxA === -1 && idxB === -1) return a.localeCompare(b);
+                      if (idxA === -1) return 1;
+                      if (idxB === -1) return -1;
+                      return idxA - idxB;
+                    });
+
+                    return sortedDivisions.map(rootDiv => {
+                      const genderGroup = grouped[rootDiv] || {};
+                      
+                      return (
+                        <div key={rootDiv} className="glass-panel" style={{ background: 'white', padding: '30px', borderTop: '4px solid var(--theme-primary)', borderRadius: '16px' }}>
+                          <h3 style={{ fontSize: '1.4rem', fontWeight: '900', color: 'var(--text-main)', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '2px solid var(--theme-primary)', paddingBottom: '10px' }}>
+                            <span style={{ fontSize: '1.6rem' }}>⛵</span> {rootDiv} 대진 및 조 편성표
+                          </h3>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
+                            {['남자부', '여자부'].map(gender => {
+                              const subclasses = genderGroup[gender] || {};
+                              if (Object.keys(subclasses).length === 0) return null;
+
+                              return (
+                                <div key={gender} style={{ background: '#f8fafc', padding: '24px', borderRadius: '14px', border: '1px solid var(--border-color)' }}>
+                                  <h4 style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    👤 {gender}
+                                  </h4>
+
+                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+                                    {Object.keys(subclasses).map(subclass => {
+                                      const list = subclasses[subclass] || [];
+                                      return (
+                                        <div key={subclass} style={{ background: 'white', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '18px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                                          <h5 style={{ fontSize: '0.95rem', fontWeight: '850', color: 'var(--text-main)', margin: '0 0 12px 0', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <span>🏷️ {subclass}</span>
+                                            <span style={{ fontSize: '0.75rem', background: 'var(--theme-primary)', color: 'white', padding: '2px 8px', borderRadius: '10px', fontWeight: '700' }}>{list.length}명</span>
+                                          </h5>
+                                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                            {list.map((player: any, pIdx: number) => (
+                                              <div
+                                                key={player.id}
+                                                style={{
+                                                  display: 'flex',
+                                                  alignItems: 'center',
+                                                  justifyContent: 'space-between',
+                                                  padding: '10px 12px',
+                                                  background: '#f8fafc',
+                                                  borderRadius: '8px',
+                                                  fontSize: '0.85rem',
+                                                  border: '1px solid #f1f5f9'
+                                                }}
+                                              >
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                  <span style={{ fontWeight: '800', color: 'var(--text-main)' }}>{player.name}</span>
+                                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>({player.birth || '-'})</span>
+                                                </div>
+                                                <span style={{ fontWeight: '800', color: 'var(--theme-primary)', background: 'rgba(197, 168, 128, 0.1)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem' }}>
+                                                  배번 {player.bibNumber}
+                                                </span>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
               )}
             </div>
