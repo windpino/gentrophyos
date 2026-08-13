@@ -1099,19 +1099,24 @@ export default function TenantPortalPage({
                       <tbody>
                         {leaderboard.map((row: any, rIdx: number) => {
                           const rounds = [row.r1, row.r2, row.r3, row.r4, row.r5, row.r6];
-                          const validScores = rounds.filter(val => val !== null && val !== undefined && val !== '' && !isNaN(Number(val)));
+                          const numericScores = rounds.map(val => {
+                            if (val === null || val === undefined || val === '') return null;
+                            if (val === 'DNS' || val === 'DNF') return leaderboard.length;
+                            const num = Number(val);
+                            return isNaN(num) ? null : num;
+                          });
+                          const validScoresCount = numericScores.filter(val => val !== null).length;
                           
                           let discardIdx = -1;
-                          if (validScores.length >= 4) {
+                          if (validScoresCount >= 4) {
                             let maxVal = -1;
                             for (let i = 0; i < rounds.length; i++) {
-                              const val = rounds[i];
-                              if (val !== null && val !== undefined && val !== '' && !isNaN(Number(val))) {
-                                const num = Number(val);
-                                if (num > maxVal) {
-                                  maxVal = num;
-                                  discardIdx = i;
-                                }
+                              const val = numericScores[i];
+                              if (val !== null) {
+                                  if (val > maxVal) {
+                                    maxVal = val;
+                                    discardIdx = i;
+                                  }
                               }
                             }
                           }
@@ -1596,7 +1601,162 @@ export default function TenantPortalPage({
                   </div>
                 </div>
 
-              </div>
+            </div>
+          </div>
+        )}
+
+          {/* INTRO. 대회 소개 탭 */}
+          {activeTab === 'intro' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '800px', margin: '0 auto', width: '100%' }} className="animate-fade-in">
+              
+              {/* 1. 인사말 / 조직위원회 */}
+              {activeSubTab === 'intro-greeting' && (
+                <div className="glass-panel" style={{ background: 'white', padding: '30px', borderTop: '4px solid var(--theme-primary)' }}>
+                  <h3 style={{ fontSize: '1.3rem', fontWeight: '900', marginBottom: '20px', color: 'var(--text-main)' }}>인사말 / 조직위원회</h3>
+                  <p style={{ color: 'var(--text-muted)', lineHeight: '1.7', fontSize: '0.92rem', margin: 0 }}>
+                    제20회 이순신장군배 전국윈드서핑대회에 관심을 가져주셔서 감사합니다.<br />
+                    본 대회 인사말 및 조직위원회 구성 명단은 준비 중입니다.
+                  </p>
+                </div>
+              )}
+
+              {/* 2. 대회 개요 및 일정 */}
+              {activeSubTab === 'intro-schedule' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                  {/* 개요 카드 */}
+                  <div className="glass-panel" style={{ background: 'white', padding: '30px', borderTop: '4px solid var(--theme-primary)' }}>
+                    <h3 style={{ fontSize: '1.3rem', fontWeight: '900', marginBottom: '18px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '1.5rem' }}>📋</span> 대회 개요
+                    </h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', fontSize: '0.92rem', color: 'black' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <p style={{ margin: 0 }}><strong>대회명 :</strong> 제20회 이순신장군배 전국윈드서핑대회 (2026)</p>
+                        <p style={{ margin: 0 }}><strong>기간 :</strong> 2026년 9월 11일(금) ~ 13일(일) [3일간]</p>
+                        <p style={{ margin: 0 }}><strong>장소 :</strong> 통영시 광도면 죽림만 해역 일원 (죽림해양스포츠 계류장)</p>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <p style={{ margin: 0 }}><strong>주최 :</strong> 통영시</p>
+                        <p style={{ margin: 0 }}><strong>주관 :</strong> 통영시윈드서핑연맹, 한국윈드서핑협회</p>
+                        <p style={{ margin: 0 }}><strong>후원 :</strong> 경상남도, 경상남도체육회, 통영시체육회</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 일정표 카드 */}
+                  <div className="glass-panel" style={{ background: 'white', padding: '30px' }}>
+                    <h3 style={{ fontSize: '1.3rem', fontWeight: '900', marginBottom: '18px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '1.5rem' }}>📅</span> 대회 상세 일정표
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                      
+                      {/* 1일차 */}
+                      <div style={{ background: '#f8fafc', padding: '16px 20px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                        <h4 style={{ fontWeight: '800', color: 'var(--theme-primary)', fontSize: '0.95rem', margin: '0 0 10px 0', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px' }}>
+                          1일차 : 9월 11일 (금)
+                        </h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.88rem', color: 'black' }}>
+                          <p style={{ margin: 0 }}>• <strong>13:00 ~ 17:00 :</strong> 참가 선수단 등록 및 리허설 (죽림만 해역)</p>
+                          <p style={{ margin: 0 }}>• <strong>18:00 ~ 20:00 :</strong> 개회식 (통영 스탠포드 호텔)</p>
+                        </div>
+                      </div>
+
+                      {/* 2일차 */}
+                      <div style={{ background: '#f8fafc', padding: '16px 20px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                        <h4 style={{ fontWeight: '800', color: 'var(--theme-primary)', fontSize: '0.95rem', margin: '0 0 10px 0', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px' }}>
+                          2일차 : 9월 12일 (토)
+                        </h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.88rem', color: 'black' }}>
+                          <p style={{ margin: 0 }}>• <strong>09:00 ~ 10:00 :</strong> 출정식 (계류장 특설무대 / 안전 교육)</p>
+                          <p style={{ margin: 0 }}>• <strong>10:00 ~ 17:00 :</strong> 공식 경기 (예선 및 본선 경기)</p>
+                          <p style={{ margin: 0 }}>• <strong>18:00 ~ 20:00 :</strong> 리셉션 및 만찬 (죽림 계류장 특설무대)</p>
+                        </div>
+                      </div>
+
+                      {/* 3일차 */}
+                      <div style={{ background: '#f8fafc', padding: '16px 20px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                        <h4 style={{ fontWeight: '800', color: 'var(--theme-primary)', fontSize: '0.95rem', margin: '0 0 10px 0', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px' }}>
+                          3일차 : 9월 13일 (일)
+                        </h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.88rem', color: 'black' }}>
+                          <p style={{ margin: 0 }}>• <strong>10:00 ~ 15:00 :</strong> 공식 결선 경기 (각 종목별 결승)</p>
+                          <p style={{ margin: 0 }}>• <strong>15:30 ~ :</strong> 시상식 및 폐회식 (죽림 계류장 특설무대)</p>
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 3. 대회 장소 및 코스 안내 */}
+              {activeSubTab === 'intro-location' && (
+                <div className="glass-panel" style={{ background: 'white', padding: '30px', borderTop: '4px solid var(--theme-primary)' }}>
+                  <h3 style={{ fontSize: '1.3rem', fontWeight: '900', marginBottom: '18px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '1.5rem' }}>📍</span> 대회 장소 및 경기 수역
+                  </h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', fontSize: '0.92rem', color: 'black' }}>
+                    <p style={{ margin: 0, lineHeight: '1.6' }}>
+                      • <strong>주소 및 위치:</strong> 통영시 광도면 죽림만 해역 일원 (죽림해양스포츠 계류장)<br />
+                      • <strong>수역 특징:</strong> 죽림만 내해 해역은 주변 지형으로 인해 잔잔한 해상 여건이 유지되어 해양 스포츠 안전사고 예방에 최적화되어 있으며, 연안 관중석에서 선수들의 긴장감 넘치는 경기 레이스를 한눈에 관람하기 매우 좋은 장소입니다.
+                    </p>
+                    <div style={{ background: '#f8fafc', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '16px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                      <p style={{ margin: '0 0 6px 0', fontWeight: '800', color: 'var(--text-main)' }}>⚠️ 선수 및 갤러리 주의사항</p>
+                      <p style={{ margin: 0 }}>- 경기 중 정해진 수역 이외의 진입을 엄격히 금하며, 안내 유도선의 통제에 적극 협조해주시기 바랍니다.</p>
+                      <p style={{ margin: 0 }}>- 장비 이송 및 계류는 지정된 죽림 해양스포츠 계류장 구역 내에서만 완료해주시기 바랍니다.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 4. 대회 규정 및 요강 (룰) */}
+              {activeSubTab === 'intro-rules' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                  {/* 경기 규칙 카드 */}
+                  <div className="glass-panel" style={{ background: 'white', padding: '30px', borderTop: '4px solid var(--theme-primary)' }}>
+                    <h3 style={{ fontSize: '1.3rem', fontWeight: '900', marginBottom: '16px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '1.5rem' }}>⛵</span> 경기 규칙 및 안전 의무
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.92rem', color: 'black', lineHeight: '1.6' }}>
+                      <p style={{ margin: 0 }}>
+                        • <strong>RRS (경기규칙):</strong> 본 대회는 **국제세일링연맹 경기규칙(Racing Rules of Sailing)**을 철저히 준수 및 적용합니다.
+                      </p>
+                      <p style={{ margin: 0, fontWeight: '700', color: '#e11d48' }}>
+                        • <strong>구명동의 착용 필수:</strong> 해상 안전 사고 예방을 위해 모든 참가 선수는 경기 중 반드시 **구명동의(Life Jacket)**를 바르게 착용하여야 합니다. 미착용 혹은 임의 탈거 적발 시 즉시 실격(DSQ) 처리됩니다.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* 채점 및 순위결정 방식 카드 */}
+                  <div className="glass-panel" style={{ background: 'white', padding: '30px' }}>
+                    <h3 style={{ fontSize: '1.3rem', fontWeight: '900', marginBottom: '16px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '1.5rem' }}>📊</span> 채점 및 순위결정 방식
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '0.92rem', color: 'black', lineHeight: '1.6' }}>
+                      <div>
+                        <strong>1. Sailing Low-Point System (저점법 채점)</strong>
+                        <p style={{ margin: '4px 0 0 12px', fontSize: '0.88rem', color: 'var(--text-muted)' }}>
+                          - 각 라운드 피니시 순위(1위 = 1점, 2위 = 2점...)가 벌점이 되며, 전체 경기 벌점의 총합이 낮을수록 최종 순위가 높게 매겨집니다.
+                        </p>
+                      </div>
+                      
+                      <div>
+                        <strong>2. DNS / DNF 패널티 벌점 기준</strong>
+                        <p style={{ margin: '4px 0 0 12px', fontSize: '0.88rem', color: 'var(--text-muted)' }}>
+                          - 경기 도중 부정출발 및 미출발(**DNS**) 혹은 미완주/리타이어(**DNF**)가 발생한 라운드의 경우, **해당 부서(종목)의 전체 등록/참가자 총원**에 해당하는 벌점이 가산되어 적용됩니다.
+                        </p>
+                      </div>
+
+                      <div>
+                        <strong>3. 가장 저조한 성적 1회 자동 제외 (Discard)</strong>
+                        <p style={{ margin: '4px 0 0 12px', fontSize: '0.88rem', color: 'var(--text-muted)' }}>
+                          - 총 4라운드(4R) 이상의 경기가 정상 완료되면, 각 참가자의 라운드 기록 중 가장 저조한 성적(가장 벌점이 높게 매겨진 1개 라운드, 예: DNS/DNF 라운드 등)을 자동 제외하고 합산합니다.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
             </div>
           )}
 

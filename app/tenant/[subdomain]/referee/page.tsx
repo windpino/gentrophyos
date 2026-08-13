@@ -20,6 +20,7 @@ export default function RefereeMobilePage({
   const [participants, setParticipants] = useState<any[]>([]);
   const [activeDivisionTab, setActiveDivisionTab] = useState<string>('윈드포일 (남자부)');
   const [formFields, setFormFields] = useState<any[]>([]);
+  const [activeCell, setActiveCell] = useState<{ id: string, roundKey: 'r1' | 'r2' | 'r3' | 'r4' | 'r5' | 'r6' } | null>(null);
 
   // 인증 게이트
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -130,21 +131,31 @@ export default function RefereeMobilePage({
       const res = await fetch(`/api/tenant/${subdomain}/leaderboard?tournamentId=${tId}&division=${encodeURIComponent(divisionName)}`);
       const data = await res.json();
       if (data.leaderboard && data.leaderboard.length > 0) {
+        const parseSavedRoundVal = (val: any) => {
+          if (val === undefined || val === null || val === '') return null;
+          if (val === 'DNS' || val === 'DNF') return val;
+          const num = Number(val);
+          return isNaN(num) ? null : num;
+        };
+
         const mapped = baseRegistrations.map((player) => {
           const savedRow = data.leaderboard.find((lItem: any) => lItem.name === player.name);
           if (savedRow) {
-            return {
+            const r1 = parseSavedRoundVal(savedRow.r1);
+            const r2 = parseSavedRoundVal(savedRow.r2);
+            const r3 = parseSavedRoundVal(savedRow.r3);
+            const r4 = parseSavedRoundVal(savedRow.r4);
+            const r5 = parseSavedRoundVal(savedRow.r5);
+            const r6 = parseSavedRoundVal(savedRow.r6);
+            
+            const updated = {
               ...player,
               bibNumber: savedRow.bibNumber || player.bibNumber,
-              r1: savedRow.r1 !== undefined && savedRow.r1 !== null ? Number(savedRow.r1) : null,
-              r2: savedRow.r2 !== undefined && savedRow.r2 !== null ? Number(savedRow.r2) : null,
-              r3: savedRow.r3 !== undefined && savedRow.r3 !== null ? Number(savedRow.r3) : null,
-              r4: savedRow.r4 !== undefined && savedRow.r4 !== null ? Number(savedRow.r4) : null,
-              r5: savedRow.r5 !== undefined && savedRow.r5 !== null ? Number(savedRow.r5) : null,
-              r6: savedRow.r6 !== undefined && savedRow.r6 !== null ? Number(savedRow.r6) : null,
-              total: savedRow.total !== undefined ? Number(savedRow.total) : 0,
+              r1, r2, r3, r4, r5, r6,
               rank: savedRow.rank || '-'
             };
+            updated.total = calculateTotal(updated, baseRegistrations.length);
+            return updated;
           }
           return player;
         });
@@ -174,9 +185,15 @@ export default function RefereeMobilePage({
     }
   }, [activeDivisionTab, rawRegistrations, activeTournament]);
 
-  const calculateTotal = (row: any) => {
+  const calculateTotal = (row: any, totalParticipants: number) => {
     const rounds = [row.r1, row.r2, row.r3, row.r4, row.r5, row.r6];
-    const validScores = rounds.filter((r): r is number => r !== null && !isNaN(r));
+    const validScores = rounds.map(r => {
+      if (r === null || r === undefined || r === '') return null;
+      if (r === 'DNS' || r === 'DNF') return totalParticipants;
+      const num = Number(r);
+      return isNaN(num) ? null : num;
+    }).filter((val): val is number => val !== null);
+
     if (validScores.length === 0) return 0;
     
     const sum = validScores.reduce((acc, curr) => acc + curr, 0);
@@ -188,12 +205,21 @@ export default function RefereeMobilePage({
   };
 
   const handleScoreInput = (id: string, roundKey: 'r1' | 'r2' | 'r3' | 'r4' | 'r5' | 'r6', valString: string) => {
-    const val = valString === '' ? null : Number(valString);
+    let val: any = valString.trim().toUpperCase();
+    if (val === '') {
+      val = null;
+    } else if (val === 'DNS' || val === 'DNF') {
+      // Keep as string
+    } else {
+      const num = Number(val);
+      val = isNaN(num) || num <= 0 ? null : num;
+    }
+
     setParticipants(prev =>
       prev.map(p => {
         if (p.id === id) {
           const updated = { ...p, [roundKey]: val };
-          updated.total = calculateTotal(updated);
+          updated.total = calculateTotal(updated, prev.length);
           return updated;
         }
         return p;
@@ -469,10 +495,10 @@ export default function RefereeMobilePage({
                         {rounds.map((rKey, rIdx) => (
                           <td key={rIdx} style={{ padding: '4px', textAlign: 'center' }}>
                             <input
-                              type="number"
-                              min="1"
-                              value={p[rKey] === null ? '' : p[rKey]}
+                              type="text"
+                              value={p[rKey] === null || p[rKey] === undefined ? '' : p[rKey]}
                               onChange={(e) => handleScoreInput(p.id, rKey, e.target.value)}
+                              onFocus={() => setActiveCell({ id: p.id, roundKey: rKey })}
                               placeholder="-"
                               style={{ width: '40px', padding: '6px 4px', border: '1px solid #cbd5e1', borderRadius: '4px', textAlign: 'center', fontSize: '0.85rem', fontWeight: '600' }}
                             />
@@ -492,14 +518,119 @@ export default function RefereeMobilePage({
 
           <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '8px', fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
             <p style={{ margin: 0, fontWeight: '700', color: '#e11d48' }}>💡 채점 가이드라인 (Sailing Low-Point System):</p>
-            <p style={{ margin: '4px 0 0 0' }}>1. 라운드 입력란에 각 선수의 피니시 순위(1, 2, 3...)를 정수로 입력하세요.</p>
-            <p style={{ margin: '4px 0 0 0' }}>2. 4경기 이상 입력 시, 가장 성적이 나쁜 경기(가장 큰 숫자) 1개가 총점 계산에서 자동으로 제외됩니다.</p>
-            <p style={{ margin: '2px 0 0 0' }}>3. 입력 후 [순위 자동 정렬] 버튼을 누르면 총점 오름차순으로 정렬되며 공식 순위가 재부여됩니다.</p>
-            <p style={{ margin: '2px 0 0 0' }}>4. 마지막으로 [순위 최종 확정] 버튼을 눌러야 메인 전광판 리더보드에 전체 공개됩니다.</p>
+            <p style={{ margin: '4px 0 0 0' }}>1. 라운드 입력란에 각 선수의 피니시 순위(1, 2, 3...)를 입력하거나 부정출발/미완주 시 **DNS** 또는 **DNF**를 선택/입력하세요.</p>
+            <p style={{ margin: '2px 0 0 0' }}>2. **DNS/DNF**의 경우 해당 부서의 전체 참가 선수 인원 수({participants.length}점)가 벌점으로 가산됩니다.</p>
+            <p style={{ margin: '2px 0 0 0' }}>3. 4경기 이상 입력 시, 가장 성적이 나쁜 경기(가장 큰 숫자 또는 DNS/DNF 벌점) 1개가 총점 계산에서 자동으로 제외됩니다.</p>
+            <p style={{ margin: '2px 0 0 0' }}>4. 입력 후 [순위 자동 정렬] 버튼을 누르면 총점 오름차순으로 정렬되며 공식 순위가 재부여됩니다.</p>
+            <p style={{ margin: '2px 0 0 0' }}>5. 마지막으로 [순위 최종 확정] 버튼을 눌러야 메인 전광판 리더보드에 전체 공개됩니다.</p>
           </div>
 
         </div>
       </div>
+
+      {/* ── 모바일 전용 DNS/DNF 간편 입력 바 ── */}
+      {activeCell && (
+        <div style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          background: '#1e293b',
+          borderTop: '1px solid #334155',
+          padding: '16px 20px',
+          display: 'flex',
+          gap: '12px',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 10000,
+          boxShadow: '0 -4px 20px rgba(0,0,0,0.25)'
+        }}>
+          <div style={{ marginRight: 'auto', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: '700' }}>선택된 셀</span>
+            <span style={{ fontSize: '0.85rem', color: '#f1f5f9', fontWeight: '800' }}>
+              {participants.find(p => p.id === activeCell.id)?.name || ''} ({activeCell.roundKey.toUpperCase()})
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              handleScoreInput(activeCell.id, activeCell.roundKey, 'DNS');
+              setActiveCell(null);
+            }}
+            style={{
+              flex: 1,
+              background: '#ef4444',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '12px 8px',
+              fontWeight: '800',
+              cursor: 'pointer',
+              fontSize: '0.9rem',
+              boxShadow: '0 2px 4px rgba(239, 68, 68, 0.2)'
+            }}
+          >
+            DNS 입력
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              handleScoreInput(activeCell.id, activeCell.roundKey, 'DNF');
+              setActiveCell(null);
+            }}
+            style={{
+              flex: 1,
+              background: '#f59e0b',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '12px 8px',
+              fontWeight: '800',
+              cursor: 'pointer',
+              fontSize: '0.9rem',
+              boxShadow: '0 2px 4px rgba(245, 158, 11, 0.2)'
+            }}
+          >
+            DNF 입력
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              handleScoreInput(activeCell.id, activeCell.roundKey, '');
+              setActiveCell(null);
+            }}
+            style={{
+              background: '#475569',
+              color: '#f1f5f9',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '12px 14px',
+              fontWeight: '800',
+              cursor: 'pointer',
+              fontSize: '0.85rem'
+            }}
+          >
+            비우기
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveCell(null)}
+            style={{
+              background: '#334155',
+              color: '#94a3b8',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '12px 14px',
+              fontWeight: '800',
+              cursor: 'pointer',
+              fontSize: '0.85rem'
+            }}
+          >
+            닫기
+          </button>
+        </div>
+      )}
+
     </div>
   );
 }
