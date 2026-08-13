@@ -226,10 +226,201 @@ button, input, select, textarea {
   min-height: 100vh;
 }
 
+/* 모바일 대시보드 상단 헤더 (기본 숨김) */
+.mobile-dashboard-header {
+  display: none;
+}
+
 /* 모바일 디바이스 뷰포트용 반응형 대시보드 */
 @media (max-width: 960px) {
   .grid-dashboard {
+    grid-template-columns: 1fr !important;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* 사이드바는 모바일에서 숨김 */
+  .grid-dashboard aside {
+    display: none !important;
+  }
+
+  /* 메인 콘텐츠 패딩 축소 및 상단 여백 추가 (모바일 헤더 공간) */
+  .grid-dashboard main {
+    padding: 24px 16px !important;
+  }
+
+  /* 모바일 대시보드 상단 헤더 표시 */
+  .mobile-dashboard-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+    padding: 0 20px;
+    background: #020617;
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+  }
+
+  .mobile-menu-toggle {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    margin-left: -8px;
+  }
+
+  /* 모바일 서브 메뉴/드로어 배경 백드롭 */
+  .mobile-drawer-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 99999;
+    display: flex;
+    justify-content: flex-start;
+  }
+
+  /* 드로어 컨텐츠 */
+  .mobile-drawer-content {
+    width: 280px;
+    max-width: 80%;
+    height: 100%;
+    background: #020617;
+    border-right: 1px solid var(--border-color);
+    padding: 30px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+    box-shadow: 10px 0 30px rgba(0,0,0,0.5);
+    animation: slideIn 0.25s ease-out forwards;
+  }
+
+  @keyframes slideIn {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  /* 메인 헤더 줄바꿈 처리 */
+  .grid-dashboard main header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 16px !important;
+    margin-bottom: 24px !important;
+  }
+
+  .grid-dashboard main header div {
+    width: 100%;
+  }
+
+  .grid-dashboard main header div:last-child {
+    display: flex;
+    flex-direction: row !important;
+    width: 100%;
+    gap: 10px !important;
+  }
+
+  .grid-dashboard main header div:last-child a {
+    flex: 1;
+    justify-content: center;
+    padding: 10px 12px !important;
+    font-size: 0.82rem !important;
+  }
+}
+
+/* 반응형 레이아웃 헬퍼 클래스 */
+.grid-responsive-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.grid-responsive-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+}
+
+.dashboard-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dashboard-search-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.division-row {
+  display: grid;
+  grid-template-columns: 2fr 3fr 5fr 60px;
+  gap: 10px;
+  align-items: center;
+}
+
+.awards-row {
+  display: grid;
+  grid-template-columns: 1.5fr 1.5fr 3.5fr 3.5fr 60px;
+  gap: 10px;
+  align-items: center;
+}
+
+@media (max-width: 768px) {
+  .grid-responsive-2 {
     grid-template-columns: 1fr;
+  }
+
+  .grid-responsive-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .division-row {
+    grid-template-columns: 1fr !important;
+    background: #f8fafc;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+  }
+
+  .awards-row {
+    grid-template-columns: 1fr !important;
+    background: #f8fafc;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+  }
+}
+
+@media (max-width: 576px) {
+  .dashboard-search-container {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+  .dashboard-search-container select {
+    width: 100%;
+  }
+  .dashboard-search-container .search-input-wrapper {
+    width: 100% !important;
   }
 }
 

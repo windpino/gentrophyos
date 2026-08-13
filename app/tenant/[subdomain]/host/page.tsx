@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, use } from 'react';
-import { Award, Check, X, Upload, Download, Plus, Trash2, ArrowUp, ArrowDown, Users, FileText, Settings, Layers, Calendar, RefreshCw, Save, Search, Eye, ExternalLink } from 'lucide-react';
+import { Award, Check, X, Menu, Upload, Download, Plus, Trash2, ArrowUp, ArrowDown, Users, FileText, Settings, Layers, Calendar, RefreshCw, Save, Search, Eye, ExternalLink } from 'lucide-react';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '@/src/lib/firebase';
 
@@ -53,6 +53,9 @@ export default function HostDashboardPage({
   const [activeTournament, setActiveTournament] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState<'applicants' | 'tie-breaker' | 'overview' | 'notice' | 'form-builder'>('applicants');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [filterSortCategory, setFilterSortCategory] = useState<string>('all');
+  const [subFilterValue, setSubFilterValue] = useState<string>('all');
 
   // 동적 신청서 폼 양식 (폼빌더) 상태
   const [formFields, setFormFields] = useState<any[]>([]);
@@ -335,32 +338,75 @@ export default function HostDashboardPage({
     }
   };
 
-  // 실시간 검색 기능 필터링 (카테고리별 정밀 검색)
-  const filteredGridData = gridData.filter((row) => {
+  // 실시간 검색 및 필터링 기능 (이름/전화번호 통합 검색 및 카테고리 필터링/정렬)
+  const filteredGridData = (() => {
+    let result = [...gridData];
+
+    // 1. 검색어 필터링
     const query = searchQuery.toLowerCase().trim();
-    if (!query) return true;
+    if (query) {
+      result = result.filter((row) => {
+        const cleanPhone = row.phone.replace(/[^0-9]/g, '');
+        const cleanQuery = query.replace(/[^0-9]/g, '');
 
-    if (searchCategory === 'name') {
-      return row.name.toLowerCase().includes(query);
-    }
-    if (searchCategory === 'phone') {
-      return row.phone.includes(query);
-    }
-    if (searchCategory === 'club') {
-      return row.club.toLowerCase().includes(query);
-    }
-    if (searchCategory === 'division') {
-      return row.division.toLowerCase().includes(query);
+        if (searchCategory === 'name') {
+          return row.name.toLowerCase().includes(query);
+        }
+        if (searchCategory === 'phone') {
+          return cleanPhone.includes(cleanQuery);
+        }
+        if (searchCategory === 'club') {
+          return row.club.toLowerCase().includes(query);
+        }
+        if (searchCategory === 'division') {
+          return row.division.toLowerCase().includes(query);
+        }
+
+        // 전체(all) 통합 검색: 이름, 전화번호(포맷제거), 소속, 종목 매칭
+        return (
+          row.name.toLowerCase().includes(query) ||
+          cleanPhone.includes(cleanQuery) ||
+          row.club.toLowerCase().includes(query) ||
+          row.division.toLowerCase().includes(query)
+        );
+      });
     }
 
-    // 전체(all) 통합 검색
-    return (
-      row.name.toLowerCase().includes(query) ||
-      row.phone.includes(query) ||
-      row.club.toLowerCase().includes(query) ||
-      row.division.toLowerCase().includes(query)
-    );
-  });
+    // 2. 카테고리별 필터링
+    if (filterSortCategory === 'paid') {
+      result = result.filter((row) => row.paymentStatus === 'APPROVED');
+    } else if (filterSortCategory === 'unpaid') {
+      result = result.filter((row) => row.paymentStatus === 'PENDING');
+    } else if (filterSortCategory === 'gender_group' && subFilterValue !== 'all') {
+      result = result.filter((row) => row.gender === subFilterValue);
+    } else if (filterSortCategory === 'club_group' && subFilterValue !== 'all') {
+      result = result.filter((row) => row.club === subFilterValue);
+    } else if (filterSortCategory === 'division_group' && subFilterValue !== 'all') {
+      result = result.filter((row) => row.division === subFilterValue);
+    } else if (filterSortCategory === 'tshirt_group' && subFilterValue !== 'all') {
+      result = result.filter((row) => row.tshirtSize === subFilterValue);
+    }
+
+    // 3. 정렬 처리
+    if (filterSortCategory === 'birth_asc') {
+      // 생년월일은 문자열이므로 오름차순 정렬 (비어있으면 뒤로 보냄)
+      result.sort((a, b) => {
+        if (!a.birth) return 1;
+        if (!b.birth) return -1;
+        return a.birth.localeCompare(b.birth);
+      });
+    } else if (filterSortCategory === 'gender_group') {
+      result.sort((a, b) => (a.gender || '').localeCompare(b.gender || ''));
+    } else if (filterSortCategory === 'club_group') {
+      result.sort((a, b) => (a.club || '').localeCompare(b.club || ''));
+    } else if (filterSortCategory === 'division_group') {
+      result.sort((a, b) => (a.division || '').localeCompare(b.division || ''));
+    } else if (filterSortCategory === 'tshirt_group') {
+      result.sort((a, b) => (a.tshirtSize || '').localeCompare(b.tshirtSize || ''));
+    }
+
+    return result;
+  })();
 
   // 2) 인증 후 데이터 로딩 중: null 반환으로 깜빡임 방지
   if (isAuthenticated && !tenant) {
@@ -479,6 +525,96 @@ export default function HostDashboardPage({
   return (
     <div style={themeStyles} className="grid-dashboard">
       
+      {/* 0. 모바일 전용 헤더 & 드로어 메뉴 */}
+      <div className="mobile-dashboard-header">
+        <button 
+          className="mobile-menu-toggle"
+          onClick={() => setIsMobileMenuOpen(true)}
+          style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}
+        >
+          <Menu size={24} />
+        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Settings size={18} style={{ color: 'var(--theme-gold)' }} />
+          <h2 style={{ fontSize: '1rem', fontWeight: '800', color: 'white', margin: 0, fontFamily: 'var(--font-title)' }}>
+            Wind <span style={{ color: 'var(--theme-gold)' }}>ERP</span>
+          </h2>
+        </div>
+        <div style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--theme-gold)' }}>
+          {activeSection === 'applicants' ? '참가자' : 
+           activeSection === 'form-builder' ? '폼설정' :
+           activeSection === 'tie-breaker' ? '룰설정' : 
+           activeSection === 'overview' ? '요강' : '공시서'}
+        </div>
+      </div>
+
+      {isMobileMenuOpen && (
+        <div className="mobile-drawer-backdrop" onClick={() => setIsMobileMenuOpen(false)}>
+          <div className="mobile-drawer-content" onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Settings size={22} style={{ color: 'var(--theme-gold)' }} />
+                <h2 style={{ fontSize: '1.2rem', fontWeight: '800', color: 'white', fontFamily: 'var(--font-title)', margin: 0 }}>
+                  Wind <span style={{ color: 'var(--theme-gold)' }}>ERP</span>
+                </h2>
+              </div>
+              <button 
+                onClick={() => setIsMobileMenuOpen(false)}
+                style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px' }}
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {[
+                { id: 'applicants', label: '참가자관리', icon: Users },
+                { id: 'form-builder', label: '참가신청서 양식 설정', icon: Settings },
+                { id: 'tie-breaker', label: '동점자 순위 규칙 설정', icon: Award },
+                { id: 'overview', label: '대회 요강 내용 편집', icon: FileText },
+                { id: 'notice', label: '개최공시서 업로드', icon: Upload },
+              ].map((item) => {
+                const Icon = item.icon;
+                const active = activeSection === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setActiveSection(item.id as any);
+                      setIsMobileMenuOpen(false);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '14px 18px',
+                      background: active ? 'rgba(255,255,255,0.06)' : 'none',
+                      color: active ? 'var(--theme-primary)' : 'var(--text-muted)',
+                      border: 'none',
+                      borderLeft: active ? `4px solid var(--theme-primary)` : '4px solid transparent',
+                      borderRadius: '0 8px 8px 0',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      fontWeight: '600',
+                      fontSize: '0.95rem',
+                      transition: 'var(--transition-smooth)',
+                    }}
+                  >
+                    <Icon size={18} />
+                    {item.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div style={{ marginTop: 'auto', padding: '16px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', fontSize: '0.85rem' }}>
+              <span style={{ color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>대회 기관:</span>
+              <span style={{ fontWeight: '700', color: 'var(--text-main)' }}>{tenant.name}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 1. 사이드바 */}
       <aside
         style={{
@@ -578,15 +714,14 @@ export default function HostDashboardPage({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             
             {/* 그리드 상단 툴바 (검색, 행추가, 일괄저장) */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
+            <div className="dashboard-toolbar" style={{ gap: '16px' }}>
               
               {/* 실시간 필터링 검색 바 + 카테고리 셀렉터 */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div className="dashboard-search-container" style={{ gap: '10px', flexWrap: 'wrap' }}>
                 <select
                   value={searchCategory}
                   onChange={(e) => {
                     setSearchCategory(e.target.value as any);
-                    setSearchQuery(''); // 카테고리 전환 시 검색어 초기화
                   }}
                   style={{
                     padding: '10px 16px',
@@ -607,8 +742,8 @@ export default function HostDashboardPage({
                   <option value="club">소속 클럽 검색</option>
                   <option value="division">참가 종목 검색</option>
                 </select>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'white', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '10px 16px', width: '300px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+ 
+                <div className="search-input-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'white', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '10px 16px', width: '300px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
                   <Search size={18} style={{ color: 'var(--text-muted)' }} />
                   <input
                     type="text"
@@ -631,6 +766,79 @@ export default function HostDashboardPage({
                     }}
                   />
                 </div>
+
+                {/* 카테고리별 필터 및 정렬 선택기 */}
+                <select
+                  value={filterSortCategory}
+                  onChange={(e) => {
+                    setFilterSortCategory(e.target.value);
+                    setSubFilterValue('all');
+                  }}
+                  style={{
+                    padding: '10px 16px',
+                    borderRadius: '10px',
+                    border: '1px solid var(--border-color)',
+                    background: 'white',
+                    color: 'var(--theme-primary)',
+                    fontWeight: '700',
+                    outline: 'none',
+                    fontSize: '0.9rem',
+                    cursor: 'pointer',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                  }}
+                >
+                  <option value="all">전체 필터/정렬</option>
+                  <option value="birth_asc">생년월일순 정렬</option>
+                  <option value="gender_group">성별순 (정렬/필터)</option>
+                  <option value="club_group">소속협회순 (정렬/필터)</option>
+                  <option value="division_group">참가종목순 (정렬/필터)</option>
+                  <option value="tshirt_group">티셔츠 사이즈별 (정렬/필터)</option>
+                  <option value="paid">결제 완료자 보기</option>
+                  <option value="unpaid">미결제자 보기</option>
+                </select>
+
+                {/* 2차 상세 필터 선택기 */}
+                {['gender_group', 'club_group', 'division_group', 'tshirt_group'].includes(filterSortCategory) && (
+                  <select
+                    value={subFilterValue}
+                    onChange={(e) => setSubFilterValue(e.target.value)}
+                    style={{
+                      padding: '10px 16px',
+                      borderRadius: '10px',
+                      border: '1px solid var(--theme-primary)',
+                      background: 'var(--theme-primary)',
+                      color: 'white',
+                      fontWeight: '700',
+                      outline: 'none',
+                      fontSize: '0.9rem',
+                      cursor: 'pointer',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                    }}
+                  >
+                    <option value="all" style={{ background: 'white', color: 'black' }}>전체 보기</option>
+                    {filterSortCategory === 'gender_group' && (
+                      <>
+                        <option value="남자" style={{ background: 'white', color: 'black' }}>남자</option>
+                        <option value="여자" style={{ background: 'white', color: 'black' }}>여자</option>
+                      </>
+                    )}
+                    {filterSortCategory === 'club_group' && (
+                      Array.from(new Set(gridData.map(r => r.club).filter(Boolean))).map(club => (
+                        <option key={club} value={club} style={{ background: 'white', color: 'black' }}>{club}</option>
+                      ))
+                    )}
+                    {filterSortCategory === 'division_group' && (
+                      Array.from(new Set(gridData.map(r => r.division).filter(Boolean))).map(div => (
+                        <option key={div} value={div} style={{ background: 'white', color: 'black' }}>{div}</option>
+                      ))
+                    )}
+                    {filterSortCategory === 'tshirt_group' && (
+                      Array.from(new Set(gridData.map(r => r.tshirtSize).filter(Boolean))).map(size => (
+                        <option key={size} value={size} style={{ background: 'white', color: 'black' }}>{size}</option>
+                      ))
+                    )}
+                  </select>
+                )}
               </div>
 
               <div style={{ display: 'flex', gap: '12px' }}>
@@ -1183,7 +1391,7 @@ export default function HostDashboardPage({
                         </div>
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                      <div className="grid-responsive-3" style={{ gap: '12px' }}>
                         <div>
                           <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>필드코드 (영문 ID)</label>
                           <input
@@ -1269,7 +1477,7 @@ export default function HostDashboardPage({
                       )}
 
                       {field.type === 'checkbox' && (
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div className="grid-responsive-2" style={{ gap: '12px' }}>
                           <div>
                             <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>부가 안내/설명 문구 (선택)</label>
                             <input
@@ -1482,7 +1690,7 @@ export default function HostDashboardPage({
               <div style={{ padding: '30px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '24px', flex: 1 }}>
                 
                 {/* 1 ~ 8단계 인적사항 및 기본 응답 */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                <div className="grid-responsive-2" style={{ gap: '20px' }}>
                   
                   {/* 성명 */}
                   <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
@@ -1742,7 +1950,7 @@ function OverviewEditor({ tenant, subdomain, onSaveSuccess }: OverviewEditorProp
             <h4 style={{ color: 'var(--theme-primary)', fontWeight: '800', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '16px' }}>
               1. 대회 기본 개요 명세
             </h4>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div className="grid-responsive-2" style={{ gap: '16px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>대회명</label>
                 <input type="text" className="form-input" value={config.title} onChange={e => handleChange('title', e.target.value)} />
@@ -1783,7 +1991,7 @@ function OverviewEditor({ tenant, subdomain, onSaveSuccess }: OverviewEditorProp
             <h4 style={{ color: 'var(--theme-primary)', fontWeight: '800', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '16px' }}>
               2. 공식 일자별 타임라인 (줄바꿈 단위 기입)
             </h4>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            <div className="grid-responsive-2" style={{ gap: '20px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>1일차 일정 정보</label>
                 <textarea
@@ -1808,7 +2016,7 @@ function OverviewEditor({ tenant, subdomain, onSaveSuccess }: OverviewEditorProp
             <h4 style={{ color: 'var(--theme-primary)', fontWeight: '800', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '16px' }}>
               3. 참가비 수납 및 마감 기일
             </h4>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+            <div className="grid-responsive-3" style={{ gap: '16px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>은행명</label>
                 <input type="text" className="form-input" value={config.bankName} onChange={e => handleChange('bankName', e.target.value)} />
@@ -1855,7 +2063,7 @@ function OverviewEditor({ tenant, subdomain, onSaveSuccess }: OverviewEditorProp
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {divisionsList.map((row, rIdx) => (
-                <div key={rIdx} style={{ display: 'grid', gridTemplateColumns: '2fr 3fr 5fr 60px', gap: '10px', alignItems: 'center' }}>
+                <div key={rIdx} className="division-row" style={{ gap: '10px' }}>
                   <input
                     type="text"
                     className="form-input"
@@ -1916,7 +2124,7 @@ function OverviewEditor({ tenant, subdomain, onSaveSuccess }: OverviewEditorProp
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {awardsList.map((row, rIdx) => (
-                <div key={rIdx} style={{ display: 'grid', gridTemplateColumns: '1.5fr 1.5fr 3.5fr 3.5fr 60px', gap: '10px', alignItems: 'center' }}>
+                <div key={rIdx} className="awards-row" style={{ gap: '10px' }}>
                   <input
                     type="text"
                     className="form-input"
@@ -1985,7 +2193,7 @@ function OverviewEditor({ tenant, subdomain, onSaveSuccess }: OverviewEditorProp
             <h4 style={{ color: 'var(--theme-primary)', fontWeight: '800', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '16px' }}>
               7. 문의처 및 운영진 안내 설정
             </h4>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div className="grid-responsive-2" style={{ gap: '16px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>문의처 / 연락처 정보</label>
                 <input
@@ -2122,7 +2330,7 @@ function NoticeEditor({ tenant, subdomain, onSaveSuccess }: NoticeEditorProps) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '30px', maxWidth: '1000px' }} className="animate-fade-in">
       <div className="glass-panel" style={{ background: 'white', padding: '30px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', borderBottom: '1px solid var(--border-color)', paddingBottom: '16px' }}>
+        <div className="dashboard-toolbar" style={{ marginBottom: '24px', borderBottom: '1px solid var(--border-color)', paddingBottom: '16px', gap: '16px' }}>
           <div>
             <h3 style={{ fontSize: '1.25rem', fontWeight: '800', margin: 0, color: 'black' }}>개최공시서 파일 업로드</h3>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>홈페이지 개최공시서 메뉴에 제공될 한글(.hwp) 및 PDF(.pdf) 파일을 등록합니다. (개별 파일 최대 800KB 제한)</p>
@@ -2137,7 +2345,7 @@ function NoticeEditor({ tenant, subdomain, onSaveSuccess }: NoticeEditorProps) {
             개최공시서 저장하기
           </button>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+        <div className="grid-responsive-2" style={{ gap: '20px' }}>
             {/* 한글 파일 업로드 */}
             <div style={{ padding: '20px', background: '#f8fafc', border: '1px solid var(--border-color)', borderRadius: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
