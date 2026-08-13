@@ -120,7 +120,6 @@ export default function TenantPortalPage({
   const [regSuccess, setRegSuccess] = useState('');
   const [regError, setRegError] = useState('');
   const [regSubmitting, setRegSubmitting] = useState(false);
-  const [uniqueClubs, setUniqueClubs] = useState<string[]>([]);
 
   // 동적 신청서 폼 설정 로드 및 입력 데이터 핸들러
   useEffect(() => {
@@ -207,34 +206,9 @@ export default function TenantPortalPage({
       if (activeTab === 'live') {
         fetchLeaderboard(activeTournamentId);
         fetchMatches(activeTournamentId);
-      } else {
-        fetchUniqueClubs(activeTournamentId);
       }
     }
   }, [activeTab, activeTournamentId, activeDivisionTab]);
-
-  const fetchUniqueClubs = async (tId: string) => {
-    try {
-      const res = await fetch(`/api/tenant/${subdomain}/registrations?tournamentId=${tId}`);
-      const data = await res.json();
-      if (data.registrations) {
-        const clubs: string[] = [];
-        data.registrations.forEach((r: any) => {
-          try {
-            if (r.formResponses) {
-              const extra = JSON.parse(r.formResponses);
-              if (extra.club && !clubs.includes(extra.club)) {
-                clubs.push(extra.club);
-              }
-            }
-          } catch (e) {}
-        });
-        setUniqueClubs(clubs);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
 
   useEffect(() => {
     if (selectedArchiveId && activeTab === 'archive') {

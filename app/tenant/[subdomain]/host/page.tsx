@@ -120,9 +120,21 @@ export default function HostDashboardPage({
 
   const loadSectionData = async (tId: string) => {
     try {
-      // 1. 참가 신청서 데이터 로드 및 윈드서핑 그리드 변환
-      const regRes = await fetch(`/api/tenant/${subdomain}/registrations?tournamentId=${tId}`);
-      const regData = await regRes.json();
+      setFormConfigLoading(true);
+      
+      // Fetch registrations, rules-detail, and form-configs in parallel!
+      const [regRes, ruleRes, formRes] = await Promise.all([
+        fetch(`/api/tenant/${subdomain}/registrations?tournamentId=${tId}`),
+        fetch(`/api/tenant/${subdomain}/rules-detail?tournamentId=${tId}`),
+        fetch(`/api/tenant/${subdomain}/form-configs`)
+      ]);
+
+      const [regData, ruleData, formData] = await Promise.all([
+        regRes.json(),
+        ruleRes.json(),
+        formRes.json()
+      ]);
+
       setRawRegistrations(regData.registrations || []);
       
       const parsedRows: GridRow[] = (regData.registrations || []).map((r: any) => {
@@ -183,16 +195,15 @@ export default function HostDashboardPage({
       });
 
       setGridData(parsedRows);
-
-      // 2. 동점자 룰 로드
-      const ruleRes = await fetch(`/api/tenant/${subdomain}/rules-detail?tournamentId=${tId}`);
-      const ruleData = await ruleRes.json();
       setRules(ruleData.rules || []);
-
-      // 3. 신청서 폼 양식 로드
-      await fetchFormConfigs();
+      
+      if (formData.fields) {
+        setFormFields(formData.fields);
+      }
     } catch (e) {
       console.error(e);
+    } finally {
+      setFormConfigLoading(false);
     }
   };
 
