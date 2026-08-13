@@ -18,7 +18,8 @@ export default function RefereeMobilePage({
   // 참가자 목록 및 종목 선택
   const [rawRegistrations, setRawRegistrations] = useState<any[]>([]);
   const [participants, setParticipants] = useState<any[]>([]);
-  const [activeDivisionTab, setActiveDivisionTab] = useState<string>('윈드포일');
+  const [activeDivisionTab, setActiveDivisionTab] = useState<string>('윈드포일 (남자부)');
+  const [formFields, setFormFields] = useState<any[]>([]);
 
   // 인증 게이트
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -53,8 +54,21 @@ export default function RefereeMobilePage({
 
   const fetchInitialData = async () => {
     try {
-      const tenantRes = await fetch(`/api/tenant/${subdomain}`);
-      const tenantData = await tenantRes.json();
+      // Fetch tenant info and form configs in parallel
+      const [tenantRes, formRes] = await Promise.all([
+        fetch(`/api/tenant/${subdomain}`),
+        fetch(`/api/tenant/${subdomain}/form-configs`)
+      ]);
+      
+      const [tenantData, formData] = await Promise.all([
+        tenantRes.json(),
+        formRes.json()
+      ]);
+
+      if (formData.fields) {
+        setFormFields(formData.fields);
+      }
+
       if (tenantData.tenant) {
         setTenant(tenantData.tenant);
         const ongoing = tenantData.tenant.tournaments.find((t: any) => t.status === 'ONGOING');
@@ -79,12 +93,12 @@ export default function RefereeMobilePage({
           .filter((r: any) => r.status === 'APPROVED')
           .map((r: any) => {
             let birth = '';
-            let division = '윈드포일';
+            let division = '윈드포일 (남자부)';
             try {
               if (r.formResponses) {
                 const extra = JSON.parse(r.formResponses);
                 birth = extra.birth || '';
-                division = extra.division || '윈드포일';
+                division = extra.division || '윈드포일 (남자부)';
               }
             } catch (e) {}
 
@@ -336,28 +350,46 @@ export default function RefereeMobilePage({
 
           {/* 종목 선택 Pill Bar */}
           <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px' }}>
-            {['윈드포일', '윙포일', '혼합오픈', '펀엔포뮬러'].map((div) => {
-              const active = activeDivisionTab === div;
-              return (
-                <button
-                  key={div}
-                  onClick={() => setActiveDivisionTab(div)}
-                  style={{
-                    padding: '8px 16px',
-                    borderRadius: '20px',
-                    border: active ? 'none' : '1px solid var(--border-color)',
-                    background: active ? 'var(--theme-primary)' : '#f1f5f9',
-                    color: active ? '#ffffff' : 'var(--text-muted)',
-                    fontSize: '0.8rem',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap'
-                  }}
-                >
-                  {div}
-                </button>
-              );
-            })}
+            {(() => {
+              const divisionField = formFields.find((f: any) => f.id === 'division');
+              const configuredDivisions = divisionField?.options || [];
+              const registeredDivisions = Array.from(new Set(rawRegistrations.map((r: any) => r.division).filter(Boolean))) as string[];
+              const divisionTabs = Array.from(new Set([...configuredDivisions, ...registeredDivisions]));
+              if (divisionTabs.length === 0) {
+                divisionTabs.push(
+                  '윈드포일 (남자부)',
+                  '윈드포일 (여자부)',
+                  '윙포일 (남자부)',
+                  '윙포일 (여자부)',
+                  '혼합오픈 (남자부)',
+                  '혼합오픈 (여자부)',
+                  '펀엔포뮬러 (남자부)',
+                  '펀엔포뮬러 (여자부)'
+                );
+              }
+              return divisionTabs.map((div) => {
+                const active = activeDivisionTab === div;
+                return (
+                  <button
+                    key={div}
+                    onClick={() => setActiveDivisionTab(div)}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '20px',
+                      border: active ? 'none' : '1px solid var(--border-color)',
+                      background: active ? 'var(--theme-primary)' : '#f1f5f9',
+                      color: active ? '#ffffff' : 'var(--text-muted)',
+                      fontSize: '0.8rem',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {div}
+                  </button>
+                );
+              });
+            })()}
           </div>
 
           {/* 액션 버튼 */}

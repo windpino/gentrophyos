@@ -90,7 +90,7 @@ export default function TenantPortalPage({
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'notice' | 'intro' | 'live' | 'gallery' | 'archive'>('overview');
   const [activeSubTab, setActiveSubTab] = useState<string>('');
-  const [activeDivisionTab, setActiveDivisionTab] = useState<string>('윈드포일');
+  const [activeDivisionTab, setActiveDivisionTab] = useState<string>('윈드포일 (남자부)');
   
   // 대회 선택 (진행중인 대회)
   const [activeTournamentId, setActiveTournamentId] = useState<string>('');
@@ -1031,30 +1031,43 @@ export default function TenantPortalPage({
 
               {/* 종목 탭바 */}
               <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
-                {['윈드포일', '윙포일', '혼합오픈', '펀엔포뮬러'].map((div) => {
-                  const active = activeDivisionTab === div;
-                  return (
-                    <button
-                      key={div}
-                      onClick={() => setActiveDivisionTab(div)}
-                      style={{
-                        padding: '10px 20px',
-                        borderRadius: '24px',
-                        background: active ? 'var(--theme-primary)' : '#ffffff',
-                        border: active ? 'none' : '1px solid var(--border-color)',
-                        color: active ? '#ffffff' : 'var(--text-muted)',
-                        fontSize: '0.85rem',
-                        fontWeight: '800',
-                        cursor: 'pointer',
-                        whiteSpace: 'nowrap',
-                        transition: 'all 0.2s ease-in-out',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
-                      }}
-                    >
-                      {div}
-                    </button>
-                  );
-                })}
+                {(() => {
+                  const divisionField = formFields.find((f: any) => f.id === 'division');
+                  const divisionTabs = divisionField?.options || [
+                    '윈드포일 (남자부)',
+                    '윈드포일 (여자부)',
+                    '윙포일 (남자부)',
+                    '윙포일 (여자부)',
+                    '혼합오픈 (남자부)',
+                    '혼합오픈 (여자부)',
+                    '펀엔포뮬러 (남자부)',
+                    '펀엔포뮬러 (여자부)'
+                  ];
+                  return divisionTabs.map((div: string) => {
+                    const active = activeDivisionTab === div;
+                    return (
+                      <button
+                        key={div}
+                        onClick={() => setActiveDivisionTab(div)}
+                        style={{
+                          padding: '10px 20px',
+                          borderRadius: '24px',
+                          background: active ? 'var(--theme-primary)' : '#ffffff',
+                          border: active ? 'none' : '1px solid var(--border-color)',
+                          color: active ? '#ffffff' : 'var(--text-muted)',
+                          fontSize: '0.85rem',
+                          fontWeight: '800',
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap',
+                          transition: 'all 0.2s ease-in-out',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                        }}
+                      >
+                        {div}
+                      </button>
+                    );
+                  });
+                })()}
               </div>
 
               {leaderboardLoading ? (
