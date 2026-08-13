@@ -1632,7 +1632,7 @@ export default function TenantPortalPage({
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <p style={{ margin: 0 }}><strong>대회명 :</strong> 제20회 이순신장군배 전국윈드서핑대회 (2026)</p>
                         <p style={{ margin: 0 }}><strong>기간 :</strong> 2026년 9월 11일(금) ~ 13일(일) [3일간]</p>
-                        <p style={{ margin: 0 }}><strong>장소 :</strong> 통영시 광도면 죽림만 해역 일원 (죽림해양스포츠 계류장)</p>
+                        <p style={{ margin: 0 }}><strong>장소 :</strong> 통영 수륙해수욕장 일원 (통영윈드서핑협회)</p>
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <p style={{ margin: 0 }}><strong>주최 :</strong> 통영시</p>
@@ -1655,7 +1655,7 @@ export default function TenantPortalPage({
                           1일차 : 9월 11일 (금)
                         </h4>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.88rem', color: 'black' }}>
-                          <p style={{ margin: 0 }}>• <strong>13:00 ~ 17:00 :</strong> 참가 선수단 등록 및 리허설 (죽림만 해역)</p>
+                          <p style={{ margin: 0 }}>• <strong>13:00 ~ 17:00 :</strong> 참가 선수단 등록 및 리허설 (수륙해수욕장 해역)</p>
                           <p style={{ margin: 0 }}>• <strong>18:00 ~ 20:00 :</strong> 개회식 (통영 스탠포드 호텔)</p>
                         </div>
                       </div>
@@ -1668,7 +1668,7 @@ export default function TenantPortalPage({
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.88rem', color: 'black' }}>
                           <p style={{ margin: 0 }}>• <strong>09:00 ~ 10:00 :</strong> 출정식 (계류장 특설무대 / 안전 교육)</p>
                           <p style={{ margin: 0 }}>• <strong>10:00 ~ 17:00 :</strong> 공식 경기 (예선 및 본선 경기)</p>
-                          <p style={{ margin: 0 }}>• <strong>18:00 ~ 20:00 :</strong> 리셉션 및 만찬 (죽림 계류장 특설무대)</p>
+                          <p style={{ margin: 0 }}>• <strong>18:00 ~ 20:00 :</strong> 리셉션 및 만찬 (수륙해수욕장 특설무대)</p>
                         </div>
                       </div>
 
@@ -1679,7 +1679,7 @@ export default function TenantPortalPage({
                         </h4>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.88rem', color: 'black' }}>
                           <p style={{ margin: 0 }}>• <strong>10:00 ~ 15:00 :</strong> 공식 결선 경기 (각 종목별 결승)</p>
-                          <p style={{ margin: 0 }}>• <strong>15:30 ~ :</strong> 시상식 및 폐회식 (죽림 계류장 특설무대)</p>
+                          <p style={{ margin: 0 }}>• <strong>15:30 ~ :</strong> 시상식 및 폐회식 (수륙해수욕장 특설무대)</p>
                         </div>
                       </div>
 
@@ -1696,13 +1696,23 @@ export default function TenantPortalPage({
                   </h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', fontSize: '0.92rem', color: 'black' }}>
                     <p style={{ margin: 0, lineHeight: '1.6' }}>
-                      • <strong>주소 및 위치:</strong> 통영시 광도면 죽림만 해역 일원 (죽림해양스포츠 계류장)<br />
-                      • <strong>수역 특징:</strong> 죽림만 내해 해역은 주변 지형으로 인해 잔잔한 해상 여건이 유지되어 해양 스포츠 안전사고 예방에 최적화되어 있으며, 연안 관중석에서 선수들의 긴장감 넘치는 경기 레이스를 한눈에 관람하기 매우 좋은 장소입니다.
+                      • <strong>주소 및 위치:</strong> 통영 수륙해수욕장 일원 (통영윈드서핑협회)<br />
+                      • <strong>수역 특징:</strong> 수륙해수욕장 경기 수역은 통영윈드서핑협회 인근 해역으로, 다양한 바람과 물결 조건을 갖추고 있어 윈드서핑 및 윙포일 경기에 적합하며 연안 관중석에서 박진감 넘치는 경기 관람이 가능합니다.
                     </p>
+
+                    {/* 경기 수역 지도 이미지 */}
+                    <div style={{ margin: '10px 0', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border-color)', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+                      <img
+                        src="/map_suryuk.png"
+                        alt="통영 수륙해수욕장 경기 수역 지도"
+                        style={{ width: '100%', height: 'auto', display: 'block' }}
+                      />
+                    </div>
+
                     <div style={{ background: '#f8fafc', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '16px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                       <p style={{ margin: '0 0 6px 0', fontWeight: '800', color: 'var(--text-main)' }}>⚠️ 선수 및 갤러리 주의사항</p>
                       <p style={{ margin: 0 }}>- 경기 중 정해진 수역 이외의 진입을 엄격히 금하며, 안내 유도선의 통제에 적극 협조해주시기 바랍니다.</p>
-                      <p style={{ margin: 0 }}>- 장비 이송 및 계류는 지정된 죽림 해양스포츠 계류장 구역 내에서만 완료해주시기 바랍니다.</p>
+                      <p style={{ margin: 0 }}>- 장비 이송 및 계류는 지정된 통영윈드서핑협회 및 수륙해수욕장 지정 구역 내에서만 완료해주시기 바랍니다.</p>
                     </div>
                   </div>
                 </div>
