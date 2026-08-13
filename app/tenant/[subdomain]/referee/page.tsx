@@ -348,48 +348,50 @@ export default function RefereeMobilePage({
             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{activeDivisionTab} 종목</span>
           </div>
 
-          {/* 종목 선택 Pill Bar */}
-          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '6px' }}>
-            {(() => {
-              const divisionField = formFields.find((f: any) => f.id === 'division');
-              const configuredDivisions = divisionField?.options || [];
-              const registeredDivisions = Array.from(new Set(rawRegistrations.map((r: any) => r.division).filter(Boolean))) as string[];
-              const divisionTabs = Array.from(new Set([...configuredDivisions, ...registeredDivisions]));
-              if (divisionTabs.length === 0) {
-                divisionTabs.push(
-                  '윈드포일 (남자부)',
-                  '윈드포일 (여자부)',
-                  '윙포일 (남자부)',
-                  '윙포일 (여자부)',
-                  '혼합오픈 (남자부)',
-                  '혼합오픈 (여자부)',
-                  '펀엔포뮬러 (남자부)',
-                  '펀엔포뮬러 (여자부)'
-                );
-              }
-              return divisionTabs.map((div) => {
-                const active = activeDivisionTab === div;
-                return (
-                  <button
-                    key={div}
-                    onClick={() => setActiveDivisionTab(div)}
-                    style={{
-                      padding: '8px 16px',
-                      borderRadius: '20px',
-                      border: active ? 'none' : '1px solid var(--border-color)',
-                      background: active ? 'var(--theme-primary)' : '#f1f5f9',
-                      color: active ? '#ffffff' : 'var(--text-muted)',
-                      fontSize: '0.8rem',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap'
-                    }}
-                  >
+          {/* 종목 선택 드롭다운 메뉴 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label style={{ fontSize: '0.85rem', fontWeight: '800', color: 'var(--text-muted)' }}>참가 종목 선택</label>
+            <select
+              value={activeDivisionTab}
+              onChange={(e) => setActiveDivisionTab(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                borderRadius: '12px',
+                border: '1px solid var(--border-color)',
+                background: 'white',
+                color: 'black',
+                fontWeight: '700',
+                outline: 'none',
+                fontSize: '0.95rem',
+                cursor: 'pointer',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+              }}
+            >
+              {(() => {
+                const divisionField = formFields.find((f: any) => f.id === 'division');
+                const configuredDivisions = divisionField?.options || [];
+                const registeredDivisions = Array.from(new Set(rawRegistrations.map((r: any) => r.division).filter(Boolean))) as string[];
+                const divisionTabs = Array.from(new Set([...configuredDivisions, ...registeredDivisions]));
+                if (divisionTabs.length === 0) {
+                  divisionTabs.push(
+                    '윈드포일 (남자부)',
+                    '윈드포일 (여자부)',
+                    '윙포일 (남자부)',
+                    '윙포일 (여자부)',
+                    '혼합오픈 (남자부)',
+                    '혼합오픈 (여자부)',
+                    '펀엔포뮬러 (남자부)',
+                    '펀엔포뮬러 (여자부)'
+                  );
+                }
+                return divisionTabs.map((div: string) => (
+                  <option key={div} value={div}>
                     {div}
-                  </button>
-                );
-              });
-            })()}
+                  </option>
+                ));
+              })()}
+            </select>
           </div>
 
           {/* 액션 버튼 */}
