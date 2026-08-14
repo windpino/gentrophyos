@@ -461,6 +461,23 @@ button, input, select, textarea {
 /* PC 전용 헤더 우측 버튼 */
 .header-actions { display: flex; gap: 12px; }
 
+.mobile-menu-btn {
+  display: none;
+}
+
+.overview-container-grid {
+  display: grid;
+  grid-template-columns: 3fr 1fr;
+  gap: 30px;
+}
+
+.overview-spec-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  font-size: 0.95rem;
+}
+
 /* PC 전용 상단 네비 */
 .header-nav {
   display: flex;
@@ -617,6 +634,21 @@ button, input, select, textarea {
 
   /* 테이블 오버플로우 */
   table { font-size: 0.8rem !important; }
+
+  /* 모바일 메뉴 버튼 표시 */
+  .mobile-menu-btn {
+    display: flex !important;
+  }
+
+  .overview-container-grid {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+  }
+
+  .overview-spec-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
 }
 
 /* 아주 작은 화면 (375px) */
@@ -624,4 +656,13 @@ button, input, select, textarea {
   .hero-title { font-size: 1.7rem !important; }
   .hero-section { height: 380px; }
   .mobile-tabbar-btn { font-size: 0.55rem; }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
 }

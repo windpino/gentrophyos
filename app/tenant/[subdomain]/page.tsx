@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, use } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Award, Calendar, Layers, FileText, CheckCircle2, UserPlus, RefreshCw, Archive, Search, Compass, MapPin, Phone } from 'lucide-react';
+import { Award, Calendar, Layers, FileText, CheckCircle2, UserPlus, RefreshCw, Archive, Search, Compass, MapPin, Phone, Menu, X } from 'lucide-react';
 
 interface TenantData {
   id: string;
@@ -101,6 +101,7 @@ export default function TenantPortalPage({
   const [registrations, setRegistrations] = useState<any[]>([]);
   const [regsLoading, setRegsLoading] = useState(false);
   const [liveStatus, setLiveStatus] = useState<'connected' | 'reconnecting' | 'disconnected'>('disconnected');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // 대진표 데이터
   const [matches, setMatches] = useState<Match[]>([]);
@@ -852,7 +853,156 @@ export default function TenantPortalPage({
             심판 입력기
           </a>
         </div>
+
+        {/* 모바일 전용 햄버거 버튼 */}
+        <button
+          onClick={() => setMobileMenuOpen(true)}
+          className="mobile-menu-btn"
+          style={{
+            background: 'none',
+            border: 'none',
+            color: 'var(--text-main)',
+            cursor: 'pointer',
+            padding: '8px',
+            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'background 0.2s',
+          }}
+        >
+          <Menu size={24} />
+        </button>
       </header>
+
+      {/* 모바일 슬라이드 메뉴 Drawer */}
+      {mobileMenuOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.4)',
+            zIndex: 1000,
+            backdropFilter: 'blur(3px)',
+            display: 'flex',
+            justifyContent: 'flex-end',
+          }}
+          onClick={() => setMobileMenuOpen(false)}
+        >
+          <div
+            style={{
+              width: '280px',
+              height: '100%',
+              background: '#ffffff',
+              boxShadow: '-4px 0 24px rgba(0,0,0,0.12)',
+              display: 'flex',
+              flexDirection: 'column',
+              padding: '24px',
+              boxSizing: 'border-box',
+              animation: 'slideIn 0.25s ease-out',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: '900', color: 'var(--text-main)', margin: 0, fontFamily: 'var(--font-title)' }}>대회 공식 메뉴</h3>
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
+              {[
+                { id: 'overview', label: '대회 요약 및 요강', icon: <Award size={18} />, defaultSubTab: '' },
+                { id: 'notice', label: '개최공시서 다운로드', icon: <FileText size={18} />, defaultSubTab: '' },
+                { id: 'intro', label: '대회소개 (일정·장소)', icon: <Calendar size={18} />, defaultSubTab: 'intro-greeting' },
+                { id: 'live', label: '실시간 리더보드 & 대진', icon: <Layers size={18} />, defaultSubTab: 'live-leaderboard', disabled: !ongoingTournament },
+                { id: 'gallery', label: '대회 미디어 & 갤러리', icon: <Compass size={18} />, defaultSubTab: 'gallery-photos' },
+                { id: 'archive', label: '역대 대회 기록관', icon: <Archive size={18} />, defaultSubTab: 'archive-home' },
+              ].map((tab) => {
+                const active = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    disabled={tab.disabled}
+                    onClick={() => {
+                      if (!tab.disabled) {
+                        setActiveTab(tab.id as any);
+                        setActiveSubTab(tab.defaultSubTab);
+                        setMobileMenuOpen(false);
+                      }
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      width: '100%',
+                      padding: '12px 16px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      background: active ? 'rgba(197, 168, 128, 0.1)' : 'transparent',
+                      color: tab.disabled ? '#cbd5e1' : (active ? 'var(--theme-primary)' : 'var(--text-main)'),
+                      fontSize: '0.9rem',
+                      fontWeight: active ? '900' : '600',
+                      textAlign: 'left',
+                      cursor: tab.disabled ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    {tab.icon}
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <a
+                href="/host"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color)',
+                  color: 'var(--text-main)',
+                  fontSize: '0.85rem',
+                  fontWeight: '800',
+                  textDecoration: 'none',
+                  textAlign: 'center',
+                  background: '#f8fafc',
+                }}
+              >
+                주최자 ERP
+              </a>
+              <a
+                href="/referee"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  color: '#ffffff',
+                  fontSize: '0.85rem',
+                  fontWeight: '800',
+                  textDecoration: 'none',
+                  textAlign: 'center',
+                  background: 'var(--theme-primary)',
+                }}
+              >
+                심판 입력기
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 2. 히어로 배너 */}
       <section className="hero-section animate-fade-in">
@@ -1566,7 +1716,7 @@ export default function TenantPortalPage({
 
           {/* A. 대회 요강 대메뉴 (Notice of Race 통합 및 세련된 연동) */}
           {activeTab === 'overview' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: '30px' }}>
+            <div className="overview-container-grid">
               <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
                 
                 {/* 대회 개요 카드 */}
@@ -1574,7 +1724,7 @@ export default function TenantPortalPage({
                   <h2 style={{ fontSize: '1.4rem', fontWeight: '800', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)' }}>
                     <Compass style={{ color: 'var(--theme-primary)' }} size={22} /> 대회 개요 명세
                   </h2>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', fontSize: '0.95rem' }}>
+                  <div className="overview-spec-grid">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <p style={{ margin: 0 }}><strong>대회명 :</strong> {overview.title}</p>
                       <p style={{ margin: 0 }}><strong>기간 :</strong> {overview.duration}</p>
