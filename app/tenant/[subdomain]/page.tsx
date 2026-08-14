@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, use } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Award, Calendar, Layers, FileText, CheckCircle2, UserPlus, RefreshCw, Archive, Search, Compass, MapPin, Phone, Menu, X } from 'lucide-react';
+import { Award, Calendar, Layers, FileText, CheckCircle2, UserPlus, RefreshCw, Archive, Search, Compass, MapPin, Phone } from 'lucide-react';
 
 interface TenantData {
   id: string;
@@ -88,8 +88,8 @@ export default function TenantPortalPage({
     ...(tenant?.overviewConfig || {})
   };
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'notice' | 'intro' | 'live' | 'gallery' | 'archive'>('intro');
-  const [activeSubTab, setActiveSubTab] = useState<string>('intro-schedule');
+  const [activeTab, setActiveTab] = useState<'overview' | 'notice' | 'intro' | 'live' | 'gallery' | 'archive'>('overview');
+  const [activeSubTab, setActiveSubTab] = useState<string>('');
   const [activeDivisionTab, setActiveDivisionTab] = useState<string>('윈드포일 (남자부)');
   
   // 대회 선택 (진행중인 대회)
@@ -101,7 +101,6 @@ export default function TenantPortalPage({
   const [registrations, setRegistrations] = useState<any[]>([]);
   const [regsLoading, setRegsLoading] = useState(false);
   const [liveStatus, setLiveStatus] = useState<'connected' | 'reconnecting' | 'disconnected'>('disconnected');
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // 대진표 데이터
   const [matches, setMatches] = useState<Match[]>([]);
@@ -728,6 +727,20 @@ export default function TenantPortalPage({
         <nav className="header-nav">
           {[
             {
+              id: 'overview',
+              label: '대회 요강',
+              icon: (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="16" y1="13" x2="8" y2="13"></line>
+                  <line x1="16" y1="17" x2="8" y2="17"></line>
+                </svg>
+              ),
+              defaultSubTab: '',
+              disabled: false
+            },
+            {
               id: 'intro',
               label: '대회소개',
               icon: (
@@ -735,7 +748,7 @@ export default function TenantPortalPage({
                   <path d="M2 20h20M12 2v14M12 4l7 7h-7M5 16h14a2 2 0 0 1 2 2v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-1a2 2 0 0 1 2-2z"></path>
                 </svg>
               ),
-              defaultSubTab: 'intro-schedule',
+              defaultSubTab: 'intro-greeting',
               disabled: false
             },
             {
@@ -752,7 +765,7 @@ export default function TenantPortalPage({
             },
             {
               id: 'gallery',
-              label: '미디어',
+              label: '미디어 & 갤러리',
               icon: (
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                   <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
@@ -765,13 +778,26 @@ export default function TenantPortalPage({
             },
             {
               id: 'archive',
-              label: '아카이브',
+              label: '역대 기록관',
               icon: (
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                   <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.45 1-1 1H4v2h16v-2h-5c-.55 0-1-.45-1-1v-2.34M12 2a7 7 0 0 1 7 7v4.66a5 5 0 0 1-5 4.67h-4a5 5 0 0 1-5-4.67V9a7 7 0 0 1 7-7z"></path>
                 </svg>
               ),
               defaultSubTab: 'archive-home',
+              disabled: false
+            },
+            {
+              id: 'notice',
+              label: '개최공시서',
+              icon: (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                  <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                  <polyline points="7 3 7 8 15 8"></polyline>
+                </svg>
+              ),
+              defaultSubTab: '',
               disabled: false
             },
           ].map((tab) => {
@@ -787,11 +813,29 @@ export default function TenantPortalPage({
                   }
                 }}
                 disabled={tab.disabled}
-                style={{
-                  color: tab.disabled ? 'rgba(0,0,0,0.15)' : (active ? 'var(--theme-primary)' : 'var(--text-muted)'),
-                  borderBottom: active ? '3px solid var(--theme-primary)' : '3px solid transparent',
-                  cursor: tab.disabled ? 'not-allowed' : 'pointer',
-                }}
+                style={
+                  tab.id === 'notice'
+                    ? {
+                        color: active ? '#ffffff' : 'var(--theme-primary)',
+                        background: active ? 'linear-gradient(135deg, var(--theme-primary) 0%, #b39366 100%)' : 'rgba(197, 168, 128, 0.15)',
+                        border: '1px dashed rgba(197, 168, 128, 0.6)',
+                        borderRadius: '20px',
+                        padding: '6px 14px',
+                        margin: '6px 4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        height: 'auto',
+                        alignSelf: 'center',
+                        boxShadow: active ? '0 4px 10px rgba(197, 168, 128, 0.3)' : 'none',
+                        transition: 'all 0.2s ease',
+                      }
+                    : {
+                        color: tab.disabled ? 'rgba(0,0,0,0.15)' : (active ? 'var(--theme-primary)' : 'var(--text-muted)'),
+                        borderBottom: active ? '3px solid var(--theme-primary)' : '3px solid transparent',
+                        cursor: tab.disabled ? 'not-allowed' : 'pointer',
+                      }
+                }
               >
                 {tab.icon}
                 <span>{tab.label}</span>
@@ -801,181 +845,14 @@ export default function TenantPortalPage({
         </nav>
 
         <div className="header-actions">
-          <button
-            onClick={() => {
-              if (ongoingTournament) {
-                window.open(window.location.pathname + '?mode=apply', '_blank');
-              }
-            }}
-            className="btn-primary"
-            style={{
-              padding: '10px 20px',
-              fontSize: '0.85rem',
-              fontWeight: '800',
-              background: 'linear-gradient(135deg, var(--theme-gold) 0%, #b39366 100%)',
-              color: '#1b263b',
-              borderRadius: '20px',
-              border: 'none',
-              boxShadow: '0 4px 12px rgba(197, 168, 128, 0.2)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            <span>⚡ 참가신청하기</span>
-          </button>
+          <a href="/host" className="btn-secondary" style={{ padding: '8px 16px', fontSize: '0.85rem', background: '#f8fafc', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}>
+            주최자 ERP
+          </a>
+          <a href="/referee" className="btn-primary" style={{ padding: '8px 16px', fontSize: '0.85rem', background: 'var(--theme-primary)', color: 'white', boxShadow: 'none' }}>
+            심판 입력기
+          </a>
         </div>
-
-        {/* 모바일 전용 햄버거 버튼 */}
-        <button
-          onClick={() => setMobileMenuOpen(true)}
-          className="mobile-menu-btn"
-          style={{
-            background: 'none',
-            border: 'none',
-            color: 'var(--text-main)',
-            cursor: 'pointer',
-            padding: '8px',
-            borderRadius: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'background 0.2s',
-          }}
-        >
-          <Menu size={24} />
-        </button>
       </header>
-
-      {/* 모바일 슬라이드 메뉴 Drawer */}
-      {mobileMenuOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.4)',
-            zIndex: 1000,
-            backdropFilter: 'blur(3px)',
-            display: 'flex',
-            justifyContent: 'flex-end',
-          }}
-          onClick={() => setMobileMenuOpen(false)}
-        >
-          <div
-            style={{
-              width: '280px',
-              height: '100%',
-              background: '#ffffff',
-              boxShadow: '-4px 0 24px rgba(0,0,0,0.12)',
-              display: 'flex',
-              flexDirection: 'column',
-              padding: '24px',
-              boxSizing: 'border-box',
-              animation: 'slideIn 0.25s ease-out',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: '900', color: 'var(--text-main)', margin: 0, fontFamily: 'var(--font-title)' }}>대회 공식 메뉴</h3>
-              <button
-                onClick={() => setMobileMenuOpen(false)}
-                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
-              {[
-                { id: 'overview', label: '대회 요약 및 요강', icon: <Award size={18} />, defaultSubTab: '' },
-                { id: 'notice', label: '개최공시서 다운로드', icon: <FileText size={18} />, defaultSubTab: '' },
-                { id: 'intro', label: '대회소개 (일정·장소)', icon: <Calendar size={18} />, defaultSubTab: 'intro-greeting' },
-                { id: 'live', label: '실시간 리더보드 & 대진', icon: <Layers size={18} />, defaultSubTab: 'live-leaderboard', disabled: !ongoingTournament },
-                { id: 'gallery', label: '대회 미디어 & 갤러리', icon: <Compass size={18} />, defaultSubTab: 'gallery-photos' },
-                { id: 'archive', label: '역대 대회 기록관', icon: <Archive size={18} />, defaultSubTab: 'archive-home' },
-              ].map((tab) => {
-                const active = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    disabled={tab.disabled}
-                    onClick={() => {
-                      if (!tab.disabled) {
-                        setActiveTab(tab.id as any);
-                        setActiveSubTab(tab.defaultSubTab);
-                        setMobileMenuOpen(false);
-                      }
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      width: '100%',
-                      padding: '12px 16px',
-                      borderRadius: '8px',
-                      border: 'none',
-                      background: active ? 'rgba(197, 168, 128, 0.1)' : 'transparent',
-                      color: tab.disabled ? '#cbd5e1' : (active ? 'var(--theme-primary)' : 'var(--text-main)'),
-                      fontSize: '0.9rem',
-                      fontWeight: active ? '900' : '600',
-                      textAlign: 'left',
-                      cursor: tab.disabled ? 'not-allowed' : 'pointer',
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    {tab.icon}
-                    <span>{tab.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <a
-                href="/host"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '12px',
-                  borderRadius: '8px',
-                  border: '1px solid var(--border-color)',
-                  color: 'var(--text-main)',
-                  fontSize: '0.85rem',
-                  fontWeight: '800',
-                  textDecoration: 'none',
-                  textAlign: 'center',
-                  background: '#f8fafc',
-                }}
-              >
-                주최자 ERP
-              </a>
-              <a
-                href="/referee"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '12px',
-                  borderRadius: '8px',
-                  color: '#ffffff',
-                  fontSize: '0.85rem',
-                  fontWeight: '800',
-                  textDecoration: 'none',
-                  textAlign: 'center',
-                  background: 'var(--theme-primary)',
-                }}
-              >
-                심판 입력기
-              </a>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* 2. 히어로 배너 */}
       <section className="hero-section animate-fade-in">
@@ -1095,8 +972,7 @@ export default function TenantPortalPage({
                 { id: 'intro-greeting', label: '인사말 / 조직위원회' },
                 { id: 'intro-schedule', label: '대회 개요 및 일정' },
                 { id: 'intro-location', label: '대회 장소 및 코스 안내' },
-                { id: 'intro-rules', label: '대회 규정 및 요강 (룰)' },
-                { id: 'intro-notice', label: '개최공시서 다운로드' }
+                { id: 'intro-rules', label: '대회 규정 및 요강 (룰)' }
               ].map(sub => (
                 <button
                   key={sub.id}
@@ -1480,7 +1356,7 @@ export default function TenantPortalPage({
           )}
 
           {/* NOR. 개최공시서 탭 - 파일 다운로드 전용 */}
-          {(activeTab === 'notice' || (activeTab === 'intro' && activeSubTab === 'intro-notice')) && (
+          {activeTab === 'notice' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '30px', maxWidth: '800px', margin: '0 auto', width: '100%' }} className="animate-fade-in">
               {/* 공시서 헤더 */}
               <div className="glass-panel" style={{ background: 'white', padding: '35px 32px', borderTop: '4px solid var(--theme-primary)', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
@@ -1689,8 +1565,8 @@ export default function TenantPortalPage({
           )}
 
           {/* A. 대회 요강 대메뉴 (Notice of Race 통합 및 세련된 연동) */}
-          {(activeTab === 'overview' || (activeTab === 'intro' && activeSubTab === 'intro-schedule')) && (
-            <div className="overview-container-grid">
+          {activeTab === 'overview' && (
+            <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: '30px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
                 
                 {/* 대회 개요 카드 */}
@@ -1698,7 +1574,7 @@ export default function TenantPortalPage({
                   <h2 style={{ fontSize: '1.4rem', fontWeight: '800', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)' }}>
                     <Compass style={{ color: 'var(--theme-primary)' }} size={22} /> 대회 개요 명세
                   </h2>
-                  <div className="overview-spec-grid">
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', fontSize: '0.95rem' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <p style={{ margin: 0 }}><strong>대회명 :</strong> {overview.title}</p>
                       <p style={{ margin: 0 }}><strong>기간 :</strong> {overview.duration}</p>
@@ -1913,8 +1789,9 @@ export default function TenantPortalPage({
           </div>
         )}
 
+          {/* INTRO. 대회 소개 탭 */}
           {activeTab === 'intro' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: activeSubTab === 'intro-schedule' || activeSubTab === 'intro-notice' ? '100%' : '800px', margin: '0 auto', width: '100%' }} className="animate-fade-in">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '800px', margin: '0 auto', width: '100%' }} className="animate-fade-in">
               
               {/* 1. 인사말 / 조직위원회 */}
               {activeSubTab === 'intro-greeting' && (
@@ -1924,6 +1801,74 @@ export default function TenantPortalPage({
                     제20회 이순신장군배 전국윈드서핑대회에 관심을 가져주셔서 감사합니다.<br />
                     본 대회 인사말 및 조직위원회 구성 명단은 준비 중입니다.
                   </p>
+                </div>
+              )}
+
+              {/* 2. 대회 개요 및 일정 */}
+              {activeSubTab === 'intro-schedule' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                  {/* 개요 카드 */}
+                  <div className="glass-panel" style={{ background: 'white', padding: '30px', borderTop: '4px solid var(--theme-primary)' }}>
+                    <h3 style={{ fontSize: '1.3rem', fontWeight: '900', marginBottom: '18px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '1.5rem' }}>📋</span> 대회 개요
+                    </h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', fontSize: '0.92rem', color: 'black' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <p style={{ margin: 0 }}><strong>대회명 :</strong> 제20회 이순신장군배 전국윈드서핑대회 (2026)</p>
+                        <p style={{ margin: 0 }}><strong>기간 :</strong> 2026년 9월 11일(금) ~ 13일(일) [3일간]</p>
+                        <p style={{ margin: 0 }}><strong>장소 :</strong> 통영 수륙해수욕장 일원 (통영윈드서핑협회)</p>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <p style={{ margin: 0 }}><strong>주최 :</strong> 통영시</p>
+                        <p style={{ margin: 0 }}><strong>주관 :</strong> 통영시윈드서핑연맹, 한국윈드서핑협회</p>
+                        <p style={{ margin: 0 }}><strong>후원 :</strong> 경상남도, 경상남도체육회, 통영시체육회</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 일정표 카드 */}
+                  <div className="glass-panel" style={{ background: 'white', padding: '30px' }}>
+                    <h3 style={{ fontSize: '1.3rem', fontWeight: '900', marginBottom: '18px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '1.5rem' }}>📅</span> 대회 상세 일정표
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                      
+                      {/* 1일차 */}
+                      <div style={{ background: '#f8fafc', padding: '16px 20px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                        <h4 style={{ fontWeight: '800', color: 'var(--theme-primary)', fontSize: '0.95rem', margin: '0 0 10px 0', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px' }}>
+                          1일차 : 9월 11일 (금)
+                        </h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.88rem', color: 'black' }}>
+                          <p style={{ margin: 0 }}>• <strong>13:00 ~ 17:00 :</strong> 참가 선수단 등록 및 리허설 (수륙해수욕장 해역)</p>
+                          <p style={{ margin: 0 }}>• <strong>18:00 ~ 20:00 :</strong> 개회식 (통영 스탠포드 호텔)</p>
+                        </div>
+                      </div>
+
+                      {/* 2일차 */}
+                      <div style={{ background: '#f8fafc', padding: '16px 20px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                        <h4 style={{ fontWeight: '800', color: 'var(--theme-primary)', fontSize: '0.95rem', margin: '0 0 10px 0', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px' }}>
+                          2일차 : 9월 12일 (토)
+                        </h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.88rem', color: 'black' }}>
+                          <p style={{ margin: 0 }}>• <strong>09:00 ~ 10:00 :</strong> 출정식 (계류장 특설무대 / 안전 교육)</p>
+                          <p style={{ margin: 0 }}>• <strong>10:00 ~ 17:00 :</strong> 공식 경기 (예선 및 본선 경기)</p>
+                          <p style={{ margin: 0 }}>• <strong>18:00 ~ 20:00 :</strong> 리셉션 및 만찬 (수륙해수욕장 특설무대)</p>
+                        </div>
+                      </div>
+
+                      {/* 3일차 */}
+                      <div style={{ background: '#f8fafc', padding: '16px 20px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                        <h4 style={{ fontWeight: '800', color: 'var(--theme-primary)', fontSize: '0.95rem', margin: '0 0 10px 0', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px' }}>
+                          3일차 : 9월 13일 (일)
+                        </h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.88rem', color: 'black' }}>
+                          <p style={{ margin: 0 }}>• <strong>10:00 ~ 15:00 :</strong> 공식 결선 경기 (각 종목별 결승)</p>
+                          <p style={{ margin: 0 }}>• <strong>15:30 ~ :</strong> 시상식 및 폐회식 (수륙해수욕장 특설무대)</p>
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -2092,10 +2037,12 @@ export default function TenantPortalPage({
       <div className="mobile-tabbar">
         <div className="mobile-tabbar-inner">
           {[
-            { id: 'intro', label: '대회소개', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>, defaultSubTab: 'intro-schedule' },
+            { id: 'overview', label: '대회요강', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>, defaultSubTab: '' },
+            { id: 'intro', label: '대회소개', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>, defaultSubTab: 'intro-greeting' },
             { id: 'live', label: '경기운영', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>, defaultSubTab: 'live-leaderboard', disabled: !ongoingTournament },
             { id: 'gallery', label: '미디어', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>, defaultSubTab: 'gallery-photos' },
-            { id: 'archive', label: '아카이브', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.45 1-1 1H4v2h16v-2h-5c-.55 0-1-.45-1-1v-2.34M12 2a7 7 0 0 1 7 7v4.66a5 5 0 0 1-5 4.67h-4a5 5 0 0 1-5-4.67V9a7 7 0 0 1 7-7z"/></svg>, defaultSubTab: 'archive-home' },
+            { id: 'archive', label: '역대기록', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.45 1-1 1H4v2h16v-2h-5c-.55 0-1-.45-1-1v-2.34M12 2a7 7 0 0 1 7 7v4.66a5 5 0 0 1-5 4.67h-4a5 5 0 0 1-5-4.67V9a7 7 0 0 1 7-7z"/></svg>, defaultSubTab: 'archive-home' },
+            { id: 'notice', label: '공시서', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>, defaultSubTab: '' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -2107,6 +2054,16 @@ export default function TenantPortalPage({
                 }
               }}
               disabled={tab.disabled}
+              style={
+                tab.id === 'notice'
+                  ? {
+                      border: '1px dashed rgba(197, 168, 128, 0.4)',
+                      borderRadius: '8px',
+                      background: activeTab === 'notice' ? 'rgba(197, 168, 128, 0.15)' : 'transparent',
+                      color: activeTab === 'notice' ? 'var(--theme-primary)' : 'var(--text-muted)'
+                    }
+                  : {}
+              }
             >
               {tab.icon}
               <span>{tab.label}</span>

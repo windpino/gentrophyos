@@ -65,6 +65,7 @@ export default function HostDashboardPage({
   // 스프레드시트 그리드 상태 관리
   const [gridData, setGridData] = useState<GridRow[]>([]);
   const [rawRegistrations, setRawRegistrations] = useState<any[]>([]); // 원본 상세 데이터 바인딩용
+  const [deletedIds, setDeletedIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchCategory, setSearchCategory] = useState<'all' | 'name' | 'phone' | 'club' | 'division'>('all'); // 카테고리별 검색
   const [selectedReg, setSelectedReg] = useState<GridRow | null>(null); // 신청서 보기 팝업용
@@ -263,40 +264,11 @@ export default function HostDashboardPage({
   };
 
   // 행 삭제
-  const handleDeleteRow = async (rowId: string) => {
+  const handleDeleteRow = (rowId: string) => {
     if (!confirm('정말 선택한 참가자를 목록에서 지우시겠습니까?')) return;
-    
-    // 1. 화면에서 우선 즉각 제거
     setGridData(gridData.filter((row) => row.id !== rowId));
-    
-    // 2. 임시 행이 아닌 실제 DB 행인 경우 서버에 즉시 삭제 요청
-    if (!rowId.startsWith('temp-') && activeTournament) {
-      setIsSaving(true);
-      try {
-        const res = await fetch(`/api/tenant/${subdomain}/registrations/bulk-update`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            tournamentId: activeTournament.id,
-            updatedList: [],
-            insertedList: [],
-            deletedIds: [rowId],
-          }),
-        });
-
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || '삭제 실패');
-        }
-        
-        // 정상 반영 확인을 위해 동기화 로드
-        await loadSectionData(activeTournament.id);
-      } catch (e: any) {
-        alert(`참가자 데이터베이스 삭제 실패: ${e.message}`);
-        await loadSectionData(activeTournament.id);
-      } finally {
-        setIsSaving(false);
-      }
+    if (!rowId.startsWith('temp-')) {
+      setDeletedIds([...deletedIds, rowId]);
     }
   };
 
@@ -307,7 +279,7 @@ export default function HostDashboardPage({
     const updatedList = gridData.filter((row) => row.isEdited && !row.isNew);
     const insertedList = gridData.filter((row) => row.isNew && row.name.trim());
 
-    if (updatedList.length === 0 && insertedList.length === 0) {
+    if (updatedList.length === 0 && insertedList.length === 0 && deletedIds.length === 0) {
       alert('저장할 변경 사항이 없습니다.');
       return;
     }
@@ -322,12 +294,13 @@ export default function HostDashboardPage({
           tournamentId: activeTournament.id,
           updatedList,
           insertedList,
-          deletedIds: [],
+          deletedIds,
         }),
       });
 
       if (res.ok) {
         alert('모든 스프레드시트 변경 사항이 성공적으로 저장 및 일괄 처리되었습니다!');
+        setDeletedIds([]);
         await loadSectionData(activeTournament.id);
       } else {
         const data = await res.json();
