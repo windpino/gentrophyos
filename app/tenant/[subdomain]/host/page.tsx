@@ -2269,8 +2269,8 @@ function NoticeEditor({ tenant, subdomain, onSaveSuccess }: NoticeEditorProps) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 10 * 1024 * 1024) {
-      alert(`파일 크기가 너무 큽니다 (${(file.size / 1024 / 1024).toFixed(1)}MB). 10MB 이하의 파일만 업로드할 수 있습니다.`);
+    if (file.size > 1024 * 1024) {
+      alert(`데이터베이스 통합 저장을 위해, 개최공시서 파일 크기는 1MB 이하여야 합니다. (현재 크기: ${(file.size / 1024 / 1024).toFixed(2)}MB)\n파일 용량을 압축하여 다시 선택해주세요.`);
       return;
     }
 
@@ -2298,7 +2298,7 @@ function NoticeEditor({ tenant, subdomain, onSaveSuccess }: NoticeEditorProps) {
         setNoticePdfData(data.downloadURL);
         setNoticePdfName(data.fileName);
       }
-      alert(`${type === 'hwp' ? '한글' : 'PDF'} 파일이 파이어베이스 스토리지에 성공적으로 업로드되었습니다. 저장하기 버튼을 눌러 확정해주세요.`);
+      alert(`${type === 'hwp' ? '한글' : 'PDF'} 파일이 정상적으로 등록되었습니다. 페이지 하단의 '저장하기' 버튼을 눌러야 최종 반영됩니다.`);
     } catch (error: any) {
       console.error('File upload error:', error);
       alert(`파일 업로드 실패: ${error.message}`);

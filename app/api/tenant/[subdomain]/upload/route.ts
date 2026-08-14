@@ -20,59 +20,30 @@ export async function POST(
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Generate unique storage path
-    const fileExt = file.name.split('.').pop() || (type === 'hwp' ? 'hwp' : 'pdf');
-    const fileName = `${Date.now()}_notice.${fileExt}`;
-    const storagePath = `${subdomain}/notices/${fileName}`;
-    const encodedPath = encodeURIComponent(storagePath);
-    
-    const bucketName = "gentrophyos.firebasestorage.app";
+    // Validate file size is under 1MB to prevent Firestore document size limit error (1MB)
+    if (file.size > 1024 * 1024) {
+      return NextResponse.json({
+        error: '데이터베이스 저장 공간 제한으로 인해, 업로드할 파일의 크기는 1MB 이하여야 합니다. 파일 용량을 압축하여 다시 업로드해주세요.'
+      }, { status: 400 });
+    }
+
     const contentType = file.type || (type === 'hwp' ? 'application/x-hwp' : 'application/pdf');
+    const base64Data = buffer.toString('base64');
+    const downloadURL = `data:${contentType};base64,${base64Data}`;
 
-    // Make direct REST API call to Firebase Storage upload endpoint
-    const uploadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodedPath}`;
-    
-    console.log(`Uploading to REST URL: ${uploadUrl}`);
-
-    let response = await fetch(uploadUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': contentType,
-      },
-      body: buffer,
-    });
-
-    // If the default bucket .firebasestorage.app fails (e.g. 404), fallback to .appspot.com
-    if (!response.ok && response.status === 404) {
-      const fallbackBucket = "gentrophyos.appspot.com";
-      const fallbackUrl = `https://firebasestorage.googleapis.com/v0/b/${fallbackBucket}/o/${encodedPath}`;
-      console.log(`Retrying upload with fallback URL: ${fallbackUrl}`);
-      response = await fetch(fallbackUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': contentType,
-        },
-        body: buffer,
-      });
-    }
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error('Firebase Storage REST error response:', data);
-      return NextResponse.json({ 
-        error: `Firebase Storage REST upload failed: ${data.error?.message || response.statusText}` 
-      }, { status: response.status });
-    }
-
-    // Firebase Storage public download URL format:
-    // https://firebasestorage.googleapis.com/v0/b/<bucket>/o/<encodedPath>?alt=media&token=<downloadTokens>
-    const finalBucket = data.bucket || bucketName;
-    const downloadTokens = data.downloadTokens;
-    
-    let downloadURL = `https://firebasestorage.googleapis.com/v0/b/${finalBucket}/o/${encodedPath}?alt=media`;
-    if (downloadTokens) {
-      downloadURL += `&token=${downloadTokens}`;
+    // Optional: write to local public/uploads directory as a local backup
+    try {
+      const fs = require('fs').promises;
+      const path = require('path');
+      const uploadDir = path.join(process.cwd(), 'public', 'uploads');
+      await fs.mkdir(uploadDir, { recursive: true });
+      const fileExt = file.name.split('.').pop() || (type === 'hwp' ? 'hwp' : 'pdf');
+      const fileName = `${Date.now()}_notice.${fileExt}`;
+      const filePath = path.join(uploadDir, fileName);
+      await fs.writeFile(filePath, buffer);
+      console.log(`Saved local upload backup to: ${filePath}`);
+    } catch (fsErr) {
+      console.error('Failed to write local backup file:', fsErr);
     }
 
     return NextResponse.json({
@@ -81,7 +52,7 @@ export async function POST(
       fileName: file.name
     });
   } catch (error: any) {
-    console.error('Server-side REST file upload error:', error);
+    console.error('Server-side file upload error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
