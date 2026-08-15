@@ -1085,13 +1085,13 @@ export default function TenantPortalPage({
               {/* 종목 카테고리 필터바 */}
               <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
                 {(() => {
-                  const divisionList = ['전체', ...getDivisionTabs()];
-                  return divisionList.map((div: string) => {
-                    const active = selectedLeaderboardCategory === div;
+                  const categories = ['전체', '윈드포일', '윙포일', '혼합오픈', '펀엔포뮬러'];
+                  return categories.map((cat: string) => {
+                    const active = selectedLeaderboardCategory === cat;
                     return (
                       <button
-                        key={div}
-                        onClick={() => setSelectedLeaderboardCategory(div)}
+                        key={cat}
+                        onClick={() => setSelectedLeaderboardCategory(cat)}
                         style={{
                           padding: '10px 20px',
                           borderRadius: '24px',
@@ -1106,7 +1106,7 @@ export default function TenantPortalPage({
                           boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
                         }}
                       >
-                        {div}
+                        {cat}
                       </button>
                     );
                   });
@@ -1121,104 +1121,153 @@ export default function TenantPortalPage({
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                   {(() => {
-                    const divisionList = getDivisionTabs();
-                    const filteredDivisions = selectedLeaderboardCategory === '전체' 
-                      ? divisionList 
-                      : divisionList.filter((d: string) => d === selectedLeaderboardCategory);
+                    const getExactDivisionName = (root: string, gender: '남자부' | '여자부') => {
+                      const allTabs = getDivisionTabs();
+                      const exact = allTabs.find((tab: string) => {
+                        const cleanTab = tab.replace(/\s+/g, '');
+                        const cleanTarget = `${root}(${gender})`.replace(/\s+/g, '');
+                        return cleanTab.includes(cleanTarget) || cleanTab === cleanTarget;
+                      });
+                      if (exact) return exact;
 
-                    return filteredDivisions.map((div: string) => {
-                      const list = leaderboards[div] || [];
+                      const fuzzy = allTabs.find((tab: string) => {
+                        const hasRoot = tab.includes(root) || (root === '펀엔포뮬러' && (tab.includes('펀엔') || tab.includes('펀&')));
+                        const hasGender = tab.includes(gender.replace('부', ''));
+                        return hasRoot && hasGender;
+                      });
+                      return fuzzy || `${root} (${gender})`;
+                    };
+
+                    const renderTable = (list: any[]) => {
                       return (
-                        <div key={div} className="glass-panel" style={{ background: 'white', padding: '24px 30px', borderTop: '4px solid var(--theme-primary)' }}>
-                          <h3 style={{ fontSize: '1.2rem', fontWeight: '900', color: 'var(--text-main)', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ fontSize: '1.3rem' }}>🏆</span> {div}
-                          </h3>
-                          {list.length === 0 ? (
-                            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '10px 0' }}>
-                              해당 종목의 등록/확정된 순위표가 없습니다.
-                            </p>
-                          ) : (
-                            <div className="premium-table-container">
-                              <table className="premium-table" style={{ fontSize: '0.9rem', width: '100%', borderCollapse: 'collapse', color: 'black' }}>
-                                <thead>
-                                  <tr style={{ background: '#f8fafc' }}>
-                                    <th style={{ width: '70px', textAlign: 'center', fontWeight: '800' }}>순위</th>
-                                    <th style={{ minWidth: '90px', fontWeight: '800' }}>성명</th>
-                                    <th style={{ minWidth: '90px', fontWeight: '800' }}>배번</th>
-                                    <th style={{ minWidth: '100px', fontWeight: '800' }}>생년월일</th>
-                                    {['1R', '2R', '3R', '4R', '5R', '6R'].map(r => (
-                                      <th key={r} style={{ width: '60px', textAlign: 'center', fontWeight: '800' }}>{r}</th>
-                                    ))}
-                                    <th style={{ width: '80px', textAlign: 'center', fontWeight: '800', color: 'var(--theme-primary)' }}>총점</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {list.map((row: any, rIdx: number) => {
-                                    const rounds = [row.r1, row.r2, row.r3, row.r4, row.r5, row.r6];
-                                    const numericScores = rounds.map(val => {
-                                      if (val === null || val === undefined || val === '') return null;
-                                      if (val === 'DNS' || val === 'DNF') return list.length;
-                                      const num = Number(val);
-                                      return isNaN(num) ? null : num;
-                                    });
-                                    const validScoresCount = numericScores.filter(val => val !== null).length;
-                                    
-                                    let discardIdx = -1;
-                                    if (validScoresCount >= 4) {
-                                      let maxVal = -1;
-                                      for (let i = 0; i < rounds.length; i++) {
-                                        const val = numericScores[i];
-                                        if (val !== null) {
-                                          if (val > maxVal) {
-                                            maxVal = val;
-                                            discardIdx = i;
-                                          }
-                                        }
+                        <div className="premium-table-container">
+                          <table className="premium-table" style={{ fontSize: '0.9rem', width: '100%', borderCollapse: 'collapse', color: 'black' }}>
+                            <thead>
+                              <tr style={{ background: '#f8fafc' }}>
+                                <th style={{ width: '70px', textAlign: 'center', fontWeight: '800' }}>순위</th>
+                                <th style={{ minWidth: '90px', fontWeight: '800' }}>성명</th>
+                                <th style={{ minWidth: '90px', fontWeight: '800' }}>배번</th>
+                                <th style={{ minWidth: '100px', fontWeight: '800' }}>생년월일</th>
+                                {['1R', '2R', '3R', '4R', '5R', '6R'].map(r => (
+                                  <th key={r} style={{ width: '60px', textAlign: 'center', fontWeight: '800' }}>{r}</th>
+                                ))}
+                                <th style={{ width: '80px', textAlign: 'center', fontWeight: '800', color: 'var(--theme-primary)' }}>총점</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {list.map((row: any, rIdx: number) => {
+                                const rounds = [row.r1, row.r2, row.r3, row.r4, row.r5, row.r6];
+                                const numericScores = rounds.map(val => {
+                                  if (val === null || val === undefined || val === '') return null;
+                                  if (val === 'DNS' || val === 'DNF') return list.length;
+                                  const num = Number(val);
+                                  return isNaN(num) ? null : num;
+                                });
+                                const validScoresCount = numericScores.filter(val => val !== null).length;
+                                
+                                let discardIdx = -1;
+                                if (validScoresCount >= 4) {
+                                  let maxVal = -1;
+                                  for (let i = 0; i < rounds.length; i++) {
+                                    const val = numericScores[i];
+                                    if (val !== null) {
+                                      if (val > maxVal) {
+                                        maxVal = val;
+                                        discardIdx = i;
                                       }
                                     }
+                                  }
+                                }
 
-                                    return (
-                                      <tr key={rIdx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                        <td style={{ textAlign: 'center', fontWeight: '800' }}>
-                                          <span style={{
-                                            display: 'inline-block',
-                                            width: '28px',
-                                            height: '28px',
-                                            lineHeight: '28px',
-                                            borderRadius: '50%',
-                                            background: row.rank === 1 ? 'var(--theme-gold)' : row.rank === 2 ? '#cbd5e1' : row.rank === 3 ? '#b45309' : '#f1f5f9',
-                                            color: row.rank <= 3 ? 'white' : 'var(--text-main)',
-                                            fontSize: '0.85rem'
-                                          }}>
-                                            {row.rank}
-                                          </span>
+                                return (
+                                  <tr key={rIdx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                    <td style={{ textAlign: 'center', fontWeight: '800' }}>
+                                      <span style={{
+                                        display: 'inline-block',
+                                        width: '28px',
+                                        height: '28px',
+                                        lineHeight: '28px',
+                                        borderRadius: '50%',
+                                        background: row.rank === 1 ? 'var(--theme-gold)' : row.rank === 2 ? '#cbd5e1' : row.rank === 3 ? '#b45309' : '#f1f5f9',
+                                        color: row.rank <= 3 ? 'white' : 'var(--text-main)',
+                                        fontSize: '0.85rem'
+                                      }}>
+                                        {row.rank}
+                                      </span>
+                                    </td>
+                                    <td style={{ fontWeight: '800' }}>{row.name}</td>
+                                    <td>{row.bibNumber || '-'}</td>
+                                    <td>{row.birth || '-'}</td>
+                                    {rounds.map((val, idx) => {
+                                      const isDiscarded = idx === discardIdx;
+                                      const displayVal = val !== null && val !== undefined && val !== '' ? val : '-';
+                                      return (
+                                        <td key={idx} style={{
+                                          textAlign: 'center',
+                                          color: isDiscarded ? '#94a3b8' : 'inherit',
+                                          textDecoration: isDiscarded ? 'line-through' : 'none',
+                                          fontWeight: isDiscarded ? 'normal' : '600'
+                                        }}>
+                                          {displayVal}
+                                          {isDiscarded && <span style={{ fontSize: '0.7rem', display: 'block', textDecoration: 'none', color: '#f43f5e', fontWeight: '800' }}>(제외)</span>}
                                         </td>
-                                        <td style={{ fontWeight: '800' }}>{row.name}</td>
-                                        <td>{row.bibNumber || '-'}</td>
-                                        <td>{row.birth || '-'}</td>
-                                        {rounds.map((val, idx) => {
-                                          const isDiscarded = idx === discardIdx;
-                                          const displayVal = val !== null && val !== undefined && val !== '' ? val : '-';
-                                          return (
-                                            <td key={idx} style={{
-                                              textAlign: 'center',
-                                              color: isDiscarded ? '#94a3b8' : 'inherit',
-                                              textDecoration: isDiscarded ? 'line-through' : 'none',
-                                              fontWeight: isDiscarded ? 'normal' : '600'
-                                            }}>
-                                              {displayVal}
-                                              {isDiscarded && <span style={{ fontSize: '0.7rem', display: 'block', textDecoration: 'none', color: '#f43f5e', fontWeight: '800' }}>(제외)</span>}
-                                            </td>
-                                          );
-                                        })}
-                                        <td style={{ textAlign: 'center', fontWeight: '900', color: 'var(--theme-primary)', fontSize: '1.05rem' }}>{row.total}점</td>
-                                      </tr>
-                                    );
-                                  })}
-                                </tbody>
-                              </table>
-                            </div>
-                          )}
+                                      );
+                                    })}
+                                    <td style={{ textAlign: 'center', fontWeight: '900', color: 'var(--theme-primary)', fontSize: '1.05rem' }}>{row.total}점</td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      );
+                    };
+
+                    const activeRoot = selectedLeaderboardCategory;
+                    const rootsToRender = activeRoot === '전체'
+                      ? ['윈드포일', '윙포일', '혼합오픈', '펀엔포뮬러']
+                      : [activeRoot];
+
+                    return rootsToRender.map((root: string) => {
+                      const maleDivName = getExactDivisionName(root, '남자부');
+                      const femaleDivName = getExactDivisionName(root, '여자부');
+
+                      const maleList = leaderboards[maleDivName] || [];
+                      const femaleList = leaderboards[femaleDivName] || [];
+
+                      if (activeRoot === '전체' && maleList.length === 0 && femaleList.length === 0) return null;
+
+                      return (
+                        <div key={root} style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '10px' }}>
+                          <div style={{ margin: '15px 0 0px 0', padding: '4px 12px', borderLeft: '4px solid var(--theme-primary)' }}>
+                            <h3 style={{ fontSize: '1.3rem', fontWeight: '900', color: 'var(--text-main)', margin: 0 }}>
+                              {root} 부문
+                            </h3>
+                          </div>
+
+                          {/* 남자부 카드 */}
+                          <div className="glass-panel" style={{ background: 'white', padding: '24px 30px', borderTop: '4px solid var(--theme-primary)' }}>
+                            <h4 style={{ fontSize: '1.15rem', fontWeight: '900', color: 'var(--text-main)', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontSize: '1.2rem' }}>♂️</span> {root} (남자부)
+                            </h4>
+                            {maleList.length === 0 ? (
+                              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '10px 0' }}>
+                                해당 부서의 등록/확정된 순위표가 없습니다.
+                              </p>
+                            ) : renderTable(maleList)}
+                          </div>
+
+                          {/* 여자부 카드 */}
+                          <div className="glass-panel" style={{ background: 'white', padding: '24px 30px', borderTop: '4px solid #f43f5e' }}>
+                            <h4 style={{ fontSize: '1.15rem', fontWeight: '900', color: 'var(--text-main)', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontSize: '1.2rem' }}>♀️</span> {root} (여자부)
+                            </h4>
+                            {femaleList.length === 0 ? (
+                              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '10px 0' }}>
+                                해당 부서의 등록/확정된 순위표가 없습니다.
+                              </p>
+                            ) : renderTable(femaleList)}
+                          </div>
                         </div>
                       );
                     });
