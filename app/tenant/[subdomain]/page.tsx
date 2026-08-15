@@ -98,6 +98,7 @@ export default function TenantPortalPage({
   // 리더보드 및 참가자 데이터
   const [leaderboards, setLeaderboards] = useState<Record<string, any[]>>({});
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  const [selectedLeaderboardCategory, setSelectedLeaderboardCategory] = useState<string>('전체');
   const [registrations, setRegistrations] = useState<any[]>([]);
   const [regsLoading, setRegsLoading] = useState(false);
   const [liveStatus, setLiveStatus] = useState<'connected' | 'reconnecting' | 'disconnected'>('disconnected');
@@ -1081,6 +1082,37 @@ export default function TenantPortalPage({
                 <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>Notice of Race (NOR) / 공식 실시간 순위 및 라운드별 경기 결과</p>
               </div>
 
+              {/* 종목 카테고리 필터바 */}
+              <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+                {(() => {
+                  const divisionList = ['전체', ...getDivisionTabs()];
+                  return divisionList.map((div: string) => {
+                    const active = selectedLeaderboardCategory === div;
+                    return (
+                      <button
+                        key={div}
+                        onClick={() => setSelectedLeaderboardCategory(div)}
+                        style={{
+                          padding: '10px 20px',
+                          borderRadius: '24px',
+                          background: active ? 'var(--theme-primary)' : '#ffffff',
+                          border: active ? 'none' : '1px solid var(--border-color)',
+                          color: active ? '#ffffff' : 'var(--text-muted)',
+                          fontSize: '0.85rem',
+                          fontWeight: '800',
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap',
+                          transition: 'all 0.2s ease-in-out',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                        }}
+                      >
+                        {div}
+                      </button>
+                    );
+                  });
+                })()}
+              </div>
+
               {leaderboardLoading ? (
                 <div className="glass-panel" style={{ background: 'white', padding: '60px 0', textAlign: 'center' }}>
                   <RefreshCw className="animate-spin" size={32} style={{ color: 'var(--theme-primary)', margin: '0 auto 12px auto' }} />
@@ -1090,7 +1122,11 @@ export default function TenantPortalPage({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                   {(() => {
                     const divisionList = getDivisionTabs();
-                    return divisionList.map((div: string) => {
+                    const filteredDivisions = selectedLeaderboardCategory === '전체' 
+                      ? divisionList 
+                      : divisionList.filter((d: string) => d === selectedLeaderboardCategory);
+
+                    return filteredDivisions.map((div: string) => {
                       const list = leaderboards[div] || [];
                       return (
                         <div key={div} className="glass-panel" style={{ background: 'white', padding: '24px 30px', borderTop: '4px solid var(--theme-primary)' }}>
@@ -1330,7 +1366,6 @@ export default function TenantPortalPage({
                                               >
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                   <span style={{ fontWeight: '800', color: 'var(--text-main)' }}>{player.name}</span>
-                                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>({player.birth || '-'})</span>
                                                 </div>
                                                 <span style={{ fontWeight: '800', color: 'var(--theme-primary)', background: 'rgba(197, 168, 128, 0.1)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem' }}>
                                                   배번 {player.bibNumber}
