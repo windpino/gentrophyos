@@ -1414,6 +1414,7 @@ export default function TenantPortalPage({
                                                 }}
                                               >
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                  <span style={{ color: 'var(--text-muted)', fontWeight: '700', fontSize: '0.8rem', minWidth: '16px' }}>{pIdx + 1}</span>
                                                   <span style={{ fontWeight: '800', color: 'var(--text-main)' }}>{player.name}</span>
                                                 </div>
                                                 <span style={{ fontWeight: '800', color: 'var(--theme-primary)', background: 'rgba(197, 168, 128, 0.1)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem' }}>
