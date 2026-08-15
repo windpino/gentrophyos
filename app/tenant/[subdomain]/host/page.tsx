@@ -264,11 +264,36 @@ export default function HostDashboardPage({
   };
 
   // 행 삭제
-  const handleDeleteRow = (rowId: string) => {
+  const handleDeleteRow = async (rowId: string) => {
     if (!confirm('정말 선택한 참가자를 목록에서 지우시겠습니까?')) return;
-    setGridData(gridData.filter((row) => row.id !== rowId));
+    
+    setGridData((prev) => prev.filter((row) => row.id !== rowId));
+    
     if (!rowId.startsWith('temp-')) {
-      setDeletedIds([...deletedIds, rowId]);
+      if (!activeTournament) return;
+      try {
+        const res = await fetch(`/api/tenant/${subdomain}/registrations/bulk-update`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tournamentId: activeTournament.id,
+            updatedList: [],
+            insertedList: [],
+            deletedIds: [rowId],
+          }),
+        });
+
+        if (res.ok) {
+          alert('참가자가 성공적으로 데이터베이스에서 삭제되었습니다.');
+          setDeletedIds((prev) => prev.filter((id) => id !== rowId));
+          await loadSectionData(activeTournament.id);
+        } else {
+          const data = await res.json();
+          alert(data.error || '삭제 실패');
+        }
+      } catch (e: any) {
+        alert('삭제 중 오류가 발생했습니다: ' + e.message);
+      }
     }
   };
 
