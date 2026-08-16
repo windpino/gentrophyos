@@ -116,8 +116,8 @@ export default function TenantPortalPage({
   const [formFields, setFormFields] = useState<any[]>([]);
   const [formResponses, setFormResponses] = useState<Record<string, any>>({
     gender: '남자',
-    division: '윈드포일 (남자부)',
-    tshirtSize: 'L (105)'
+    division: '윈드포일',
+    tshirtSize: '100'
   });
 
   const [regSuccess, setRegSuccess] = useState('');
@@ -148,8 +148,8 @@ export default function TenantPortalPage({
           
           // 필수 기본값 보완
           if (initialResponses.gender === undefined) initialResponses.gender = '남자';
-          if (initialResponses.division === undefined) initialResponses.division = '윈드포일 (남자부)';
-          if (initialResponses.tshirtSize === undefined) initialResponses.tshirtSize = 'L (105)';
+          if (initialResponses.division === undefined) initialResponses.division = '윈드포일';
+          if (initialResponses.tshirtSize === undefined) initialResponses.tshirtSize = '100';
 
           setFormResponses(initialResponses);
         }
@@ -410,8 +410,8 @@ export default function TenantPortalPage({
       });
       // 필수 기본값 복구
       resetResponses.gender = '남자';
-      resetResponses.division = '윈드포일 (남자부)';
-      resetResponses.tshirtSize = 'L (105)';
+      resetResponses.division = '윈드포일';
+      resetResponses.tshirtSize = '100';
 
       setFormResponses(resetResponses);
     } catch (err: any) {

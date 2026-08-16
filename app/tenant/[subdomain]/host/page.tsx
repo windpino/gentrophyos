@@ -142,8 +142,8 @@ export default function HostDashboardPage({
         let gender = '남자';
         let phone = '';
         let club = '미소속';
-        let division = '윈드포일 (남자부)';
-        let tshirtSize = 'L (105)';
+        let division = '윈드포일';
+        let tshirtSize = '100';
         let vestAgreement = '';
         let paymentNoticeAgreement = '';
         let liabilityWaiver = '';
@@ -158,8 +158,8 @@ export default function HostDashboardPage({
             // formResponses에 phone이 있으면 우선 사용
             phone = extra.phone || '';
             club = extra.club || '미소속';
-            division = extra.division || '윈드포일 (남자부)';
-            tshirtSize = extra.tshirtSize || 'L (105)';
+            division = extra.division || '윈드포일';
+            tshirtSize = extra.tshirtSize || '100';
             vestAgreement = extra.vestAgreement || '';
             paymentNoticeAgreement = extra.paymentNoticeAgreement || '';
             liabilityWaiver = extra.liabilityWaiver || '';
@@ -248,8 +248,8 @@ export default function HostDashboardPage({
       gender: '남자',
       phone: '',
       club: '',
-      division: '윈드포일 (남자부)',
-      tshirtSize: 'L (105)',
+      division: '윈드포일',
+      tshirtSize: '100',
       vestAgreement: '네. 확인했습니다.',
       paymentNoticeAgreement: '네. 확인했습니다.',
       liabilityWaiver: '네. 동의합니다.',
@@ -1067,18 +1067,10 @@ export default function HostDashboardPage({
                               cursor: 'pointer'
                             }}
                           >
-                            <option value="윈드포일 (남자부)">윈드포일 (남자부)</option>
-                            <option value="윙포일 (남자부)">윙포일 (남자부)</option>
-                            <option value="혼합오픈 (남자부)">혼합오픈 (남자부)</option>
-                            <option value="펀엔포뮬러 (남자부)">펀엔포뮬러 (남자부)</option>
-                            <option value="윈드포일 (여자부)">윈드포일 (여자부)</option>
-                            <option value="윙포일 (여자부)">윙포일 (여자부)</option>
-                            <option value="혼합오픈 (여자부)">혼합오픈 (여자부)</option>
-                            <option value="펀엔포뮬러 (여자부)">펀엔포뮬러 (여자부)</option>
-                            <option value="윈드포일">윈드포일 (기존)</option>
-                            <option value="윙포일">윙포일 (기존)</option>
-                            <option value="혼합오픈">혼합오픈 (기존)</option>
-                            <option value="펀엔포뮬러">펀엔포뮬러 (기존)</option>
+                            <option value="윈드포일">윈드포일</option>
+                            <option value="윙포일">윙포일</option>
+                            <option value="혼합오픈">혼합오픈</option>
+                            <option value="펀엔포뮬러">펀엔포뮬러</option>
                           </select>
                         </td>
 
@@ -1096,20 +1088,13 @@ export default function HostDashboardPage({
                               cursor: 'pointer'
                             }}
                           >
-                            <option value="S (95)">S (95)</option>
-                            <option value="M (100)">M (100)</option>
-                            <option value="L (105)">L (105)</option>
-                            <option value="XL (110)">XL (110)</option>
-                            <option value="남자 S (95)">남자 S (95)</option>
-                            <option value="남자 M (100)">남자 M (100)</option>
-                            <option value="남자 L (105)">남자 L (105)</option>
-                            <option value="남자 XL (110)">남자 XL (110)</option>
-                            <option value="남자 XXL (115)">남자 XXL (115)</option>
-                            <option value="여자 S (85)">여자 S (85)</option>
-                            <option value="여자 M (90)">여자 M (90)</option>
-                            <option value="여자 L (95)">여자 L (95)</option>
-                            <option value="여자 XL (100)">여자 XL (100)</option>
-                            <option value="여자 XXL (105)">여자 XXL (105)</option>
+                            <option value="85">85</option>
+                            <option value="90">90</option>
+                            <option value="95">95</option>
+                            <option value="100">100</option>
+                            <option value="105">105</option>
+                            <option value="110">110</option>
+                            <option value="115">115</option>
                           </select>
                         </td>
 
