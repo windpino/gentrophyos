@@ -919,7 +919,7 @@ export default function HostDashboardPage({
                       <th style={{ minWidth: '80px', textAlign: 'center', fontSize: '0.8rem' }}>11.개인정보</th>
                       <th style={{ minWidth: '80px', textAlign: 'center', fontSize: '0.8rem' }}>12.초상권</th>
                       <th style={{ minWidth: '80px' }}>결제 여부</th>
-                      <th style={{ minWidth: '80px' }}>승인 상태</th>
+                      <th style={{ minWidth: '100px', textAlign: 'center' }}>홈페이지 배포</th>
                       <th style={{ minWidth: '150px', textAlign: 'center' }}>신청일시</th>
                       <th style={{ width: '90px', textAlign: 'center' }}>작업</th>
                     </tr>
@@ -1153,24 +1153,20 @@ export default function HostDashboardPage({
                           </select>
                         </td>
 
-                        {/* 참가 승인 상태 */}
-                        <td style={{ padding: '8px' }}>
-                          <select
-                            value={row.status}
-                            onChange={(e) => handleCellChange(row.id, 'status', e.target.value)}
+                        {/* 홈페이지 배포 체크박스 */}
+                        <td style={{ textAlign: 'center', padding: '8px' }}>
+                          <input
+                            type="checkbox"
+                            checked={row.status === 'APPROVED'}
+                            onChange={(e) => handleCellChange(row.id, 'status', e.target.checked ? 'APPROVED' : 'PENDING')}
                             style={{
-                              width: '100%',
-                              background: 'white',
-                              border: 'none',
-                              color: row.status === 'APPROVED' ? '#10B981' : '#F59E0B',
-                              fontWeight: '600',
-                              outline: 'none',
-                              cursor: 'pointer'
+                              width: '18px',
+                              height: '18px',
+                              cursor: 'pointer',
+                              accentColor: 'var(--theme-primary)',
+                              verticalAlign: 'middle'
                             }}
-                          >
-                            <option value="PENDING" style={{ color: '#F59E0B' }}>대기상태</option>
-                            <option value="APPROVED" style={{ color: '#10B981' }}>승인완료</option>
-                          </select>
+                          />
                         </td>
 
                         {/* 신청일시 */}
