@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, use } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Award, Calendar, Layers, FileText, CheckCircle2, UserPlus, RefreshCw, Archive, Search, Compass, MapPin, Phone, Sparkles, Trophy, Smartphone, ShieldCheck } from 'lucide-react';
+import { Award, Calendar, Layers, FileText, CheckCircle2, UserPlus, RefreshCw, Archive, Search, Compass, MapPin, Phone, Sparkles, Trophy, Smartphone, ShieldCheck, X, AlertTriangle } from 'lucide-react';
 
 interface TenantData {
   id: string;
@@ -123,6 +123,28 @@ export default function TenantPortalPage({
   const [regSuccess, setRegSuccess] = useState('');
   const [regError, setRegError] = useState('');
   const [regSubmitting, setRegSubmitting] = useState(false);
+
+  // 폭우 피해 및 대회 잠정 연기 팝업 공지 상태
+  const [isNoticePopupOpen, setIsNoticePopupOpen] = useState(false);
+  const [hideToday, setHideToday] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hideUntil = localStorage.getItem('hide_postpone_notice_popup');
+      if (!hideUntil || new Date().getTime() > Number(hideUntil)) {
+        setIsNoticePopupOpen(true);
+      }
+    }
+  }, []);
+
+  const handleCloseNoticePopup = () => {
+    if (hideToday && typeof window !== 'undefined') {
+      // 오늘 24시간 동안 보지 않기
+      const expireTime = new Date().getTime() + 24 * 60 * 60 * 1000;
+      localStorage.setItem('hide_postpone_notice_popup', String(expireTime));
+    }
+    setIsNoticePopupOpen(false);
+  };
 
   // 동적 신청서 폼 설정 로드 및 입력 데이터 핸들러
   useEffect(() => {
@@ -706,6 +728,234 @@ export default function TenantPortalPage({
       <meta name="description" content="제20회 이순신장군배 전국윈드서핑대회 공식 홈페이지" />
       <meta property="og:image" content="https://gentrophyos.vercel.app/images/logo_new.png" />
       
+      {/* ── 상단 긴급 공지 띠 배너 (클릭 시 팝업 다시 열기) ── */}
+      <div
+        onClick={() => setIsNoticePopupOpen(true)}
+        style={{
+          background: 'linear-gradient(90deg, #dc2626 0%, #b91c1c 100%)',
+          color: 'white',
+          padding: '10px 16px',
+          textAlign: 'center',
+          fontSize: '0.85rem',
+          fontWeight: '700',
+          cursor: 'pointer',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: '8px',
+          boxShadow: '0 2px 6px rgba(220,38,38,0.25)',
+          position: 'sticky',
+          top: 0,
+          zIndex: 60
+        }}
+      >
+        <span>📢 [긴급공지] 거제·통영 지역 기록적 폭우 피해로 인한 대회 잠정 연기 안내문</span>
+        <span style={{ fontSize: '0.75rem', background: 'rgba(255,255,255,0.25)', padding: '2px 8px', borderRadius: '12px', whiteSpace: 'nowrap' }}>
+          자세히 보기 ➔
+        </span>
+      </div>
+
+      {/* ── 폭우 피해 위로 및 대회 잠정 연기 안내 팝업 모달 ── */}
+      {isNoticePopupOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+            zIndex: 99999,
+            animation: 'fadeIn 0.25s ease-out'
+          }}
+          onClick={() => handleCloseNoticePopup()}
+        >
+          <div
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '20px',
+              maxWidth: '560px',
+              width: '100%',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              maxHeight: '90vh',
+              animation: 'scaleUp 0.25s ease-out',
+              color: '#1e293b'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 모달 헤더 */}
+            <div
+              style={{
+                background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+                color: 'white',
+                padding: '24px 24px 20px 24px',
+                position: 'relative'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <span style={{
+                  background: '#ef4444',
+                  color: 'white',
+                  fontSize: '0.75rem',
+                  fontWeight: '800',
+                  padding: '3px 10px',
+                  borderRadius: '20px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}>
+                  📢 긴급 공지
+                </span>
+                <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: '600' }}>
+                  {tenant?.name || '대회본부 공지'}
+                </span>
+              </div>
+              <h2 style={{ fontSize: '1.3rem', fontWeight: '900', margin: 0, lineHeight: '1.4', color: '#f8fafc' }}>
+                기록적 집중호우 피해에 따른<br />
+                <span style={{ color: '#fbbf24' }}>대회 잠정 연기</span> 및 지역민 위로 안내
+              </h2>
+
+              <button
+                type="button"
+                onClick={handleCloseNoticePopup}
+                style={{
+                  position: 'absolute',
+                  top: '18px',
+                  right: '18px',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: 'none',
+                  color: '#e2e8f0',
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                aria-label="닫기"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* 모달 본문 */}
+            <div style={{ padding: '22px 24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              
+              {/* 1. 지역민 위로 메시지 카드 */}
+              <div
+                style={{
+                  background: '#f0fdf4',
+                  border: '1px solid #bbf7d0',
+                  borderRadius: '14px',
+                  padding: '16px 18px',
+                  display: 'flex',
+                  gap: '12px',
+                  alignItems: 'flex-start'
+                }}
+              >
+                <span style={{ fontSize: '1.6rem', lineHeight: '1' }}>🕊️</span>
+                <div>
+                  <h4 style={{ margin: '0 0 6px 0', fontSize: '0.95rem', fontWeight: '800', color: '#166534' }}>
+                    거제·통영 지역 수재민과 주민 여러분께 깊은 위로를 전합니다
+                  </h4>
+                  <p style={{ margin: 0, fontSize: '0.85rem', color: '#15803d', lineHeight: '1.55' }}>
+                    최근 거제 및 통영 지역 일대에 내린 기록적인 극한 폭우로 인해 큰 피해와 상심을 겪으신 지역 주민 여러분과 수재민 분들께 진심 어린 위로와 격려의 마음을 전합니다. 피해를 입으신 모든 분들의 조속한 일상 회복과 안전하고 신속한 피해 복구를 간절히 기원합니다.
+                  </p>
+                </div>
+              </div>
+
+              {/* 2. 대회 연기 결정 배경 및 안내 */}
+              <div style={{ fontSize: '0.9rem', color: '#334155', lineHeight: '1.6', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{
+                  background: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  borderRadius: '12px',
+                  padding: '14px 16px'
+                }}>
+                  <p style={{ margin: 0, fontWeight: '800', color: '#b91c1c', fontSize: '0.92rem' }}>
+                    ⚠️ 대회 잠정 연기 결정 안내
+                  </p>
+                  <p style={{ margin: '6px 0 0 0', fontSize: '0.86rem', color: '#991b1b' }}>
+                    본 대회 주최 및 경기위원회는 <strong>지역사회의 조속한 수해 복구와 안전 지원에 적극 동참</strong>하고, 참가 선수단 및 관계자 여러분의 <strong>안전을 최우선으로 확보</strong>하기 위하여 예정되었던 대회를 부득이 <strong>잠정 연기</strong>하기로 결정하였습니다.
+                  </p>
+                </div>
+
+                <div style={{ background: '#f8fafc', padding: '14px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '0.85rem' }}>
+                  <p style={{ margin: '0 0 6px 0', fontWeight: '800', color: '#0f172a' }}>
+                    📌 향후 일정 및 참가자 안내사항
+                  </p>
+                  <ul style={{ margin: 0, paddingLeft: '18px', color: '#475569', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <li>
+                      <strong>대회 일정 재공지:</strong> 지역 수해 복구 상황 및 경기장 안전 점검 완료 후 추후 공식 홈페이지와 개별 연락망을 통해 새로운 일정을 신속히 공지해 드리겠습니다.
+                    </li>
+                    <li>
+                      <strong>기존 접수 내역 유지:</strong> 기 접수 완료된 참가 신청 내역 및 제반 사항은 변경되는 대회 일정에 그대로 안전하게 승계 적용됩니다.
+                    </li>
+                    <li>
+                      <strong>환불 및 문의:</strong> 변경된 일정에 참가가 어려우신 분들의 환불 절차 및 문의는 대회본부로 연락 주시면 정성껏 안내해 드리겠습니다.
+                    </li>
+                  </ul>
+                </div>
+
+                <p style={{ margin: '4px 0 0 0', fontSize: '0.84rem', color: '#64748b', textAlign: 'center' }}>
+                  대회 참가를 위해 땀 흘려 준비해 주신 선수 여러분과 동호인, 관계자 분들의 너른 양해와 온정 어린 이해를 부탁드립니다.
+                </p>
+              </div>
+
+            </div>
+
+            {/* 모달 푸터 */}
+            <div
+              style={{
+                borderTop: '1px solid #e2e8f0',
+                padding: '14px 20px',
+                background: '#f8fafc',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: '12px'
+              }}
+            >
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.82rem', color: '#64748b', userSelect: 'none' }}>
+                <input
+                  type="checkbox"
+                  checked={hideToday}
+                  onChange={(e) => setHideToday(e.target.checked)}
+                  style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--theme-primary)' }}
+                />
+                오늘 하루 동안 이 창 열지 않기
+              </label>
+
+              <button
+                type="button"
+                onClick={handleCloseNoticePopup}
+                style={{
+                  background: '#0f172a',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '10px',
+                  padding: '9px 20px',
+                  fontSize: '0.88rem',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }}
+              >
+                확인 및 닫기
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
       {/* 1. 상단 화이트 브랜드 헤더 */}
       <header className="site-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -2125,28 +2375,26 @@ export default function TenantPortalPage({
           background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.92) 0%, rgba(10, 15, 29, 0.98) 100%)',
           borderTop: '1px solid rgba(255, 255, 255, 0.1)',
           color: '#cbd5e1',
-          padding: '48px 20px 100px 20px',
+          padding: '36px 20px 90px 20px',
           backdropFilter: 'blur(10px)',
         }}
       >
-        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
           {/* 상단: GenTrophyOS 로고 및 핵심 소개 */}
           <div style={{
             display: 'flex',
             flexWrap: 'wrap',
             justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            gap: '24px',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-            paddingBottom: '28px'
+            alignItems: 'center',
+            gap: '20px',
           }}>
-            <div style={{ maxWidth: '520px' }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+            <div style={{ maxWidth: '560px' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
                 <div style={{ background: 'var(--theme-primary)', padding: '6px', borderRadius: '8px', display: 'flex' }}>
-                  <Layers size={22} color="white" />
+                  <Layers size={20} color="white" />
                 </div>
-                <span style={{ fontSize: '1.35rem', fontWeight: '900', color: 'white', letterSpacing: '-0.5px' }}>
+                <span style={{ fontSize: '1.25rem', fontWeight: '900', color: 'white', letterSpacing: '-0.5px' }}>
                   GenTrophy<span style={{ color: 'var(--theme-primary)' }}>OS</span>
                 </span>
                 <span style={{
@@ -2160,7 +2408,7 @@ export default function TenantPortalPage({
                   스마트 대회 운영 OS
                 </span>
               </div>
-              <p style={{ fontSize: '0.88rem', color: '#94a3b8', lineHeight: '1.6', margin: 0 }}>
+              <p style={{ fontSize: '0.85rem', color: '#94a3b8', lineHeight: '1.5', margin: 0 }}>
                 <strong>GenTrophyOS (젠트로피오에스)</strong>는 스포츠 협회, 연맹 및 대회 주최사를 위한 차세대 B2B 올인원 경기 운영 및 실시간 리더보드 ERP 플랫폼입니다.
               </p>
             </div>
@@ -2205,73 +2453,6 @@ export default function TenantPortalPage({
               >
                 ⚖️ 심판 모바일 제어기
               </a>
-              <a
-                href="/"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  background: 'var(--theme-primary)',
-                  color: 'white',
-                  padding: '8px 14px',
-                  borderRadius: '10px',
-                  fontSize: '0.82rem',
-                  fontWeight: '700',
-                  textDecoration: 'none',
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
-                }}
-              >
-                🌐 GenTrophyOS 플랫폼
-              </a>
-            </div>
-          </div>
-
-          {/* 중단: GenTrophyOS 4대 핵심 서비스 안내 카드 */}
-          <div>
-            <div style={{ fontSize: '0.95rem', fontWeight: '800', color: '#f8fafc', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Sparkles size={16} style={{ color: 'var(--theme-primary)' }} />
-              GenTrophyOS 대회 운영 핵심 시스템 안내
-            </div>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-              gap: '14px'
-            }}>
-              <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '12px', padding: '16px' }}>
-                <div style={{ fontSize: '1rem', fontWeight: '800', color: '#f1f5f9', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span>🏆</span> 실시간 순위 산출 엔진
-                </div>
-                <p style={{ fontSize: '0.8rem', color: '#94a3b8', lineHeight: '1.5', margin: 0 }}>
-                  국제 세일링/스포츠 규정(Low-Point System, 벌점 처리 및 최악 경기 1회 자동 제외 룰)을 실시간으로 자동 연산하여 공식 리더보드에 즉시 표출합니다.
-                </p>
-              </div>
-
-              <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '12px', padding: '16px' }}>
-                <div style={{ fontSize: '1rem', fontWeight: '800', color: '#f1f5f9', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span>📱</span> 심판 모바일 현장 제어기
-                </div>
-                <p style={{ fontSize: '0.8rem', color: '#94a3b8', lineHeight: '1.5', margin: 0 }}>
-                  결승선(Finish Line)에서 심판이 스마트폰으로 피니시 순위와 배번(티넘버), DNS/DNF를 즉시 입력하고 확정할 수 있는 전용 모바일 UI를 제공합니다.
-                </p>
-              </div>
-
-              <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '12px', padding: '16px' }}>
-                <div style={{ fontSize: '1rem', fontWeight: '800', color: '#f1f5f9', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span>📝</span> 동적 폼빌더 & 원스톱 접수
-                </div>
-                <p style={{ fontSize: '0.8rem', color: '#94a3b8', lineHeight: '1.5', margin: 0 }}>
-                  대회별 맞춤형 참가 신청 양식(부서, 티셔츠 사이즈, 서약서 등)을 드래그앤드롭으로 설계하고 입금 확인 및 엑셀 관리를 원스톱으로 처리합니다.
-                </p>
-              </div>
-
-              <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '12px', padding: '16px' }}>
-                <div style={{ fontSize: '1rem', fontWeight: '800', color: '#f1f5f9', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span>🏛️</span> 명예의 전당 & 미디어 아카이브
-                </div>
-                <p style={{ fontSize: '0.8rem', color: '#94a3b8', lineHeight: '1.5', margin: 0 }}>
-                  역대 대회 우승자/입상자 기록의 영구 디지털 보존, 고화질 대회 사진/영상 갤러리 및 개최공시서(Notice of Race) 다운로드 기능을 지원합니다.
-                </p>
-              </div>
             </div>
           </div>
 
@@ -2288,7 +2469,7 @@ export default function TenantPortalPage({
             color: '#64748b'
           }}>
             <div>
-              <span style={{ color: '#94a3b8', fontWeight: '700' }}>{tenant.name}</span> 공식 경기 운영 포털 (채널 도메인: {tenant.subdomain})
+              <span style={{ color: '#94a3b8', fontWeight: '700' }}>{tenant.name}</span> 공식 경기 운영 포털
               <p style={{ margin: '4px 0 0 0' }}>
                 본 대회의 참가 접수, 심판 판정 및 실시간 순위 산출은 <strong>GenTrophyOS</strong> 스마트 대회 운영 엔진에 의해 안전하고 투명하게 구동됩니다.
               </p>
