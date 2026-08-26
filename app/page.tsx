@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Award, Layers, PlusCircle, CheckCircle2, ChevronRight, Settings, Users, ShieldAlert } from 'lucide-react';
+import { Award, Layers, PlusCircle, CheckCircle2, ChevronRight, Settings, Users, ShieldAlert, Sparkles } from 'lucide-react';
 
 interface Tenant {
   id: string;
@@ -346,8 +346,101 @@ export default function PlatformMainPage() {
         </section>
       </div>
 
-      <footer style={{ marginTop: '80px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-        <p>© 2026 GenTrophyOS. All rights reserved.</p>
+      {/* ── GenTrophyOS 플랫폼 아키텍처 & 기능 소개 섹션 ── */}
+      <section style={{ marginTop: '80px' }} className="animate-fade-in">
+        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            background: 'rgba(99, 102, 241, 0.1)',
+            border: '1px solid rgba(99, 102, 241, 0.2)',
+            padding: '6px 14px',
+            borderRadius: '20px',
+            color: 'var(--theme-primary)',
+            fontSize: '0.85rem',
+            fontWeight: '700',
+            marginBottom: '12px'
+          }}>
+            <Sparkles size={16} /> All-in-One Tournament Operating System
+          </div>
+          <h2 style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '12px' }}>
+            왜 스포츠 대회 운영에 <span className="gradient-text">GenTrophyOS</span>인가요?
+          </h2>
+          <p style={{ color: 'var(--text-muted)', maxWidth: '650px', margin: '0 auto', fontSize: '0.95rem', lineHeight: '1.6' }}>
+            복잡한 서류 작업, 엑셀 수기 계산, 지연되는 심판 집계는 이제 그만. 접수부터 현장 모바일 판정, 실시간 전광판 리더보드까지 원스톱으로 해결합니다.
+          </p>
+        </div>
+
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+          gap: '20px'
+        }}>
+          <div className="glass-panel" style={{ padding: '24px' }}>
+            <div style={{ fontSize: '2rem', marginBottom: '12px' }}>⚡</div>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: '700', marginBottom: '8px' }}>1분 초고속 멀티테넌트 배포</h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.6', margin: 0 }}>
+              대회명과 도메인만 입력하면 독립된 대회 공식 포털, 주최자 어드민, 심판 제어기가 1초 만에 즉시 발급됩니다.
+            </p>
+          </div>
+
+          <div className="glass-panel" style={{ padding: '24px' }}>
+            <div style={{ fontSize: '2rem', marginBottom: '12px' }}>📱</div>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: '700', marginBottom: '8px' }}>심판 모바일 현장 제어기</h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.6', margin: 0 }}>
+              심판이 해상/피니시 라인에서 스마트폰으로 배번을 순서대로 터치 입력하면 실시간으로 라운드별 점수가 기록됩니다.
+            </p>
+          </div>
+
+          <div className="glass-panel" style={{ padding: '24px' }}>
+            <div style={{ fontSize: '2rem', marginBottom: '12px' }}>🏆</div>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: '700', marginBottom: '8px' }}>국제 룰 자동 순위 연산 엔진</h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.6', margin: 0 }}>
+              Low-Point System, DNS/DNF 벌점, 4경기 이상 최악 경기 1회 드롭, 동점자 처리 규정을 100% 자동 계산합니다.
+            </p>
+          </div>
+
+          <div className="glass-panel" style={{ padding: '24px' }}>
+            <div style={{ fontSize: '2rem', marginBottom: '12px' }}>🏛️</div>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: '700', marginBottom: '8px' }}>영구 보존 아카이브 & 미디어</h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.6', margin: 0 }}>
+              역대 대회 우승자 명예의 전당, 사진/영상 갤러리, 공식 공시서(Notice of Race)가 영구적으로 보존됩니다.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── 플랫폼 푸터 ── */}
+      <footer style={{
+        marginTop: '100px',
+        borderTop: '1px solid var(--border-color)',
+        paddingTop: '40px',
+        paddingBottom: '60px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '20px',
+        color: 'var(--text-muted)',
+        fontSize: '0.85rem'
+      }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Layers size={24} style={{ color: 'var(--theme-primary)' }} />
+            <span style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-main)' }}>GenTrophyOS</span>
+            <span style={{ fontSize: '0.75rem', background: 'rgba(255,255,255,0.06)', padding: '2px 8px', borderRadius: '8px' }}>v2.0 ERP Platform</span>
+          </div>
+          <div style={{ display: 'flex', gap: '16px' }}>
+            <a href="#create-section" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>대회 채널 개설</a>
+            <a href="#channel-list" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>진행중인 대회 목록</a>
+            <a href="/tenant/windsurfing" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>데모 대회 체험</a>
+          </div>
+        </div>
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '16px', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '10px' }}>
+          <p style={{ margin: 0 }}>
+            GenTrophyOS는 스포츠 경기 단체, 연맹 및 협회의 디지털 트랜스포메이션을 선도하는 차세대 대회 운영 OS입니다.
+          </p>
+          <p style={{ margin: 0 }}>© 2026 GenTrophyOS. All rights reserved.</p>
+        </div>
       </footer>
     </div>
   );

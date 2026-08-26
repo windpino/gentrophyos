@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, use } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Award, Calendar, Layers, FileText, CheckCircle2, UserPlus, RefreshCw, Archive, Search, Compass, MapPin, Phone } from 'lucide-react';
+import { Award, Calendar, Layers, FileText, CheckCircle2, UserPlus, RefreshCw, Archive, Search, Compass, MapPin, Phone, Sparkles, Trophy, Smartphone, ShieldCheck } from 'lucide-react';
 
 interface TenantData {
   id: string;
@@ -2117,6 +2117,189 @@ export default function TenantPortalPage({
         </main>
       </div>
       </div>
+
+      {/* ── GenTrophyOS 플랫폼 소개 및 안내 푸터 ── */}
+      <footer
+        style={{
+          marginTop: '60px',
+          background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.92) 0%, rgba(10, 15, 29, 0.98) 100%)',
+          borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+          color: '#cbd5e1',
+          padding: '48px 20px 100px 20px',
+          backdropFilter: 'blur(10px)',
+        }}
+      >
+        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+          
+          {/* 상단: GenTrophyOS 로고 및 핵심 소개 */}
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            gap: '24px',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+            paddingBottom: '28px'
+          }}>
+            <div style={{ maxWidth: '520px' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                <div style={{ background: 'var(--theme-primary)', padding: '6px', borderRadius: '8px', display: 'flex' }}>
+                  <Layers size={22} color="white" />
+                </div>
+                <span style={{ fontSize: '1.35rem', fontWeight: '900', color: 'white', letterSpacing: '-0.5px' }}>
+                  GenTrophy<span style={{ color: 'var(--theme-primary)' }}>OS</span>
+                </span>
+                <span style={{
+                  fontSize: '0.7rem',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  color: '#94a3b8',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  fontWeight: '600'
+                }}>
+                  스마트 대회 운영 OS
+                </span>
+              </div>
+              <p style={{ fontSize: '0.88rem', color: '#94a3b8', lineHeight: '1.6', margin: 0 }}>
+                <strong>GenTrophyOS (젠트로피오에스)</strong>는 스포츠 협회, 연맹 및 대회 주최사를 위한 차세대 B2B 올인원 경기 운영 및 실시간 리더보드 ERP 플랫폼입니다.
+              </p>
+            </div>
+
+            {/* 대회 운영 바로가기 버튼 */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+              <a
+                href={typeof window !== 'undefined' && window.location.pathname.startsWith('/tenant/') ? `/tenant/${subdomain}/host` : '/host'}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  color: '#f1f5f9',
+                  padding: '8px 14px',
+                  borderRadius: '10px',
+                  fontSize: '0.82rem',
+                  fontWeight: '700',
+                  textDecoration: 'none',
+                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  transition: 'all 0.2s'
+                }}
+              >
+                🔐 주최자 관리 콘솔
+              </a>
+              <a
+                href={typeof window !== 'undefined' && window.location.pathname.startsWith('/tenant/') ? `/tenant/${subdomain}/referee` : '/referee'}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  color: '#f1f5f9',
+                  padding: '8px 14px',
+                  borderRadius: '10px',
+                  fontSize: '0.82rem',
+                  fontWeight: '700',
+                  textDecoration: 'none',
+                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  transition: 'all 0.2s'
+                }}
+              >
+                ⚖️ 심판 모바일 제어기
+              </a>
+              <a
+                href="/"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: 'var(--theme-primary)',
+                  color: 'white',
+                  padding: '8px 14px',
+                  borderRadius: '10px',
+                  fontSize: '0.82rem',
+                  fontWeight: '700',
+                  textDecoration: 'none',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
+                }}
+              >
+                🌐 GenTrophyOS 플랫폼
+              </a>
+            </div>
+          </div>
+
+          {/* 중단: GenTrophyOS 4대 핵심 서비스 안내 카드 */}
+          <div>
+            <div style={{ fontSize: '0.95rem', fontWeight: '800', color: '#f8fafc', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Sparkles size={16} style={{ color: 'var(--theme-primary)' }} />
+              GenTrophyOS 대회 운영 핵심 시스템 안내
+            </div>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+              gap: '14px'
+            }}>
+              <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '12px', padding: '16px' }}>
+                <div style={{ fontSize: '1rem', fontWeight: '800', color: '#f1f5f9', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>🏆</span> 실시간 순위 산출 엔진
+                </div>
+                <p style={{ fontSize: '0.8rem', color: '#94a3b8', lineHeight: '1.5', margin: 0 }}>
+                  국제 세일링/스포츠 규정(Low-Point System, 벌점 처리 및 최악 경기 1회 자동 제외 룰)을 실시간으로 자동 연산하여 공식 리더보드에 즉시 표출합니다.
+                </p>
+              </div>
+
+              <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '12px', padding: '16px' }}>
+                <div style={{ fontSize: '1rem', fontWeight: '800', color: '#f1f5f9', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>📱</span> 심판 모바일 현장 제어기
+                </div>
+                <p style={{ fontSize: '0.8rem', color: '#94a3b8', lineHeight: '1.5', margin: 0 }}>
+                  결승선(Finish Line)에서 심판이 스마트폰으로 피니시 순위와 배번(티넘버), DNS/DNF를 즉시 입력하고 확정할 수 있는 전용 모바일 UI를 제공합니다.
+                </p>
+              </div>
+
+              <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '12px', padding: '16px' }}>
+                <div style={{ fontSize: '1rem', fontWeight: '800', color: '#f1f5f9', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>📝</span> 동적 폼빌더 & 원스톱 접수
+                </div>
+                <p style={{ fontSize: '0.8rem', color: '#94a3b8', lineHeight: '1.5', margin: 0 }}>
+                  대회별 맞춤형 참가 신청 양식(부서, 티셔츠 사이즈, 서약서 등)을 드래그앤드롭으로 설계하고 입금 확인 및 엑셀 관리를 원스톱으로 처리합니다.
+                </p>
+              </div>
+
+              <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '12px', padding: '16px' }}>
+                <div style={{ fontSize: '1rem', fontWeight: '800', color: '#f1f5f9', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>🏛️</span> 명예의 전당 & 미디어 아카이브
+                </div>
+                <p style={{ fontSize: '0.8rem', color: '#94a3b8', lineHeight: '1.5', margin: 0 }}>
+                  역대 대회 우승자/입상자 기록의 영구 디지털 보존, 고화질 대회 사진/영상 갤러리 및 개최공시서(Notice of Race) 다운로드 기능을 지원합니다.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* 하단: 주최 채널 안내 및 카피라이트 */}
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '16px',
+            borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+            paddingTop: '20px',
+            fontSize: '0.78rem',
+            color: '#64748b'
+          }}>
+            <div>
+              <span style={{ color: '#94a3b8', fontWeight: '700' }}>{tenant.name}</span> 공식 경기 운영 포털 (채널 도메인: {tenant.subdomain})
+              <p style={{ margin: '4px 0 0 0' }}>
+                본 대회의 참가 접수, 심판 판정 및 실시간 순위 산출은 <strong>GenTrophyOS</strong> 스마트 대회 운영 엔진에 의해 안전하고 투명하게 구동됩니다.
+              </p>
+            </div>
+            <div>
+              <p style={{ margin: 0 }}>© 2026 GenTrophyOS Platform. All rights reserved.</p>
+            </div>
+          </div>
+
+        </div>
+      </footer>
 
       {/* ── 모바일 전용 하단 탭바 ── */}
       <div className="mobile-tabbar">
