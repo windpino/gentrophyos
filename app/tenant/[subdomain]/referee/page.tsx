@@ -1,7 +1,39 @@
 'use client';
 
 import React, { useState, useEffect, use } from 'react';
-import { CheckCircle2, User, RefreshCw, AlertTriangle, ListOrdered } from 'lucide-react';
+import {
+  CheckCircle2,
+  User,
+  RefreshCw,
+  AlertTriangle,
+  ListOrdered,
+  Home,
+  ChevronLeft,
+  ChevronRight,
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  X,
+  Trophy,
+  RotateCcw,
+  Sparkles,
+  Search,
+  ExternalLink,
+  Edit2,
+  Medal,
+  Flag
+} from 'lucide-react';
+
+type RoundKey = 'r1' | 'r2' | 'r3' | 'r4' | 'r5' | 'r6';
+
+const ROUND_CONFIG: { key: RoundKey; label: string; short: string }[] = [
+  { key: 'r1', label: '1라운드 (1R)', short: '1R' },
+  { key: 'r2', label: '2라운드 (2R)', short: '2R' },
+  { key: 'r3', label: '3라운드 (3R)', short: '3R' },
+  { key: 'r4', label: '4라운드 (4R)', short: '4R' },
+  { key: 'r5', label: '5라운드 (5R)', short: '5R' },
+  { key: 'r6', label: '6라운드 (6R)', short: '6R' },
+];
 
 export default function RefereeMobilePage({
   params,
@@ -10,17 +42,28 @@ export default function RefereeMobilePage({
 }) {
   const { subdomain } = use(params);
 
-  // 1. 상태 정의
+  // 1. 기본 상태
   const [tenant, setTenant] = useState<any>(null);
   const [activeTournament, setActiveTournament] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  // 모드 분리 상태: 'input' (순위 입력란) vs 'confirm' (순위 확정 및 검토란)
+  const [activeMode, setActiveMode] = useState<'input' | 'confirm'>('input');
 
   // 참가자 목록 및 종목 선택
   const [rawRegistrations, setRawRegistrations] = useState<any[]>([]);
   const [participants, setParticipants] = useState<any[]>([]);
   const [activeDivisionTab, setActiveDivisionTab] = useState<string>('윈드포일 (남자부)');
   const [formFields, setFormFields] = useState<any[]>([]);
-  const [activeCell, setActiveCell] = useState<{ id: string, roundKey: 'r1' | 'r2' | 'r3' | 'r4' | 'r5' | 'r6' } | null>(null);
+
+  // 순위 입력란 전용 상태
+  const [selectedRound, setSelectedRound] = useState<RoundKey>('r1');
+  const [currentRankNum, setCurrentRankNum] = useState<number>(1);
+  const [bibInput, setBibInput] = useState<string>('');
+  const [inputFeedback, setInputFeedback] = useState<{ text: string; isError: boolean } | null>(null);
+
+  // 확정란 셀 선택 상태 (모바일 키패드/DNS/DNF 바용)
+  const [activeCell, setActiveCell] = useState<{ id: string; roundKey: RoundKey } | null>(null);
 
   // 인증 게이트
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -55,7 +98,6 @@ export default function RefereeMobilePage({
 
   const fetchInitialData = async () => {
     try {
-      // Fetch tenant info and form configs in parallel
       const [tenantRes, formRes] = await Promise.all([
         fetch(`/api/tenant/${subdomain}`),
         fetch(`/api/tenant/${subdomain}/form-configs`)
@@ -159,7 +201,7 @@ export default function RefereeMobilePage({
           }
           return player;
         });
-        // Sort mapped list by rank if rank is a number
+
         mapped.sort((a, b) => {
           if (a.rank === '-' && b.rank !== '-') return 1;
           if (a.rank !== '-' && b.rank === '-') return -1;
@@ -180,11 +222,16 @@ export default function RefereeMobilePage({
     if (activeTournament && rawRegistrations.length > 0) {
       const filteredBase = rawRegistrations.filter(r => r.division === activeDivisionTab);
       loadLeaderboardForDivision(activeTournament.id, activeDivisionTab, filteredBase);
+      // Reset input pointers
+      setCurrentRankNum(1);
+      setBibInput('');
+      setInputFeedback(null);
     } else {
       setParticipants([]);
     }
   }, [activeDivisionTab, rawRegistrations, activeTournament]);
 
+  // 점수 및 총점 계산
   const calculateTotal = (row: any, totalParticipants: number) => {
     const rounds = [row.r1, row.r2, row.r3, row.r4, row.r5, row.r6];
     const validScores = rounds.map(r => {
@@ -204,12 +251,13 @@ export default function RefereeMobilePage({
     return sum;
   };
 
-  const handleScoreInput = (id: string, roundKey: 'r1' | 'r2' | 'r3' | 'r4' | 'r5' | 'r6', valString: string) => {
+  // 개별 셀 점수 직접 입력 핸들러 (확정란 그리드 수정용)
+  const handleScoreInput = (id: string, roundKey: RoundKey, valString: string) => {
     let val: any = valString.trim().toUpperCase();
     if (val === '') {
       val = null;
     } else if (val === 'DNS' || val === 'DNF') {
-      // Keep as string
+      // DNS / DNF 유지
     } else {
       const num = Number(val);
       val = isNaN(num) || num <= 0 ? null : num;
@@ -227,6 +275,95 @@ export default function RefereeMobilePage({
     );
   };
 
+  // ── [순위 입력란 전용 로직] ──
+  // 특정 선수에게 특정 라운드의 순위(점수) 부여
+  const assignRankToPlayer = (playerId: string, roundKey: RoundKey, scoreOrRank: number | 'DNS' | 'DNF' | null) => {
+    setParticipants(prev =>
+      prev.map(p => {
+        if (p.id === playerId) {
+          const updated = { ...p, [roundKey]: scoreOrRank };
+          updated.total = calculateTotal(updated, prev.length);
+          return updated;
+        }
+        // 만약 다른 선수가 이미 해당 순위 번호를 가지고 있었다면 해제 (중복 방지)
+        if (typeof scoreOrRank === 'number' && p[roundKey] === scoreOrRank) {
+          const updated = { ...p, [roundKey]: null };
+          updated.total = calculateTotal(updated, prev.length);
+          return updated;
+        }
+        return p;
+      })
+    );
+  };
+
+  // 배번(티넘버)으로 현재 순위 배정 후 다음 순위로 자동 이동
+  const handleAssignBibSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const cleanBib = bibInput.trim();
+    if (!cleanBib) {
+      setInputFeedback({ text: '배번(티넘버)을 입력해주세요.', isError: true });
+      return;
+    }
+
+    const matched = participants.find(
+      p => (p.bibNumber && p.bibNumber.trim().toLowerCase() === cleanBib.toLowerCase()) ||
+           p.name.trim() === cleanBib
+    );
+
+    if (matched) {
+      assignRankToPlayer(matched.id, selectedRound, currentRankNum);
+      setInputFeedback({
+        text: `✅ ${currentRankNum}위에 '${matched.name}' 선수(배번 ${matched.bibNumber || cleanBib})가 등록되었습니다!`,
+        isError: false,
+      });
+      setBibInput('');
+
+      // 다음 순위 칸으로 자동 전진
+      if (currentRankNum < participants.length) {
+        setCurrentRankNum(prev => prev + 1);
+      }
+    } else {
+      setInputFeedback({
+        text: `⚠️ 배번 '${cleanBib}'에 일치하는 선수가 없습니다. 등록된 배번인지 확인해주세요.`,
+        isError: true,
+      });
+    }
+  };
+
+  // 미배정 선수 칩 터치 시 즉시 현재 순위 배정 후 다음 순위로 전진
+  const handleQuickAssignPlayer = (player: any) => {
+    assignRankToPlayer(player.id, selectedRound, currentRankNum);
+    setInputFeedback({
+      text: `✅ ${currentRankNum}위에 '${player.name}' 선수가 등록되었습니다!`,
+      isError: false,
+    });
+    setBibInput('');
+    if (currentRankNum < participants.length) {
+      setCurrentRankNum(prev => prev + 1);
+    }
+  };
+
+  // 특정 순위 비우기 (삭제)
+  const handleClearCurrentRank = (rankNum: number) => {
+    const holder = participants.find(p => p[selectedRound] === rankNum);
+    if (holder) {
+      assignRankToPlayer(holder.id, selectedRound, null);
+      setInputFeedback({ text: `${rankNum}위 배정이 취소되었습니다.`, isError: false });
+    }
+  };
+
+  // 앞/뒤 버튼으로 순위 칸 이동
+  const handlePrevRank = () => {
+    setCurrentRankNum(prev => Math.max(1, prev - 1));
+    setInputFeedback(null);
+  };
+
+  const handleNextRank = () => {
+    setCurrentRankNum(prev => Math.min(Math.max(1, participants.length), prev + 1));
+    setInputFeedback(null);
+  };
+
+  // 순위 자동 정렬
   const handleSortRankings = () => {
     const sorted = [...participants].sort((a, b) => {
       const aHasScores = [a.r1, a.r2, a.r3, a.r4, a.r5, a.r6].some(r => r !== null);
@@ -244,9 +381,10 @@ export default function RefereeMobilePage({
     }));
 
     setParticipants(ranked);
-    alert('순위 정렬 및 자동 순위 부여가 완료되었습니다! "순위 최종 확정" 버튼을 눌러 실시간 리더보드에 반영해주세요.');
+    alert('순위 정렬 및 공식 순위 부여가 완료되었습니다! "순위 최종 확정" 버튼을 눌러 실시간 리더보드에 반영해주세요.');
   };
 
+  // 최종 리더보드 서버 저장 (확정)
   const handleConfirmLeaderboard = async () => {
     setSubmitting(true);
     try {
@@ -285,7 +423,7 @@ export default function RefereeMobilePage({
           textAlign: 'center', backdropFilter: 'blur(20px)',
         }}>
           <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>⚖️</div>
-          <h1 style={{ fontSize: '1.4rem', fontWeight: '900', color: 'white', marginBottom: '6px' }}>심판 입력기</h1>
+          <h1 style={{ fontSize: '1.4rem', fontWeight: '900', color: 'white', marginBottom: '6px' }}>심판 모바일 제어기</h1>
           <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem', marginBottom: '28px' }}>
             접근 권한 확인이 필요합니다
           </p>
@@ -318,6 +456,26 @@ export default function RefereeMobilePage({
             >
               입력기 잠금 해제
             </button>
+            <a
+              href={typeof window !== 'undefined' && window.location.pathname.startsWith('/tenant/') ? `/tenant/${subdomain}` : '/'}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                color: 'rgba(255,255,255,0.7)',
+                fontSize: '0.85rem',
+                textDecoration: 'none',
+                marginTop: '6px',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                transition: 'all 0.2s',
+              }}
+            >
+              <Home size={15} /> 대회 홈페이지로 이동
+            </a>
           </form>
         </div>
       </div>
@@ -336,6 +494,23 @@ export default function RefereeMobilePage({
     return (
       <div style={{ padding: '80px 20px', textAlign: 'center' }}>
         <h2 style={{ fontSize: '2rem', color: '#EF4444' }}>관리 대상 채널 또는 진행 중인 대회가 없습니다.</h2>
+        <a
+          href={typeof window !== 'undefined' && window.location.pathname.startsWith('/tenant/') ? `/tenant/${subdomain}` : '/'}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            marginTop: '20px',
+            padding: '10px 18px',
+            borderRadius: '8px',
+            background: '#3b82f6',
+            color: 'white',
+            textDecoration: 'none',
+            fontWeight: '600'
+          }}
+        >
+          <Home size={16} /> 대회 홈페이지로 이동
+        </a>
       </div>
     );
   }
@@ -346,37 +521,163 @@ export default function RefereeMobilePage({
     '--theme-primary-rgb': '99, 102, 241',
   } as React.CSSProperties;
 
+  // 종목 옵션 목록 추출
+  const divisionField = formFields.find((f: any) => f.id === 'division');
+  const configuredDivisions = divisionField?.options || [];
+  const registeredDivisions = Array.from(new Set(rawRegistrations.map((r: any) => r.division).filter(Boolean))) as string[];
+  const divisionTabs = Array.from(new Set([...configuredDivisions, ...registeredDivisions]));
+  if (divisionTabs.length === 0) {
+    divisionTabs.push(
+      '윈드포일 (남자부)',
+      '윈드포일 (여자부)',
+      '윙포일 (남자부)',
+      '윙포일 (여자부)',
+      '혼합오픈 (남자부)',
+      '혼합오픈 (여자부)',
+      '펀엔포뮬러 (남자부)',
+      '펀엔포뮬러 (여자부)'
+    );
+  }
+
+  // 선택된 라운드 기준 참가자 데이터 집계
+  const currentRankPlayer = participants.find(p => p[selectedRound] === currentRankNum);
+  const matchedTypingPlayer = bibInput.trim()
+    ? participants.find(
+        p => (p.bibNumber && p.bibNumber.trim().toLowerCase() === bibInput.trim().toLowerCase()) ||
+             p.name.trim() === bibInput.trim()
+      )
+    : null;
+
+  const unassignedPlayers = participants.filter(
+    p => p[selectedRound] === null || p[selectedRound] === undefined || p[selectedRound] === ''
+  );
+  const dnsDnfPlayers = participants.filter(
+    p => p[selectedRound] === 'DNS' || p[selectedRound] === 'DNF'
+  );
+
   return (
     <div style={themeStyles} className="animate-fade-in">
-      {/* 심판 전용 헤더 */}
+      {/* ── 심판 전용 헤더 ── */}
       <header
         style={{
-          background: 'rgba(0,0,0,0.5)',
-          padding: '16px 20px',
-          borderBottom: '1px solid var(--border-color)',
+          background: 'rgba(15, 23, 42, 0.95)',
+          padding: '14px 20px',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
           display: 'flex',
+          justifyContent: 'space-between',
           alignItems: 'center',
-          gap: '12px'
+          gap: '12px',
+          position: 'sticky',
+          top: 0,
+          zIndex: 50,
+          backdropFilter: 'blur(10px)',
+          color: 'white'
         }}
       >
-        <User size={24} style={{ color: 'var(--theme-primary)' }} />
-        <div>
-          <h1 style={{ fontSize: '1.2rem', fontWeight: '800' }}>심판 모바일 제어기 (Referee UI)</h1>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{tenant.name}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ background: 'var(--theme-primary)', padding: '6px', borderRadius: '8px', display: 'flex' }}>
+            <Trophy size={18} color="white" />
+          </div>
+          <div>
+            <h1 style={{ fontSize: '1.05rem', fontWeight: '800', margin: 0 }}>심판 모바일 제어기</h1>
+            <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)' }}>{tenant.name}</span>
+          </div>
         </div>
+        <a
+          href={typeof window !== 'undefined' && window.location.pathname.startsWith('/tenant/') ? `/tenant/${subdomain}` : '/'}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: 'white',
+            color: '#1e293b',
+            padding: '7px 14px',
+            borderRadius: '8px',
+            fontSize: '0.85rem',
+            fontWeight: '700',
+            textDecoration: 'none',
+            border: '1px solid rgba(0, 0, 0, 0.1)',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            whiteSpace: 'nowrap',
+            cursor: 'pointer'
+          }}
+        >
+          <Home size={15} /> 홈페이지
+        </a>
       </header>
 
-      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '16px' }}>
-        <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '20px', background: 'white', color: 'black', padding: '20px' }}>
+      <div style={{ maxWidth: '850px', margin: '0 auto', padding: '16px 12px 60px 12px' }}>
+        
+        {/* ── [1] 상단 모드 분리 탭 (순위 입력란 vs 순위 확정란) ── */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          background: '#e2e8f0',
+          padding: '4px',
+          borderRadius: '14px',
+          marginBottom: '16px',
+          gap: '4px'
+        }}>
+          <button
+            type="button"
+            onClick={() => setActiveMode('input')}
+            style={{
+              padding: '12px 8px',
+              borderRadius: '10px',
+              border: 'none',
+              fontWeight: '800',
+              fontSize: '0.95rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              transition: 'all 0.2s',
+              background: activeMode === 'input' ? 'white' : 'transparent',
+              color: activeMode === 'input' ? '#0f172a' : '#64748b',
+              boxShadow: activeMode === 'input' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
+            }}
+          >
+            <Flag size={18} color={activeMode === 'input' ? '#3b82f6' : '#64748b'} />
+            🏁 1. 순위 입력란
+          </button>
           
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: '800', margin: 0 }}>실시간 순위 입력 및 확정</h2>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{activeDivisionTab} 종목</span>
-          </div>
+          <button
+            type="button"
+            onClick={() => setActiveMode('confirm')}
+            style={{
+              padding: '12px 8px',
+              borderRadius: '10px',
+              border: 'none',
+              fontWeight: '800',
+              fontSize: '0.95rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              transition: 'all 0.2s',
+              background: activeMode === 'confirm' ? 'white' : 'transparent',
+              color: activeMode === 'confirm' ? '#0f172a' : '#64748b',
+              boxShadow: activeMode === 'confirm' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
+            }}
+          >
+            <CheckCircle2 size={18} color={activeMode === 'confirm' ? '#10b981' : '#64748b'} />
+            📋 2. 순위 확정란
+          </button>
+        </div>
 
-          {/* 종목 선택 드롭다운 메뉴 */}
+        {/* ── [2] 공통 종목(부서) 선택 카테고리 ── */}
+        <div className="glass-panel" style={{ background: 'white', color: 'black', padding: '16px', borderRadius: '16px', marginBottom: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ fontSize: '0.85rem', fontWeight: '800', color: 'var(--text-muted)' }}>참가 종목 선택</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label style={{ fontSize: '0.85rem', fontWeight: '800', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                🏆 참가 종목(부서) 선택
+              </label>
+              <span style={{ fontSize: '0.8rem', color: 'var(--theme-primary)', fontWeight: '700' }}>
+                승인 선수: {participants.length}명
+              </span>
+            </div>
             <select
               value={activeDivisionTab}
               onChange={(e) => setActiveDivisionTab(e.target.value)}
@@ -384,152 +685,644 @@ export default function RefereeMobilePage({
                 width: '100%',
                 padding: '12px 16px',
                 borderRadius: '12px',
-                border: '1px solid var(--border-color)',
-                background: 'white',
-                color: 'black',
-                fontWeight: '700',
+                border: '2px solid #e2e8f0',
+                background: '#f8fafc',
+                color: '#0f172a',
+                fontWeight: '800',
                 outline: 'none',
-                fontSize: '0.95rem',
+                fontSize: '1rem',
                 cursor: 'pointer',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
               }}
             >
-              {(() => {
-                const divisionField = formFields.find((f: any) => f.id === 'division');
-                const configuredDivisions = divisionField?.options || [];
-                const registeredDivisions = Array.from(new Set(rawRegistrations.map((r: any) => r.division).filter(Boolean))) as string[];
-                const divisionTabs = Array.from(new Set([...configuredDivisions, ...registeredDivisions]));
-                if (divisionTabs.length === 0) {
-                  divisionTabs.push(
-                    '윈드포일 (남자부)',
-                    '윈드포일 (여자부)',
-                    '윙포일 (남자부)',
-                    '윙포일 (여자부)',
-                    '혼합오픈 (남자부)',
-                    '혼합오픈 (여자부)',
-                    '펀엔포뮬러 (남자부)',
-                    '펀엔포뮬러 (여자부)'
-                  );
-                }
-                return divisionTabs.map((div: string) => (
-                  <option key={div} value={div}>
-                    {div}
-                  </option>
-                ));
-              })()}
+              {divisionTabs.map((div: string) => (
+                <option key={div} value={div}>
+                  {div}
+                </option>
+              ))}
             </select>
           </div>
+        </div>
 
-          {/* 액션 버튼 */}
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button
-              onClick={handleSortRankings}
-              className="btn-secondary"
-              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', fontSize: '0.9rem', fontWeight: '700', cursor: 'pointer' }}
-            >
-              <ListOrdered size={16} /> 순위 자동 정렬
-            </button>
-            <button
-              onClick={handleConfirmLeaderboard}
-              disabled={submitting}
-              className="btn-primary"
-              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', fontSize: '0.9rem', fontWeight: '700', cursor: 'pointer' }}
-            >
-              <CheckCircle2 size={16} /> 순위 최종 확정
-            </button>
-          </div>
+        {/* ═══════════════════════════════════════════════════════════
+            MODE 1: 순위 입력란 (종목 & 라운드 선택 및 1위부터 순서대로 배번 입력)
+            ═══════════════════════════════════════════════════════════ */}
+        {activeMode === 'input' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            
+            {/* 라운드 선택 카테고리 탭 */}
+            <div className="glass-panel" style={{ background: 'white', color: 'black', padding: '16px', borderRadius: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: '800', color: '#475569' }}>
+                  🎯 경기 라운드 선택
+                </span>
+                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                  입력할 라운드를 터치하세요
+                </span>
+              </div>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(6, 1fr)',
+                gap: '6px',
+              }}>
+                {ROUND_CONFIG.map(r => {
+                  const isSelected = selectedRound === r.key;
+                  const filledCount = participants.filter(p => p[r.key] !== null && p[r.key] !== undefined && p[r.key] !== '').length;
+                  return (
+                    <button
+                      key={r.key}
+                      type="button"
+                      onClick={() => {
+                        setSelectedRound(r.key);
+                        setInputFeedback(null);
+                        setBibInput('');
+                      }}
+                      style={{
+                        padding: '10px 4px',
+                        borderRadius: '10px',
+                        border: isSelected ? '2px solid var(--theme-primary)' : '1px solid #e2e8f0',
+                        background: isSelected ? 'var(--theme-primary)' : '#f8fafc',
+                        color: isSelected ? 'white' : '#334155',
+                        fontWeight: '800',
+                        fontSize: '0.85rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '2px',
+                        transition: 'all 0.15s',
+                        boxShadow: isSelected ? '0 2px 8px rgba(99,102,241,0.3)' : 'none'
+                      }}
+                    >
+                      <span>{r.short}</span>
+                      <span style={{
+                        fontSize: '0.65rem',
+                        opacity: isSelected ? 0.9 : 0.6,
+                        fontWeight: '600'
+                      }}>
+                        {filledCount}/{participants.length}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
-          {/* 테이블 */}
-          <div style={{ overflowX: 'auto', width: '100%' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-              <thead>
-                <tr style={{ background: '#f8fafc', borderBottom: '2px solid var(--border-color)' }}>
-                  <th style={{ padding: '8px', width: '45px', textAlign: 'center' }}>순위</th>
-                  <th style={{ padding: '8px', minWidth: '80px', textAlign: 'left' }}>이름</th>
-                  <th style={{ padding: '8px', width: '60px', textAlign: 'center' }}>배번</th>
-                  <th style={{ padding: '8px', width: '70px', textAlign: 'center' }}>생년월일</th>
-                  {['1R', '2R', '3R', '4R', '5R', '6R'].map(r => (
-                    <th key={r} style={{ padding: '4px', width: '50px', textAlign: 'center' }}>{r}</th>
-                  ))}
-                  <th style={{ padding: '8px', width: '60px', textAlign: 'center', color: 'var(--theme-primary)' }}>총점</th>
-                </tr>
-              </thead>
-              <tbody>
-                {participants.length === 0 ? (
-                  <tr>
-                    <td colSpan={11} style={{ padding: '30px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                      해당 종목에 승인된 신청자가 없거나 데이터를 불러올 수 없습니다.
-                    </td>
-                  </tr>
-                ) : (
-                  participants.map((p, idx) => {
-                    const rounds = ['r1', 'r2', 'r3', 'r4', 'r5', 'r6'] as const;
+            {/* ── 1등부터 순위별 배번(티넘버) 순서 입력 카드 ── */}
+            <div className="glass-panel" style={{
+              background: 'white',
+              color: 'black',
+              padding: '20px',
+              borderRadius: '18px',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+              border: '2px solid #e2e8f0'
+            }}>
+              {/* 순위 네비게이션 & 앞뒤 이동 버튼 */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                paddingBottom: '16px',
+                borderBottom: '1px solid #f1f5f9',
+                marginBottom: '16px'
+              }}>
+                <button
+                  type="button"
+                  onClick={handlePrevRank}
+                  disabled={currentRankNum <= 1}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '8px 14px',
+                    borderRadius: '10px',
+                    border: '1px solid #cbd5e1',
+                    background: currentRankNum <= 1 ? '#f1f5f9' : '#f8fafc',
+                    color: currentRankNum <= 1 ? '#94a3b8' : '#0f172a',
+                    fontWeight: '700',
+                    fontSize: '0.85rem',
+                    cursor: currentRankNum <= 1 ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  <ChevronLeft size={18} /> 이전 ({currentRankNum > 1 ? `${currentRankNum - 1}위` : '없음'})
+                </button>
+
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: currentRankNum === 1 ? '#fef3c7' : currentRankNum === 2 ? '#f1f5f9' : currentRankNum === 3 ? '#ffedd5' : '#e0e7ff',
+                    color: currentRankNum === 1 ? '#b45309' : currentRankNum === 2 ? '#475569' : currentRankNum === 3 ? '#c2410c' : '#4338ca',
+                    padding: '6px 16px',
+                    borderRadius: '20px',
+                    fontWeight: '900',
+                    fontSize: '1.2rem',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                  }}>
+                    {currentRankNum === 1 ? '🥇 1위' : currentRankNum === 2 ? '🥈 2위' : currentRankNum === 3 ? '🥉 3위' : `🏅 ${currentRankNum}위`}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px', fontWeight: '600' }}>
+                    [{selectedRound.toUpperCase()}] 피니시 순위 입력
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleNextRank}
+                  disabled={currentRankNum >= participants.length}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '8px 14px',
+                    borderRadius: '10px',
+                    border: '1px solid #cbd5e1',
+                    background: currentRankNum >= participants.length ? '#f1f5f9' : '#f8fafc',
+                    color: currentRankNum >= participants.length ? '#94a3b8' : '#0f172a',
+                    fontWeight: '700',
+                    fontSize: '0.85rem',
+                    cursor: currentRankNum >= participants.length ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  다음 ({currentRankNum < participants.length ? `${currentRankNum + 1}위` : '끝'}) <ChevronRight size={18} />
+                </button>
+              </div>
+
+              {/* 현재 순위에 이미 배정된 선수 표시 */}
+              {currentRankPlayer ? (
+                <div style={{
+                  background: '#ecfdf5',
+                  border: '1px solid #a7f3d0',
+                  borderRadius: '12px',
+                  padding: '12px 16px',
+                  marginBottom: '16px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <div>
+                    <div style={{ fontSize: '0.75rem', color: '#059669', fontWeight: '700' }}>
+                      현재 {currentRankNum}위에 배정된 선수
+                    </div>
+                    <div style={{ fontSize: '1.05rem', fontWeight: '900', color: '#065f46' }}>
+                      {currentRankPlayer.name} {currentRankPlayer.bibNumber && `(배번 #${currentRankPlayer.bibNumber})`}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleClearCurrentRank(currentRankNum)}
+                    style={{
+                      background: '#fee2e2',
+                      color: '#b91c1c',
+                      border: '1px solid #fca5a5',
+                      borderRadius: '8px',
+                      padding: '6px 12px',
+                      fontWeight: '700',
+                      fontSize: '0.8rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    <X size={14} /> 배정 취소
+                  </button>
+                </div>
+              ) : null}
+
+              {/* 배번 입력 폼 */}
+              <form onSubmit={handleAssignBibSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <label style={{ fontSize: '0.9rem', fontWeight: '800', color: '#1e293b' }}>
+                  {currentRankNum}위 선수 배번(티넘버) 입력
+                </label>
+                
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={bibInput}
+                    onChange={(e) => setBibInput(e.target.value)}
+                    placeholder="예: 27 또는 선수 이름"
+                    style={{
+                      flex: 1,
+                      padding: '14px 16px',
+                      borderRadius: '12px',
+                      border: '2px solid var(--theme-primary)',
+                      fontSize: '1.15rem',
+                      fontWeight: '800',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                      textAlign: 'center'
+                    }}
+                    autoFocus
+                  />
+                  <button
+                    type="submit"
+                    style={{
+                      background: 'var(--theme-primary)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '12px',
+                      padding: '0 20px',
+                      fontWeight: '800',
+                      fontSize: '0.95rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      whiteSpace: 'nowrap',
+                      boxShadow: '0 2px 8px rgba(99,102,241,0.3)'
+                    }}
+                  >
+                    <Check size={18} /> {currentRankNum}위 등록
+                  </button>
+                </div>
+
+                {/* 실시간 매칭 프리뷰 */}
+                {matchedTypingPlayer && (
+                  <div style={{
+                    background: '#eff6ff',
+                    border: '1px solid #bfdbfe',
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    fontSize: '0.85rem',
+                    color: '#1e40af',
+                    fontWeight: '700',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}>
+                    <span>🏃 매칭된 선수: <strong>{matchedTypingPlayer.name}</strong> (배번: #{matchedTypingPlayer.bibNumber || '-'})</span>
+                  </div>
+                )}
+
+                {/* 피드백 메시지 */}
+                {inputFeedback && (
+                  <div style={{
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    fontSize: '0.85rem',
+                    fontWeight: '700',
+                    background: inputFeedback.isError ? '#fef2f2' : '#f0fdf4',
+                    color: inputFeedback.isError ? '#dc2626' : '#16a34a',
+                    border: `1px solid ${inputFeedback.isError ? '#fecaca' : '#bbf7d0'}`
+                  }}>
+                    {inputFeedback.text}
+                  </div>
+                )}
+              </form>
+
+              {/* 미배정 선수 빠른 칩 선택 (터치 시 즉시 현재 순위로 배정) */}
+              {unassignedPlayers.length > 0 && (
+                <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px dashed #cbd5e1' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#475569' }}>
+                      ⚡ 미입력 선수 빠른 선택 (터치 시 즉시 {currentRankNum}위 배정):
+                    </span>
+                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                      {unassignedPlayers.length}명 대기중
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxHeight: '140px', overflowY: 'auto', padding: '2px' }}>
+                    {unassignedPlayers.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => handleQuickAssignPlayer(p)}
+                        style={{
+                          background: '#f1f5f9',
+                          border: '1px solid #cbd5e1',
+                          borderRadius: '8px',
+                          padding: '6px 10px',
+                          fontSize: '0.8rem',
+                          fontWeight: '700',
+                          color: '#1e293b',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          transition: 'all 0.1s'
+                        }}
+                      >
+                        {p.bibNumber && <span style={{ color: 'var(--theme-primary)' }}>#{p.bibNumber}</span>}
+                        <span>{p.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ── [3] 해당 라운드(selectedRound) 전체 순위표 리스트 ── */}
+            <div className="glass-panel" style={{ background: 'white', color: 'black', padding: '20px', borderRadius: '18px', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: '800', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  📊 [{selectedRound.toUpperCase()}] 전체 순위 현황표
+                </h3>
+                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                  순위 행을 터치하면 해당 순위로 이동합니다
+                </span>
+              </div>
+
+              {participants.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '30px', color: '#94a3b8', fontSize: '0.9rem' }}>
+                  해당 종목에 등록된 선수가 없습니다.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {Array.from({ length: participants.length }).map((_, idx) => {
+                    const rankNum = idx + 1;
+                    const assigned = participants.find(p => p[selectedRound] === rankNum);
+                    const isCurrentFocus = currentRankNum === rankNum;
+
                     return (
-                      <tr key={p.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        {/* 순위 */}
-                        <td style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold' }}>
-                          {p.rank}
-                        </td>
-                        {/* 이름 */}
-                        <td style={{ padding: '8px', fontWeight: '800' }}>
-                          {p.name}
-                        </td>
-                        {/* 배번 */}
-                        <td style={{ padding: '8px', textAlign: 'center' }}>
-                          <input
-                            type="text"
-                            value={p.bibNumber || ''}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setParticipants(prev => prev.map(item => item.id === p.id ? { ...item, bibNumber: val } : item));
-                            }}
-                            placeholder="배번"
-                            style={{ width: '45px', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '4px', textAlign: 'center', fontSize: '0.8rem' }}
-                          />
-                        </td>
-                        {/* 생년월일 */}
-                        <td style={{ padding: '8px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                          {p.birth ? p.birth.substring(2) : '-'}
-                        </td>
-                        {/* 라운드 스코어들 */}
-                        {rounds.map((rKey, rIdx) => (
-                          <td key={rIdx} style={{ padding: '4px', textAlign: 'center' }}>
+                      <div
+                        key={rankNum}
+                        onClick={() => setCurrentRankNum(rankNum)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '10px 14px',
+                          borderRadius: '10px',
+                          border: isCurrentFocus ? '2px solid var(--theme-primary)' : '1px solid #e2e8f0',
+                          background: isCurrentFocus ? '#f0f5ff' : assigned ? '#ffffff' : '#f8fafc',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <span style={{
+                            width: '40px',
+                            fontWeight: '900',
+                            fontSize: '0.95rem',
+                            color: rankNum === 1 ? '#d97706' : rankNum === 2 ? '#475569' : rankNum === 3 ? '#ea580c' : '#64748b'
+                          }}>
+                            {rankNum}위
+                          </span>
+                          {assigned ? (
+                            <div>
+                              <span style={{ fontWeight: '800', fontSize: '0.95rem', color: '#0f172a' }}>
+                                {assigned.name}
+                              </span>
+                              {assigned.bibNumber && (
+                                <span style={{ marginLeft: '8px', fontSize: '0.8rem', color: 'var(--theme-primary)', fontWeight: '700' }}>
+                                  (배번 #{assigned.bibNumber})
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
+                              - 미입력 (터치하여 입력)
+                            </span>
+                          )}
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {assigned ? (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleClearCurrentRank(rankNum);
+                              }}
+                              style={{
+                                background: '#fee2e2',
+                                color: '#ef4444',
+                                border: 'none',
+                                borderRadius: '6px',
+                                padding: '4px 8px',
+                                fontSize: '0.75rem',
+                                fontWeight: '700',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              삭제
+                            </button>
+                          ) : (
+                            <span style={{ fontSize: '0.75rem', color: isCurrentFocus ? 'var(--theme-primary)' : '#cbd5e1', fontWeight: '700' }}>
+                              {isCurrentFocus ? '선택됨' : '입력 대기'}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* DNS / DNF 처리 섹션 */}
+                  {dnsDnfPlayers.length > 0 && (
+                    <div style={{ marginTop: '12px', padding: '12px', background: '#fff1f2', borderRadius: '10px', border: '1px solid #fecdd3' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#be123c', display: 'block', marginBottom: '6px' }}>
+                        ⚠️ DNS / DNF 명단:
+                      </span>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {dnsDnfPlayers.map(p => (
+                          <span key={p.id} style={{ background: 'white', padding: '4px 8px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '700', border: '1px solid #fecdd3' }}>
+                            {p.name} ({p[selectedRound]})
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 하단 확정란 이동 바로가기 */}
+              <div style={{ marginTop: '20px', textAlign: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => setActiveMode('confirm')}
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    borderRadius: '12px',
+                    background: '#0f172a',
+                    color: 'white',
+                    border: 'none',
+                    fontWeight: '800',
+                    fontSize: '0.95rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    boxShadow: '0 4px 12px rgba(15,23,42,0.15)'
+                  }}
+                >
+                  <CheckCircle2 size={18} color="#10b981" /> 순위 확정란으로 이동하여 전체 검토 및 확정하기 ▶
+                </button>
+              </div>
+            </div>
+
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════
+            MODE 2: 순위 확정란 (전체 라운드 스프레드시트 검토 및 직접 수정 & 확정)
+            ═══════════════════════════════════════════════════════════ */}
+        {activeMode === 'confirm' && (
+          <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '20px', background: 'white', color: 'black', padding: '20px', borderRadius: '18px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h2 style={{ fontSize: '1.2rem', fontWeight: '900', margin: 0 }}>전체 순위 검토 및 최종 확정</h2>
+                <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                  각 라운드 점수를 직접 클릭하여 수정하거나 순위를 정렬 후 확정하세요.
+                </p>
+              </div>
+            </div>
+
+            {/* 액션 버튼 */}
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={handleSortRankings}
+                className="btn-secondary"
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  padding: '13px',
+                  fontSize: '0.92rem',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  borderRadius: '10px'
+                }}
+              >
+                <ListOrdered size={18} /> 순위 자동 정렬
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmLeaderboard}
+                disabled={submitting}
+                className="btn-primary"
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  padding: '13px',
+                  fontSize: '0.92rem',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  borderRadius: '10px',
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  boxShadow: '0 2px 8px rgba(16,185,129,0.3)'
+                }}
+              >
+                <CheckCircle2 size={18} /> 순위 최종 확정 (공개)
+              </button>
+            </div>
+
+            {/* 전체 참가자 & 라운드별 점수 스프레드시트 테이블 (직접 수정 가능) */}
+            <div style={{ overflowX: 'auto', width: '100%', border: '1px solid #e2e8f0', borderRadius: '12px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+                    <th style={{ padding: '10px 6px', width: '45px', textAlign: 'center' }}>순위</th>
+                    <th style={{ padding: '10px 8px', minWidth: '80px', textAlign: 'left' }}>이름</th>
+                    <th style={{ padding: '10px 6px', width: '60px', textAlign: 'center' }}>배번</th>
+                    <th style={{ padding: '10px 6px', width: '70px', textAlign: 'center' }}>생년월일</th>
+                    {ROUND_CONFIG.map(r => (
+                      <th key={r.key} style={{ padding: '10px 4px', width: '50px', textAlign: 'center', color: '#1e293b' }}>
+                        {r.short}
+                      </th>
+                    ))}
+                    <th style={{ padding: '10px 6px', width: '60px', textAlign: 'center', color: 'var(--theme-primary)' }}>총점</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {participants.length === 0 ? (
+                    <tr>
+                      <td colSpan={11} style={{ padding: '30px', textAlign: 'center', color: '#94a3b8' }}>
+                        해당 종목에 승인된 신청자가 없거나 데이터를 불러올 수 없습니다.
+                      </td>
+                    </tr>
+                  ) : (
+                    participants.map((p) => {
+                      const rounds: RoundKey[] = ['r1', 'r2', 'r3', 'r4', 'r5', 'r6'];
+                      return (
+                        <tr key={p.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          {/* 순위 */}
+                          <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: '900', color: p.rank === 1 ? '#d97706' : '#0f172a' }}>
+                            {p.rank}
+                          </td>
+                          {/* 이름 */}
+                          <td style={{ padding: '8px', fontWeight: '800' }}>
+                            {p.name}
+                          </td>
+                          {/* 배번 (수정 가능) */}
+                          <td style={{ padding: '6px 4px', textAlign: 'center' }}>
                             <input
                               type="text"
-                              value={p[rKey] === null || p[rKey] === undefined ? '' : p[rKey]}
-                              onChange={(e) => handleScoreInput(p.id, rKey, e.target.value)}
-                              onFocus={() => setActiveCell({ id: p.id, roundKey: rKey })}
-                              placeholder="-"
-                              style={{ width: '40px', padding: '6px 4px', border: '1px solid #cbd5e1', borderRadius: '4px', textAlign: 'center', fontSize: '0.85rem', fontWeight: '600' }}
+                              value={p.bibNumber || ''}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setParticipants(prev => prev.map(item => item.id === p.id ? { ...item, bibNumber: val } : item));
+                              }}
+                              placeholder="배번"
+                              style={{ width: '45px', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '6px', textAlign: 'center', fontSize: '0.8rem', fontWeight: '700' }}
                             />
                           </td>
-                        ))}
-                        {/* 총점 */}
-                        <td style={{ padding: '8px', textAlign: 'center', fontWeight: '900', color: 'var(--theme-primary)' }}>
-                          {p.total}점
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+                          {/* 생년월일 */}
+                          <td style={{ padding: '8px 4px', textAlign: 'center', color: '#64748b' }}>
+                            {p.birth ? p.birth.substring(2) : '-'}
+                          </td>
+                          {/* 라운드 스코어들 (직접 수정 가능) */}
+                          {rounds.map((rKey) => (
+                            <td key={rKey} style={{ padding: '4px', textAlign: 'center' }}>
+                              <input
+                                type="text"
+                                value={p[rKey] === null || p[rKey] === undefined ? '' : p[rKey]}
+                                onChange={(e) => handleScoreInput(p.id, rKey, e.target.value)}
+                                onFocus={() => setActiveCell({ id: p.id, roundKey: rKey })}
+                                placeholder="-"
+                                style={{
+                                  width: '40px',
+                                  padding: '6px 2px',
+                                  border: activeCell?.id === p.id && activeCell?.roundKey === rKey ? '2px solid var(--theme-primary)' : '1px solid #cbd5e1',
+                                  borderRadius: '6px',
+                                  textAlign: 'center',
+                                  fontSize: '0.85rem',
+                                  fontWeight: '800',
+                                  background: p[rKey] === 'DNS' || p[rKey] === 'DNF' ? '#fee2e2' : 'white',
+                                  color: p[rKey] === 'DNS' || p[rKey] === 'DNF' ? '#dc2626' : '#0f172a'
+                                }}
+                              />
+                            </td>
+                          ))}
+                          {/* 총점 */}
+                          <td style={{ padding: '8px', textAlign: 'center', fontWeight: '900', color: 'var(--theme-primary)' }}>
+                            {p.total}점
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
 
-          <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '8px', fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
-            <p style={{ margin: 0, fontWeight: '700', color: '#e11d48' }}>💡 채점 가이드라인 (Sailing Low-Point System):</p>
-            <p style={{ margin: '4px 0 0 0' }}>1. 라운드 입력란에 각 선수의 피니시 순위(1, 2, 3...)를 입력하거나 부정출발/미완주 시 **DNS** 또는 **DNF**를 선택/입력하세요.</p>
-            <p style={{ margin: '2px 0 0 0' }}>2. **DNS/DNF**의 경우 해당 부서의 전체 참가 선수 인원 수({participants.length}점)가 벌점으로 가산됩니다.</p>
-            <p style={{ margin: '2px 0 0 0' }}>3. 4경기 이상 입력 시, 가장 성적이 나쁜 경기(가장 큰 숫자 또는 DNS/DNF 벌점) 1개가 총점 계산에서 자동으로 제외됩니다.</p>
-            <p style={{ margin: '2px 0 0 0' }}>4. 입력 후 [순위 자동 정렬] 버튼을 누르면 총점 오름차순으로 정렬되며 공식 순위가 재부여됩니다.</p>
-            <p style={{ margin: '2px 0 0 0' }}>5. 마지막으로 [순위 최종 확정] 버튼을 눌러야 메인 전광판 리더보드에 전체 공개됩니다.</p>
-          </div>
+            {/* 채점 가이드라인 */}
+            <div style={{ background: '#f8fafc', padding: '14px 16px', borderRadius: '12px', fontSize: '0.8rem', color: '#475569', lineHeight: '1.6', border: '1px solid #e2e8f0' }}>
+              <p style={{ margin: 0, fontWeight: '800', color: '#e11d48' }}>💡 채점 가이드라인 (Sailing Low-Point System):</p>
+              <p style={{ margin: '4px 0 0 0' }}>1. 각 라운드 셀에 피니시 순위(1, 2, 3...)를 입력하거나 부정출발/미완주 시 **DNS** 또는 **DNF**를 선택/입력하세요.</p>
+              <p style={{ margin: '2px 0 0 0' }}>2. **DNS/DNF**의 경우 해당 부서 전체 참가 선수 인원 수({participants.length}점)가 벌점으로 가산됩니다.</p>
+              <p style={{ margin: '2px 0 0 0' }}>3. 4경기 이상 입력 시, 가장 성적이 나쁜 경기(가장 큰 숫자 또는 벌점) 1개가 총점에서 자동 제외됩니다.</p>
+              <p style={{ margin: '2px 0 0 0' }}>4. 입력 후 <strong>[순위 자동 정렬]</strong>을 누르면 총점 오름차순으로 정렬되며 공식 순위가 재부여됩니다.</p>
+              <p style={{ margin: '2px 0 0 0' }}>5. 마지막으로 <strong>[순위 최종 확정]</strong> 버튼을 눌러야 메인 전광판 및 홈페이지 리더보드에 즉시 반영됩니다.</p>
+            </div>
 
-        </div>
+          </div>
+        )}
+
       </div>
 
-      {/* ── 모바일 전용 DNS/DNF 간편 입력 바 ── */}
-      {activeCell && (
+      {/* ── 모바일 전용 DNS/DNF 간편 입력 바 (확정란 셀 포커스 시 표시) ── */}
+      {activeMode === 'confirm' && activeCell && (
         <div style={{
           position: 'fixed',
           bottom: 0,
@@ -537,13 +1330,13 @@ export default function RefereeMobilePage({
           right: 0,
           background: '#1e293b',
           borderTop: '1px solid #334155',
-          padding: '16px 20px',
+          padding: '14px 20px',
           display: 'flex',
-          gap: '12px',
+          gap: '10px',
           justifyContent: 'center',
           alignItems: 'center',
           zIndex: 10000,
-          boxShadow: '0 -4px 20px rgba(0,0,0,0.25)'
+          boxShadow: '0 -4px 20px rgba(0,0,0,0.3)'
         }}>
           <div style={{ marginRight: 'auto', display: 'flex', flexDirection: 'column', gap: '2px' }}>
             <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: '700' }}>선택된 셀</span>
@@ -563,11 +1356,10 @@ export default function RefereeMobilePage({
               color: 'white',
               border: 'none',
               borderRadius: '8px',
-              padding: '12px 8px',
+              padding: '10px 8px',
               fontWeight: '800',
               cursor: 'pointer',
-              fontSize: '0.9rem',
-              boxShadow: '0 2px 4px rgba(239, 68, 68, 0.2)'
+              fontSize: '0.85rem'
             }}
           >
             DNS 입력
@@ -584,11 +1376,10 @@ export default function RefereeMobilePage({
               color: 'white',
               border: 'none',
               borderRadius: '8px',
-              padding: '12px 8px',
+              padding: '10px 8px',
               fontWeight: '800',
               cursor: 'pointer',
-              fontSize: '0.9rem',
-              boxShadow: '0 2px 4px rgba(245, 158, 11, 0.2)'
+              fontSize: '0.85rem'
             }}
           >
             DNF 입력
@@ -604,10 +1395,10 @@ export default function RefereeMobilePage({
               color: '#f1f5f9',
               border: 'none',
               borderRadius: '8px',
-              padding: '12px 14px',
+              padding: '10px 12px',
               fontWeight: '800',
               cursor: 'pointer',
-              fontSize: '0.85rem'
+              fontSize: '0.8rem'
             }}
           >
             비우기
@@ -620,10 +1411,10 @@ export default function RefereeMobilePage({
               color: '#94a3b8',
               border: 'none',
               borderRadius: '8px',
-              padding: '12px 14px',
+              padding: '10px 12px',
               fontWeight: '800',
               cursor: 'pointer',
-              fontSize: '0.85rem'
+              fontSize: '0.8rem'
             }}
           >
             닫기
