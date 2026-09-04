@@ -66,7 +66,7 @@ export default function TenantPortalPage({
   // 대회요강 Fallback 및 동적 데이터 셋업
   const overview = {
     title: '제20회 미추홀구청장배 전국핀수영대회',
-    duration: '2026. 9. 12(토) ~ 13(일) 2일간',
+    duration: '2026. 10. 31(토) ~ 11. 1(일) 2일간',
     location: '문학박태환수영장 (인천광역시 미추홀구 경원대로 526)',
     scale: '300명 (선착순 마감)',
     host: '인천광역시 미추홀구',
@@ -78,8 +78,8 @@ export default function TenantPortalPage({
     accountHolder: '인천광역시핀수영협회',
     entryFeeIndividual: '개인전 1종목당 20,000원',
     entryFeeGroup: '단체전 팀당 50,000원',
-    deadlineDate: '2026년 8월 24일(월)',
-    rulesNote: '※ 참가 신청 시 소속 클럽 명확히 작성 필수.\n※ 단체전은 남녀 혼성 계영 4x50m 및 4x100m로 진행함.\n※ 모든 나이는 2026년 9월 12일을 기준으로 합니다.\n※ 1인 최대 2종목까지 신청 가능 (단체전 제외).\n※ 참가인원은 선착순으로 300명이 충족되면 참가접수 기한이 조기에 마감될 수 있습니다.\n※ 참가비가 납부되어야 정식 등록이 완료되며 기한 내 미납 시 참가가 자동 취소됩니다.\n※ 신청기간 이후에는 취소 및 참가비 환불이 불가합니다.',
+    deadlineDate: '2026년 10월 23일(금)',
+    rulesNote: '※ 참가 신청 시 소속 클럽 명확히 작성 필수.\n※ 단체전은 남녀 혼성 계영 4x50m 및 4x100m로 진행함.\n※ 모든 나이는 2026년 10월 31일을 기준으로 합니다.\n※ 1인 최대 2종목까지 신청 가능 (단체전 제외).\n※ 참가인원은 선착순으로 300명이 충족되면 참가접수 기한이 조기에 마감될 수 있습니다.\n※ 참가비가 납부되어야 정식 등록이 완료되며 기한 내 미납 시 참가가 자동 취소됩니다.\n※ 신청기간 이후에는 취소 및 참가비 환불이 불가합니다.',
     itineraryDay1: '10:00 - 12:00 : 선수단 현장등록 및 웜업\n12:00 - 13:00 : 중식\n13:00 - 13:30 : 개회식\n13:30 - 18:00 : 1일차 경기',
     itineraryDay2: '09:00 - 12:00 : 2일차 경기\n12:00 - 13:00 : 중식\n13:00 - 18:00 : 2일차 경기 및 시상식\n18:00 - : 폐회식 및 해산',
     itineraryDay3: '',
@@ -527,7 +527,7 @@ export default function TenantPortalPage({
                 <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>주 최 :</strong> 통영시</p>
                 <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>주 관 :</strong> 통영시요트협회</p>
                 <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>후 원 :</strong> 통영시체육회, 경상남도요트협회, 한국윈드서핑협회</p>
-                <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>대회일정 :</strong> 2026. 9. 12(토) ~ 13(일) 1박2일</p>
+                <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>대회일정 :</strong> 2026. 10. 31(토) ~ 11. 1(일) 1박2일</p>
                 <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>장 소 :</strong> 통영시 산양읍 영운리 수륙마을 내 수륙해수욕장</p>
                 <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>참가인원 :</strong> 130명</p>
               </div>
@@ -548,8 +548,8 @@ export default function TenantPortalPage({
 
               <div>
                 <strong style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '6px' }}>▣ 접수방법</strong>
-                <p style={{ margin: 0, paddingLeft: '8px' }}>• 2026년 8월 27일(목) 까지 참가신청서를 작성하여 선수등록을 하여야 한다.</p>
-                <p style={{ margin: 0, paddingLeft: '8px' }}>• 단체전은 2026년 9월 13일(일) 경기개시 1시간 전 선수등록하여 시행한다.</p>
+                <p style={{ margin: 0, paddingLeft: '8px' }}>• 2026년 10월 23일(금) 까지 참가신청서를 작성하여 선수등록을 하여야 한다.</p>
+                <p style={{ margin: 0, paddingLeft: '8px' }}>• 단체전은 2026년 11월 1일(일) 경기개시 1시간 전 선수등록하여 시행한다.</p>
                 <p style={{ margin: 0, paddingLeft: '8px' }}>• 참가인원은 선착순으로 130명이 충족되면 참가접수기한이 조기에 마감할 수 있다. (이번대회 신설된 윙포일부분은 남녀각각 10명으로 참가인원을 제한한다.)</p>
                 <p style={{ margin: 0, paddingLeft: '8px' }}>• 참가비 입금계좌는 선수접수등록 후 개별 통지하며 참가비가 입금이 완료되어야 참가자격이 주어진다.</p>
               </div>
@@ -749,13 +749,13 @@ export default function TenantPortalPage({
           zIndex: 60
         }}
       >
-        <span>📢 [긴급공지] 거제·통영 지역 기록적 폭우 피해로 인한 대회 잠정 연기 안내문</span>
+        <span>📢 [일정안내] 폭우 피해로 연기되었던 대회 일정이 2026. 10. 31(토) ~ 11. 1(일)로 변경 확정되었습니다.</span>
         <span style={{ fontSize: '0.75rem', background: 'rgba(255,255,255,0.25)', padding: '2px 8px', borderRadius: '12px', whiteSpace: 'nowrap' }}>
           자세히 보기 ➔
         </span>
       </div>
 
-      {/* ── 폭우 피해 위로 및 대회 잠정 연기 안내 팝업 모달 ── */}
+      {/* ── 폭우 피해 위로 및 대회 일정 변경 안내 팝업 모달 ── */}
       {isNoticePopupOpen && (
         <div
           style={{
@@ -817,7 +817,7 @@ export default function TenantPortalPage({
               </div>
               <h2 style={{ fontSize: '1.3rem', fontWeight: '900', margin: 0, lineHeight: '1.4', color: '#f8fafc' }}>
                 기록적 집중호우 피해에 따른<br />
-                <span style={{ color: '#fbbf24' }}>대회 잠정 연기</span> 및 지역민 위로 안내
+                <span style={{ color: '#fbbf24' }}>대회 일정 변경 (10.31 ~ 11.1)</span> 및 안내
               </h2>
 
               <button
@@ -871,7 +871,7 @@ export default function TenantPortalPage({
                 </div>
               </div>
 
-              {/* 2. 대회 연기 결정 배경 및 안내 */}
+              {/* 2. 대회 연기 및 변경 일정 안내 */}
               <div style={{ fontSize: '0.9rem', color: '#334155', lineHeight: '1.6', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div style={{
                   background: '#fef2f2',
@@ -880,23 +880,23 @@ export default function TenantPortalPage({
                   padding: '14px 16px'
                 }}>
                   <p style={{ margin: 0, fontWeight: '800', color: '#b91c1c', fontSize: '0.92rem' }}>
-                    ⚠️ 대회 잠정 연기 결정 안내
+                    ⚠️ 대회 일정 변경 안내 (2026. 10. 31 ~ 11. 1)
                   </p>
                   <p style={{ margin: '6px 0 0 0', fontSize: '0.86rem', color: '#991b1b' }}>
-                    본 대회 주최 및 경기위원회는 <strong>지역사회의 조속한 수해 복구와 안전 지원에 적극 동참</strong>하고, 참가 선수단 및 관계자 여러분의 <strong>안전을 최우선으로 확보</strong>하기 위하여 예정되었던 대회를 부득이 <strong>잠정 연기</strong>하기로 결정하였습니다.
+                    본 대회 주최 및 경기위원회는 <strong>지역사회의 조속한 수해 복구와 안전 지원에 동참</strong>하고, 참가 선수단의 <strong>안전을 최우선으로 확보</strong>하기 위해 당초 9월 예정이었던 대회를 <strong>2026년 10월 31일(토) ~ 11월 1일(일)</strong>로 변경하여 개최하기로 확정하였습니다.
                   </p>
                 </div>
 
                 <div style={{ background: '#f8fafc', padding: '14px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '0.85rem' }}>
                   <p style={{ margin: '0 0 6px 0', fontWeight: '800', color: '#0f172a' }}>
-                    📌 향후 일정 및 참가자 안내사항
+                    📌 변경된 일정 및 참가자 안내사항
                   </p>
                   <ul style={{ margin: 0, paddingLeft: '18px', color: '#475569', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     <li>
-                      <strong>대회 일정 재공지:</strong> 지역 수해 복구 상황 및 경기장 안전 점검 완료 후 추후 공식 홈페이지와 개별 연락망을 통해 새로운 일정을 신속히 공지해 드리겠습니다.
+                      <strong>확정 대회 일정:</strong> 2026년 10월 31일(토) ~ 11월 1일(일) [1박 2일간]
                     </li>
                     <li>
-                      <strong>기존 접수 내역 유지:</strong> 기 접수 완료된 참가 신청 내역 및 제반 사항은 변경되는 대회 일정에 그대로 안전하게 승계 적용됩니다.
+                      <strong>기존 접수 내역 유지:</strong> 기 접수 완료된 참가 신청 내역 및 제반 사항은 변경된 대회 일정에 그대로 안전하게 승계 적용됩니다.
                     </li>
                     <li>
                       <strong>환불 및 문의:</strong> 변경된 일정에 참가가 어려우신 분들의 환불 절차 및 문의는 대회본부로 연락 주시면 정성껏 안내해 드리겠습니다.
@@ -905,7 +905,7 @@ export default function TenantPortalPage({
                 </div>
 
                 <p style={{ margin: '4px 0 0 0', fontSize: '0.84rem', color: '#64748b', textAlign: 'center' }}>
-                  대회 참가를 위해 땀 흘려 준비해 주신 선수 여러분과 동호인, 관계자 분들의 너른 양해와 온정 어린 이해를 부탁드립니다.
+                  대회 참가를 위해 땀 흘려 준비해 주신 선수 여러분과 동호인, 관계자 분들의 너른 양해와 많은 성원을 부탁드립니다.
                 </p>
               </div>
 
@@ -962,7 +962,7 @@ export default function TenantPortalPage({
           <img
             src="/images/logo_new.png"
             alt="제20회 이순신장군배 전국윈드서핑대회 로고"
-            style={{ height: '70px', width: 'auto', objectFit: 'contain' }}
+            style={{ height: '52px', width: 'auto', objectFit: 'contain', mixBlendMode: 'multiply' }}
           />
           <div className="brand-text" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             <span style={{ fontSize: '0.85rem', fontWeight: '800', color: 'var(--text-main)', lineHeight: '1.25', fontFamily: 'var(--font-title)' }}>
@@ -2150,7 +2150,7 @@ export default function TenantPortalPage({
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', fontSize: '0.92rem', color: 'black' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <p style={{ margin: 0 }}><strong>대회명 :</strong> 제20회 이순신장군배 전국윈드서핑대회 (2026)</p>
-                        <p style={{ margin: 0 }}><strong>기간 :</strong> 2026년 9월 11일(금) ~ 13일(일) [3일간]</p>
+                        <p style={{ margin: 0 }}><strong>기간 :</strong> 2026년 10월 31일(토) ~ 11월 1일(일) [2일간]</p>
                         <p style={{ margin: 0 }}><strong>장소 :</strong> 통영 수륙해수욕장 일원 (통영윈드서핑협회)</p>
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -2171,33 +2171,22 @@ export default function TenantPortalPage({
                       {/* 1일차 */}
                       <div style={{ background: '#f8fafc', padding: '16px 20px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
                         <h4 style={{ fontWeight: '800', color: 'var(--theme-primary)', fontSize: '0.95rem', margin: '0 0 10px 0', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px' }}>
-                          1일차 : 9월 11일 (금)
+                          1일차 : 10월 31일 (토)
                         </h4>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.88rem', color: 'black' }}>
-                          <p style={{ margin: 0 }}>• <strong>13:00 ~ 17:00 :</strong> 참가 선수단 등록 및 리허설 (수륙해수욕장 해역)</p>
-                          <p style={{ margin: 0 }}>• <strong>18:00 ~ 20:00 :</strong> 개회식 (통영 스탠포드 호텔)</p>
+                          <p style={{ margin: 0 }}>• <strong>09:00 ~ 10:00 :</strong> 참가 선수단 등록 및 출정식 (계류장 특설무대 / 안전 교육)</p>
+                          <p style={{ margin: 0 }}>• <strong>10:00 ~ 17:00 :</strong> 공식 경기 (예선 및 본선 경기)</p>
+                          <p style={{ margin: 0 }}>• <strong>18:00 ~ 20:00 :</strong> 리셉션 및 환영 만찬 (수륙해수욕장 특설무대)</p>
                         </div>
                       </div>
 
                       {/* 2일차 */}
                       <div style={{ background: '#f8fafc', padding: '16px 20px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
                         <h4 style={{ fontWeight: '800', color: 'var(--theme-primary)', fontSize: '0.95rem', margin: '0 0 10px 0', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px' }}>
-                          2일차 : 9월 12일 (토)
+                          2일차 : 11월 1일 (일)
                         </h4>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.88rem', color: 'black' }}>
-                          <p style={{ margin: 0 }}>• <strong>09:00 ~ 10:00 :</strong> 출정식 (계류장 특설무대 / 안전 교육)</p>
-                          <p style={{ margin: 0 }}>• <strong>10:00 ~ 17:00 :</strong> 공식 경기 (예선 및 본선 경기)</p>
-                          <p style={{ margin: 0 }}>• <strong>18:00 ~ 20:00 :</strong> 리셉션 및 만찬 (수륙해수욕장 특설무대)</p>
-                        </div>
-                      </div>
-
-                      {/* 3일차 */}
-                      <div style={{ background: '#f8fafc', padding: '16px 20px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-                        <h4 style={{ fontWeight: '800', color: 'var(--theme-primary)', fontSize: '0.95rem', margin: '0 0 10px 0', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px' }}>
-                          3일차 : 9월 13일 (일)
-                        </h4>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.88rem', color: 'black' }}>
-                          <p style={{ margin: 0 }}>• <strong>10:00 ~ 15:00 :</strong> 공식 결선 경기 (각 종목별 결승)</p>
+                          <p style={{ margin: 0 }}>• <strong>10:00 ~ 15:00 :</strong> 공식 결선 경기 (각 종목별 결승 및 단체전)</p>
                           <p style={{ margin: 0 }}>• <strong>15:30 ~ :</strong> 시상식 및 폐회식 (수륙해수욕장 특설무대)</p>
                         </div>
                       </div>

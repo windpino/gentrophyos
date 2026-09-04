@@ -28,7 +28,7 @@ async function main() {
 • 주 최 : 통영시
 • 주 관 : 통영시요트협회
 • 후 원 : 통영시체육회, 경상남도요트협회, 한국윈드서핑협회
-• 대회일정 : 2026. 9. 12(토) ~ 13(일) 1박2일
+• 대회일정 : 2026. 10. 31(토) ~ 11. 1(일) 1박2일
 • 장 소 : 통영시 산양읍 영운리 수륙마을 내 수륙해수욕장
 • 참가인원 : 130명
 
@@ -41,7 +41,7 @@ async function main() {
   ※ 각 클래스는 생년월일기준으로 편성하며 선수 5명이상 출전 시 시상한다.
   ※ 단체전을 제외한 종목별 경기의 중복출전은 불가하다.
   ※ 단체전은 시,도 클럽별 릴레이식 참가선수 4명이 1개 팀으로 하는 경기방식 채택한다.
-  ※ 모든 나이는 2026년 9월 12일을 기준으로 한다.`,
+  ※ 모든 나이는 2026년 10월 31일을 기준으로 한다.`,
     },
   });
 
@@ -127,8 +127,8 @@ async function main() {
       tenantId: windTenant.id,
       title: '제20회 이순신장군배 전국윈드서핑대회 (2026)',
       status: 'ONGOING',
-      startDate: new Date('2026-09-12'),
-      endDate: new Date('2026-09-13'),
+      startDate: new Date('2026-10-31'),
+      endDate: new Date('2026-11-01'),
     },
   });
 
@@ -290,7 +290,7 @@ async function main() {
       matchType: 'LEAGUE',
       status: 'COMPLETED',
       refereeId: windReferee.id,
-      scheduledAt: new Date('2026-09-12T10:00:00Z'),
+      scheduledAt: new Date('2026-10-31T10:00:00Z'),
     },
   });
 
@@ -309,7 +309,7 @@ async function main() {
       matchType: 'LEAGUE',
       status: 'COMPLETED',
       refereeId: windReferee.id,
-      scheduledAt: new Date('2026-09-12T11:00:00Z'),
+      scheduledAt: new Date('2026-10-31T11:00:00Z'),
     },
   });
 
@@ -328,7 +328,7 @@ async function main() {
       matchType: 'LEAGUE',
       status: 'COMPLETED',
       refereeId: windReferee.id,
-      scheduledAt: new Date('2026-09-12T12:00:00Z'),
+      scheduledAt: new Date('2026-10-31T12:00:00Z'),
     },
   });
 
@@ -347,7 +347,7 @@ async function main() {
       matchType: 'LEAGUE',
       status: 'SCHEDULED',
       refereeId: windReferee.id,
-      scheduledAt: new Date('2026-09-13T10:00:00Z'),
+      scheduledAt: new Date('2026-11-01T10:00:00Z'),
       participants: {
         create: [
           { playerId: players[0].id, score: 0, isWinner: false },

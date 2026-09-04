@@ -446,9 +446,9 @@ button, input, select, textarea {
 
 /* 헤더 */
 .site-header {
-  position: absolute;
+  position: sticky;
   top: 0; left: 0; right: 0;
-  height: 64px;
+  height: 72px;
   z-index: 100;
   display: flex;
   justify-content: space-between;
@@ -456,6 +456,7 @@ button, input, select, textarea {
   padding: 0 32px;
   background: #ffffff;
   border-bottom: 1px solid var(--border-color);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
 }
 
 /* PC 전용 헤더 우측 버튼 */
@@ -486,14 +487,14 @@ button, input, select, textarea {
 /* 히어로 섹션 */
 .hero-section {
   position: relative;
-  height: 530px;
+  height: 520px;
   background-image: url('/images/windsurfing_hero.jpg');
   background-size: cover;
   background-position: center;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  padding: 64px 40px 40px 40px;
+  padding: 48px 40px 40px 40px;
   border-bottom: 1px solid var(--border-color);
 }
 .hero-title { font-size: 3.5rem; }
@@ -556,12 +557,12 @@ button, input, select, textarea {
 
   /* 헤더: 높이 줄이고 패딩 축소 */
   .site-header {
-    height: 56px;
+    height: 58px;
     padding: 0 16px;
   }
 
   /* 헤더 로고 작게 */
-  .site-header img { height: 44px !important; }
+  .site-header img { height: 42px !important; }
   .site-header .brand-text { display: none; }
 
   /* 상단 네비 & 우측 버튼 숨기기 */
@@ -573,8 +574,8 @@ button, input, select, textarea {
 
   /* 히어로 섹션: 높이 줄이고 패딩 축소 */
   .hero-section {
-    height: 420px;
-    padding: 56px 20px 24px 20px;
+    height: 400px;
+    padding: 32px 20px 24px 20px;
   }
   .hero-title { font-size: 2rem !important; }
   .hero-subtitle { font-size: 0.95rem !important; max-width: 100% !important; }
