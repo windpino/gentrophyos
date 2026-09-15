@@ -61,7 +61,7 @@ const DEFAULT_FORM_FIELDS = [
   { id: 'division', label: '6. 참가종목', type: 'radio', required: true, options: ['윈드포일 (남자부)', '윈드포일 (여자부)', '윙포일 (남자부)', '윙포일 (여자부)', '혼합오픈 (남자부)', '혼합오픈 (여자부)', '펀엔포뮬러 (남자부)', '펀엔포뮬러 (여자부)'] },
   { id: 'tshirtSize', label: '7. 티셔츠(기념품)사이즈', type: 'radio', required: true, options: ['S (95)', 'M (100)', 'L (105)', 'XL (110)'] },
   { id: 'vestAgreement', label: '8. 당일 대회본부에 조끼(배번티)를 반드시 수령하셔야 합니다.', type: 'checkbox', required: true, notice: '대회운영본부 수령 필수 (사용 후 반드시 반납바랍니다)', agreeLabel: '네. 확인했습니다.' },
-  { id: 'paymentNoticeAgreement', label: '9. 참가비 입금 안내 확인 동의', type: 'checkbox', required: true, notice: '선착순 선수등록 처리 후 130명 마감 시 계좌는 개별 문자 통지합니다.', agreeLabel: '네. 확인했습니다.' },
+  { id: 'paymentNoticeAgreement', label: '9. 참가비 입금 안내 확인 동의', type: 'checkbox', required: true, notice: '• 입금계좌: 농협 351-1334-8643-33 (예금주: 통영시요트협회)\n• 참가 신청서에 작성하신 성명(이름)으로 반드시 입금해 주시기 바랍니다.\n• 입금 완료 순서(입금순)로 선착순 130명 참가 확정 처리됩니다.\n• 참가 확정 및 선수등록 승인 안내는 대회 공식 홈페이지에서 확인하실 수 있습니다.', agreeLabel: '네. 확인했습니다.' },
   { id: 'liabilityWaiver', label: '10. 면책 동의서 서약에 동의합니다.', type: 'textarea', required: true, textareaContent: '본인은 제20회 이순신장군배 전국윈드서핑대회 참가 활동 중 본인의 부주의로 인해 발생할 수 있는 사고, 즉 개인적 부상, 재산상 피해, 의학적인 사고 등 대회기간 중 발생한 사고에 대한 책임은 본인의 자의적인 참가에 의한 본인의 책임이며, 본 대회를 주관하는 관계자 및 기관에 대한 면책은 물론 책임전가를 하지 않을 것을 서약합니다.', agreeLabel: '네. 동의합니다.' },
   { id: 'privacyConsent', label: '11. 개인정보 수집에 동의합니다.', type: 'textarea', required: true, textareaContent: '• 정보수집 및 이용기관 : 통영시요트협회\n• 수집 정보 : 성명, 생년월일, 전화번호, 이메일, 소속 단체\n• 수집 목적 : 참가자 관리 및 보험가입, 대회 공지 전송 등\n• 보존 기간 : 대회 정산 이후 즉시 폐기합니다.', agreeLabel: '네. 동의합니다.' },
   { id: 'mediaConsent', label: '12. 초상권 및 저작권 사용 동의', type: 'textarea', required: true, textareaContent: '• 정보수집 및 이용기관 : 통영시요트협회\n• 수집 목적 : 대회 홍보, 결과 보도, 미디어 자료 활용 등\n• 활용 대상 : 대회 사진, 동영상 등 촬영물\n• 보존 기간 : 통영시요트협회 아카이브 보관용으로 영구 보존 및 활용에 동의합니다.', agreeLabel: '네. 동의합니다.' }
@@ -76,15 +76,15 @@ const getDefaultTenantData = (subdomain: string): TenantData => ({
   rulesSummary: '제20회 이순신장군배 전국윈드서핑대회 요강',
   overviewConfig: {
     title: '제20회 이순신장군배 전국윈드서핑대회',
-    duration: '2026. 10. 31(토) ~ 11. 1(일) 2일간',
+    duration: '2026. 10. 31(토) ~ 11. 1(일) 1박2일',
     location: '경상남도 통영시 도남항 특설경기장 및 트라이애슬론 광장 일원',
     scale: '130명 (선착순 마감)',
     host: '통영시, 통영시요트협회',
     sponsor: '경상남도, 경상남도체육회, 통영시체육회',
     supporter: '대한윈드서핑카이트보딩협회',
     office: '경상남도 통영시 도남로 269-20 통영시요트협회 사무국',
-    bankName: '선수등록 승인 후 개별 문자 발송 예정',
-    accountNo: '계좌번호 등록대기',
+    bankName: '농협 (NH농협)',
+    accountNo: '351-1334-8643-33',
     accountHolder: '통영시요트협회',
     entryFeeIndividual: '개인전 1종목당 30,000원',
     entryFeeGroup: '단체전 팀당 50,000원',
@@ -93,7 +93,7 @@ const getDefaultTenantData = (subdomain: string): TenantData => ({
     registrationStartDate: '2026-08-10T09:00',
     registrationEndDate: '2026-10-23T18:00',
     registrationNotice: '',
-    rulesNote: '※ 참가 신청 시 소속 클럽 명확히 작성 필수.\n※ 모든 나이는 2026년 10월 31일을 기준으로 합니다.\n※ 참가인원은 선착순으로 130명이 충족되면 참가접수 기한이 조기에 마감될 수 있습니다.\n※ 참가비가 납부되어야 정식 등록이 완료되며 기한 내 미납 시 참가가 자동 취소됩니다.\n※ 신청기간 이후에는 취소 및 참가비 환불이 불가합니다.',
+    rulesNote: '※ 참가 신청 시 소속 클럽 명확히 작성 필수.\n※ 모든 나이는 2026년 10월 31일을 기준으로 합니다.\n※ 참가인원은 선착순으로 130명이 충족되면 참가접수 기한이 조기에 마감될 수 있습니다.\n※ 참가비 입금계좌: 농협 351-1334-8643-33 (예금주: 통영시요트협회)\n※ 참가 신청서에 입력한 이름으로 반드시 입금해 주시기 바랍니다.\n※ 입금 완료 순서(입금순)로 선착순 130명 참가 확정 처리되며, 참가 확정 안내는 대회 공식 홈페이지에서 확인하실 수 있습니다.\n※ 신청기간 이후에는 취소 및 참가비 환불이 불가합니다.',
     itineraryDay1: '10:00 - 12:00 : 선수단 현장등록 및 웜업\n12:00 - 13:00 : 중식\n13:00 - 13:30 : 개회식\n13:30 - 18:00 : 1일차 경기',
     itineraryDay2: '09:00 - 12:00 : 2일차 경기\n12:00 - 13:00 : 중식\n13:00 - 18:00 : 2일차 경기 및 시상식\n18:00 - : 폐회식 및 해산',
     itineraryDay3: '',
@@ -166,6 +166,45 @@ export default function TenantPortalPage({
   const [regSuccess, setRegSuccess] = useState('');
   const [regError, setRegError] = useState('');
   const [regSubmitting, setRegSubmitting] = useState(false);
+
+  // 참가 신청 접수 기간 안내 팝업 상태
+  const [isRegPopupOpen, setIsRegPopupOpen] = useState(false);
+  const [hideRegPopupToday, setHideRegPopupToday] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hideUntil = localStorage.getItem('hide_registration_period_popup');
+      if (!hideUntil || new Date().getTime() > Number(hideUntil)) {
+        setIsRegPopupOpen(true);
+      }
+    }
+  }, []);
+
+  const handleCloseRegPopup = () => {
+    if (hideRegPopupToday && typeof window !== 'undefined') {
+      const expireTime = new Date().getTime() + 24 * 60 * 60 * 1000;
+      localStorage.setItem('hide_registration_period_popup', String(expireTime));
+    }
+    setIsRegPopupOpen(false);
+  };
+
+  const formatKoreanDateTime = (dtStr?: string) => {
+    if (!dtStr) return '추후 공지';
+    try {
+      const d = new Date(dtStr);
+      if (isNaN(d.getTime())) return dtStr;
+      const year = d.getFullYear();
+      const month = d.getMonth() + 1;
+      const day = d.getDate();
+      const days = ['일', '월', '화', '수', '목', '금', '토'];
+      const dayName = days[d.getDay()];
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      return `${year}년 ${month}월 ${day}일(${dayName}) ${hours}:${minutes}`;
+    } catch {
+      return dtStr;
+    }
+  };
 
   // 동적 신청서 폼 설정 로드 및 입력 데이터 핸들러
   useEffect(() => {
@@ -440,7 +479,13 @@ export default function TenantPortalPage({
         throw new Error(data.error || '접수 실패');
       }
 
-      setRegSuccess('참가 신청서가 성공적으로 제출되었습니다! 주최측에서 확인 후 문자로 입금계좌를 안내해 드립니다.');
+      setRegSuccess(
+        '참가 신청서가 성공적으로 제출되었습니다!\n\n' +
+        '• 참가비 입금계좌: 농협 351-1334-8643-33 (예금주: 통영시요트협회)\n' +
+        '• 입금자명: 참가 신청서에 작성하신 성명(이름)과 동일하게 입금해 주시기 바랍니다.\n' +
+        '• 참가 확정 기준: 입금 완료 순서(입금순)로 선착순 130명 참가 확정 처리됩니다.\n' +
+        '• 확정 안내: 선수등록 승인 및 참가 확정 내역은 대회 공식 홈페이지에서 확인하실 수 있습니다.'
+      );
       
       // 폼 초기화
       const resetResponses: Record<string, any> = {};
@@ -667,17 +712,25 @@ export default function TenantPortalPage({
               </div>
 
               <div>
-                <strong style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '6px' }}>▣ 접수방법</strong>
-                <p style={{ margin: 0, paddingLeft: '8px' }}>• 2026년 10월 23일(금) 까지 참가신청서를 작성하여 선수등록을 하여야 한다.</p>
-                <p style={{ margin: 0, paddingLeft: '8px' }}>• 단체전은 2026년 11월 1일(일) 경기개시 1시간 전 선수등록하여 시행한다.</p>
-                <p style={{ margin: 0, paddingLeft: '8px' }}>• 참가인원은 선착순으로 130명이 충족되면 참가접수기한이 조기에 마감할 수 있다. (이번대회 신설된 윙포일부분은 남녀각각 10명으로 참가인원을 제한한다.)</p>
-                <p style={{ margin: 0, paddingLeft: '8px' }}>• 참가비 입금계좌는 선수접수등록 후 개별 통지하며 참가비가 입금이 완료되어야 참가자격이 주어진다.</p>
+                <strong style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '6px' }}>▣ 접수방법 & 참가비 입금 안내</strong>
+                <p style={{ margin: 0, paddingLeft: '8px' }}>• 2026년 10월 23일(금) 18:00 까지 참가신청서를 작성하여 선수등록을 하여야 합니다.</p>
+                <p style={{ margin: 0, paddingLeft: '8px' }}>• 단체전은 2026년 11월 1일(일) 경기개시 1시간 전 선수등록하여 시행합니다.</p>
+                <p style={{ margin: 0, paddingLeft: '8px' }}>• 참가인원은 선착순 130명이 충족되면 참가접수 기한이 조기에 마감될 수 있습니다. (윙포일 부문은 남녀 각 10명으로 제한)</p>
+                <p style={{ margin: '4px 0 0 0', paddingLeft: '8px', color: 'var(--theme-primary)', fontWeight: '700' }}>
+                  • 참가비 입금계좌: 농협 351-1334-8643-33 (예금주: 통영시요트협회)
+                </p>
+                <p style={{ margin: 0, paddingLeft: '8px', color: '#b91c1c', fontWeight: '700' }}>
+                  • 참가 신청서에 작성하신 성명(이름)과 반드시 동일하게 입금해 주시기 바랍니다.
+                </p>
+                <p style={{ margin: 0, paddingLeft: '8px', color: '#0f766e', fontWeight: '700' }}>
+                  • 입금 완료 순서(입금순)로 선착순 130명 참가 확정 처리되며, 확정 안내는 대회 공식 홈페이지에서 확인하실 수 있습니다.
+                </p>
               </div>
 
               <div>
-                <strong style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '6px' }}>▣ 기타&문의사항</strong>
-                <p style={{ margin: 0, paddingLeft: '8px' }}>• 통영윈드서핑협회 전무이사 임병훈(010-3648-9838)</p>
-                <p style={{ margin: 0, paddingLeft: '8px' }}>• 2026.08.10 11:37 ~ 제한 없음</p>
+                <strong style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '6px' }}>▣ 기타 & 문의사항</strong>
+                <p style={{ margin: 0, paddingLeft: '8px' }}>• 통영윈드서핑협회 전무이사 임병훈 (010-3648-9838)</p>
+                <p style={{ margin: 0, paddingLeft: '8px' }}>• 접수 기간: 2026. 08. 10(월) 09:00 ~ 2026. 10. 23(금) 18:00</p>
               </div>
             </div>
           </div>
@@ -849,6 +902,247 @@ export default function TenantPortalPage({
       <meta property="og:image" content="https://gentrophyos.vercel.app/images/logo_new.png" />
       <link rel="preload" href="/images/windsurfing_hero.jpg" as="image" />
       <link rel="preload" href="/images/logo_new.png" as="image" />
+
+      {/* ── 참가 신청 접수 기간 안내 및 신청서 작성 팝업 모달 ── */}
+      {isRegPopupOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+            zIndex: 99999,
+            animation: 'fadeIn 0.25s ease-out'
+          }}
+          onClick={handleCloseRegPopup}
+        >
+          <div
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '20px',
+              maxWidth: '540px',
+              width: '100%',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              maxHeight: '90vh',
+              animation: 'scaleUp 0.25s ease-out',
+              color: '#1e293b'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 모달 헤더 */}
+            <div
+              style={{
+                background: 'linear-gradient(135deg, #0f766e 0%, #008080 100%)',
+                color: 'white',
+                padding: '24px 24px 20px 24px',
+                position: 'relative'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <span style={{
+                  background: 'rgba(255, 255, 255, 0.2)',
+                  color: 'white',
+                  fontSize: '0.75rem',
+                  fontWeight: '800',
+                  padding: '3px 10px',
+                  borderRadius: '20px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}>
+                  📢 접수 안내
+                </span>
+                <span style={{ fontSize: '0.8rem', color: '#ccfbf1', fontWeight: '600' }}>
+                  {tenant?.name || '제20회 이순신장군배 전국윈드서핑대회'}
+                </span>
+              </div>
+              <h2 style={{ fontSize: '1.35rem', fontWeight: '900', margin: 0, lineHeight: '1.35', color: '#ffffff' }}>
+                대회 참가 신청서 접수 기간 안내
+              </h2>
+
+              <button
+                type="button"
+                onClick={handleCloseRegPopup}
+                style={{
+                  position: 'absolute',
+                  top: '18px',
+                  right: '18px',
+                  background: 'rgba(255, 255, 255, 0.15)',
+                  border: 'none',
+                  color: '#ffffff',
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                aria-label="닫기"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* 모달 본문 */}
+            <div style={{ padding: '22px 24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              
+              {/* 접수 상태 뱃지 */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: regStatusType === 'OPEN' ? '#f0fdf4' : regStatusType === 'BEFORE' ? '#fefce8' : '#fef2f2',
+                border: `1px solid ${regStatusType === 'OPEN' ? '#bbf7d0' : regStatusType === 'BEFORE' ? '#fef08a' : '#fecaca'}`,
+                padding: '12px 16px',
+                borderRadius: '12px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '1.2rem' }}>{regStatusBadge.icon}</span>
+                  <span style={{
+                    fontWeight: '800',
+                    fontSize: '0.95rem',
+                    color: regStatusType === 'OPEN' ? '#166534' : regStatusType === 'BEFORE' ? '#854d0e' : '#991b1b'
+                  }}>
+                    {regStatusBadge.text}
+                  </span>
+                </div>
+                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                  정원 130명 선착순
+                </span>
+              </div>
+
+              {/* ERP에 저장된 접수 기간 안내 박스 */}
+              <div style={{
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '14px',
+                padding: '16px 18px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px'
+              }}>
+                <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  ⏰ 온라인 참가 신청 접수 일정 (ERP 설정)
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.88rem', color: '#334155' }}>
+                  <p style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    • <strong style={{ color: '#0f766e', minWidth: '70px' }}>접수 시작 :</strong>
+                    <span style={{ fontWeight: '700' }}>{formatKoreanDateTime(regStartDateStr)}</span>
+                  </p>
+                  <p style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    • <strong style={{ color: '#dc2626', minWidth: '70px' }}>접수 마감 :</strong>
+                    <span style={{ fontWeight: '700' }}>{formatKoreanDateTime(regEndDateStr)}</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* 대회 기본 정보 카드 */}
+              <div style={{
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                padding: '14px 16px',
+                fontSize: '0.85rem',
+                color: '#475569',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '6px'
+              }}>
+                <p style={{ margin: 0 }}>• <strong>대회 일정 :</strong> {overview.duration || '2026. 10. 31(토) ~ 11. 1(일) 1박2일'}</p>
+                <p style={{ margin: 0 }}>• <strong>대회 장소 :</strong> {overview.location || '경상남도 통영시 도남항 특설경기장 및 트라이애슬론 광장 일원'}</p>
+                <p style={{ margin: 0 }}>• <strong>참가 인원 :</strong> {overview.scale || '130명 (선착순 마감)'}</p>
+                <p style={{ margin: 0 }}>• <strong>문의 안내 :</strong> {overview.contactPhone || '대회 사무국 (010-3648-9838)'}</p>
+              </div>
+
+              {/* 참가 신청서 작성 버튼 */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (isRegistrationOpen) {
+                    handleCloseRegPopup();
+                    window.location.href = window.location.pathname.startsWith('/tenant/')
+                      ? `${window.location.pathname}?mode=apply`
+                      : `/tenant/${subdomain}?mode=apply`;
+                  } else {
+                    alert(regStatusMessage);
+                  }
+                }}
+                className="btn-primary"
+                style={{
+                  width: '100%',
+                  padding: '16px',
+                  fontSize: '1.05rem',
+                  fontWeight: '800',
+                  justifyContent: 'center',
+                  background: isRegistrationOpen
+                    ? 'linear-gradient(135deg, #008080 0%, #0f766e 100%)'
+                    : '#94a3b8',
+                  boxShadow: isRegistrationOpen ? '0 4px 14px rgba(0, 128, 128, 0.35)' : 'none',
+                  cursor: isRegistrationOpen ? 'pointer' : 'not-allowed',
+                  borderRadius: '12px',
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                <FileText size={20} />
+                <span>{isRegistrationOpen ? '참가신청서 작성하기' : `참가신청 (${regStatusBadge.text})`}</span>
+              </button>
+            </div>
+
+            {/* 모달 푸터 */}
+            <div
+              style={{
+                borderTop: '1px solid #e2e8f0',
+                padding: '14px 20px',
+                background: '#f8fafc',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: '12px'
+              }}
+            >
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.82rem', color: '#64748b', userSelect: 'none' }}>
+                <input
+                  type="checkbox"
+                  checked={hideRegPopupToday}
+                  onChange={(e) => setHideRegPopupToday(e.target.checked)}
+                  style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--theme-primary)' }}
+                />
+                오늘 하루 동안 이 창 열지 않기
+              </label>
+
+              <button
+                type="button"
+                onClick={handleCloseRegPopup}
+                style={{
+                  background: '#334155',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '10px',
+                  padding: '8px 18px',
+                  fontSize: '0.85rem',
+                  fontWeight: '700',
+                  cursor: 'pointer'
+                }}
+              >
+                닫기
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
 
       {/* 1. 상단 화이트 브랜드 헤더 */}
       <header className="site-header">
@@ -1831,7 +2125,7 @@ export default function TenantPortalPage({
                 {/* 세부 대회 일정 (타임라인 카드) */}
                 <div className="glass-panel" style={{ padding: '24px 30px', background: 'white' }}>
                   <h2 style={{ fontSize: '1.4rem', fontWeight: '800', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)' }}>
-                    <Calendar style={{ color: 'var(--theme-primary)' }} size={22} /> 공식 대회 일정표 (2일간)
+                    <Calendar style={{ color: 'var(--theme-primary)' }} size={22} /> 공식 대회 일정표 (1박2일)
                   </h2>
                   
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
@@ -2053,7 +2347,7 @@ export default function TenantPortalPage({
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', fontSize: '0.92rem', color: 'black' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <p style={{ margin: 0 }}><strong>대회명 :</strong> 제20회 이순신장군배 전국윈드서핑대회 (2026)</p>
-                        <p style={{ margin: 0 }}><strong>기간 :</strong> 2026년 10월 31일(토) ~ 11월 1일(일) [2일간]</p>
+                        <p style={{ margin: 0 }}><strong>기간 :</strong> 2026년 10월 31일(토) ~ 11월 1일(일) [1박2일]</p>
                         <p style={{ margin: 0 }}><strong>장소 :</strong> 통영 수륙해수욕장 일원 (통영윈드서핑협회)</p>
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
