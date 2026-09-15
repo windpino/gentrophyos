@@ -125,6 +125,29 @@ export async function POST(
     }
     const tenant = tenantDoc.data();
 
+    // 0. 대회 참가 신청 기간 및 접근 권한 유효성 검증
+    const overviewConfig = tenant.overviewConfig || {};
+    const registrationEnabled = overviewConfig.registrationEnabled !== false;
+    const startDate = overviewConfig.registrationStartDate ? new Date(overviewConfig.registrationStartDate) : null;
+    const endDate = overviewConfig.registrationEndDate ? new Date(overviewConfig.registrationEndDate) : null;
+    const now = new Date();
+
+    if (!registrationEnabled) {
+      return NextResponse.json({
+        error: overviewConfig.registrationNotice || '현재는 대회 주최 측에 의해 참가 신청 접수가 일시 중단되었습니다.'
+      }, { status: 400 });
+    }
+    if (startDate && !isNaN(startDate.getTime()) && now < startDate) {
+      return NextResponse.json({
+        error: `대회 참가 신청 기간 전입니다. (접수 시작: ${overviewConfig.registrationStartDate.replace('T', ' ')})`
+      }, { status: 400 });
+    }
+    if (endDate && !isNaN(endDate.getTime()) && now > endDate) {
+      return NextResponse.json({
+        error: `대회 참가 신청 접수가 마감되었습니다. (접수 마감: ${overviewConfig.registrationEndDate.replace('T', ' ')})`
+      }, { status: 400 });
+    }
+
     // 1. 선수 조회
     const playerQuery = query(
       collection(firestore, 'players'),

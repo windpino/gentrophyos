@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, use } from 'react';
-import { Award, Check, X, Menu, Upload, Download, Plus, Trash2, ArrowUp, ArrowDown, Users, FileText, Settings, Layers, Calendar, RefreshCw, Save, Search, Eye, ExternalLink } from 'lucide-react';
+import { Award, Check, X, Menu, Upload, Download, Plus, Trash2, ArrowUp, ArrowDown, Users, FileText, Settings, Layers, Calendar, RefreshCw, Save, Search, Eye, ExternalLink, Clock, ShieldAlert, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '@/src/lib/firebase';
 
@@ -71,6 +71,13 @@ export default function HostDashboardPage({
   const [selectedReg, setSelectedReg] = useState<GridRow | null>(null); // 신청서 보기 팝업용
   const [isSaving, setIsSaving] = useState(false);
 
+  // 온라인 참가 신청 접수 기간 및 권한 설정 상태
+  const [regStartDate, setRegStartDate] = useState('2026-08-10T09:00');
+  const [regEndDate, setRegEndDate] = useState('2026-10-23T18:00');
+  const [regEnabled, setRegEnabled] = useState(true);
+  const [regNotice, setRegNotice] = useState('');
+  const [regPeriodSaving, setRegPeriodSaving] = useState(false);
+
   // 동점자 룰
   const [rules, setRules] = useState<TieBreakerRule[]>([]);
 
@@ -105,6 +112,13 @@ export default function HostDashboardPage({
       const tenantData = await tenantRes.json();
       if (tenantData.tenant) {
         setTenant(tenantData.tenant);
+        if (tenantData.tenant.overviewConfig) {
+          const cfg = tenantData.tenant.overviewConfig;
+          if (cfg.registrationStartDate) setRegStartDate(cfg.registrationStartDate);
+          if (cfg.registrationEndDate) setRegEndDate(cfg.registrationEndDate);
+          if (cfg.registrationEnabled !== undefined) setRegEnabled(cfg.registrationEnabled);
+          if (cfg.registrationNotice !== undefined) setRegNotice(cfg.registrationNotice);
+        }
         const ongoing = tenantData.tenant.tournaments.find((t: any) => t.status === 'ONGOING');
         if (ongoing) {
           setActiveTournament(ongoing);
@@ -115,6 +129,36 @@ export default function HostDashboardPage({
       console.error(e);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveRegistrationPeriod = async () => {
+    setRegPeriodSaving(true);
+    try {
+      const currentConfig = tenant?.overviewConfig || {};
+      const updatedConfig = {
+        ...currentConfig,
+        registrationStartDate: regStartDate,
+        registrationEndDate: regEndDate,
+        registrationEnabled: regEnabled,
+        registrationNotice: regNotice,
+      };
+      const res = await fetch(`/api/tenant/${subdomain}/overview`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ overviewConfig: updatedConfig }),
+      });
+      if (res.ok) {
+        alert('참가 신청서 접수 기간 및 권한 설정이 성공적으로 저장되었습니다!');
+        await fetchInitialData();
+      } else {
+        const data = await res.json();
+        alert(data.error || '저장 실패');
+      }
+    } catch (err: any) {
+      alert('저장 중 오류 발생: ' + err.message);
+    } finally {
+      setRegPeriodSaving(false);
     }
   };
 
@@ -1321,14 +1365,146 @@ export default function HostDashboardPage({
 
         {/* SECTION E: 참가신청서 양식 설정 (폼빌더) */}
         {activeSection === 'form-builder' && (
-          <div style={{ background: 'var(--bg-card)', padding: '24px', borderRadius: '12px', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}>
-            <div style={{ marginBottom: '20px' }}>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '8px' }}>신청서 질문 양식 구성 (폼빌더)</h2>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
-                참가자가 제출할 양식의 질문과 동의서 내용을 자유롭게 설계할 수 있습니다.<br />
-                <span style={{ color: '#EF4444', fontWeight: '600' }}>⚠️ 주의:</span> <strong>name (성명), birth (생년월일), gender (성별), phone (전화번호), club (소속), division (참가종목), tshirtSize (티셔츠 사이즈)</strong> 필드는 시스템 참가자 리스트와 직결되는 핵심 질문이므로 필드코드를 임의로 변경하지 않도록 유의해주세요.
-              </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            
+            {/* ⏰ 참가 신청서 접수 기간 및 접근 권한 설정 카드 */}
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%)',
+              border: '1px solid var(--border-color)',
+              borderRadius: '16px',
+              padding: '24px',
+              boxShadow: '0 10px 25px -5px rgba(0,0,0,0.2)',
+              color: 'var(--text-main)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '16px', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ background: 'rgba(197, 168, 128, 0.2)', padding: '10px', borderRadius: '12px', color: 'var(--theme-gold)' }}>
+                    <Clock size={24} />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '1.15rem', fontWeight: '800', margin: 0, color: '#f8fafc' }}>
+                      참가 신청서 접수 기간 및 접근 권한 제어
+                    </h3>
+                    <p style={{ fontSize: '0.85rem', color: '#94a3b8', margin: '4px 0 0 0' }}>
+                      설정된 접수 기간 중에만 일반 참가자가 참가신청서에 접근하고 제출할 수 있도록 권한을 통제합니다.
+                    </p>
+                  </div>
+                </div>
+
+                {/* 실시간 상태 뱃지 */}
+                {(() => {
+                  const now = new Date();
+                  const s = regStartDate ? new Date(regStartDate) : null;
+                  const e = regEndDate ? new Date(regEndDate) : null;
+                  let badge = { text: '접수 진행 중', bg: 'rgba(16, 185, 129, 0.15)', border: '#10b981', color: '#6ee7b7', icon: '🟢' };
+
+                  if (!regEnabled) {
+                    badge = { text: '접수 수동 중단(비활성)', bg: 'rgba(100, 116, 139, 0.2)', border: '#64748b', color: '#cbd5e1', icon: '⚫' };
+                  } else if (s && !isNaN(s.getTime()) && now < s) {
+                    badge = { text: '접수 시작 전 (대기)', bg: 'rgba(234, 179, 8, 0.15)', border: '#eab308', color: '#fde047', icon: '🟡' };
+                  } else if (e && !isNaN(e.getTime()) && now > e) {
+                    badge = { text: '접수 기간 마감', bg: 'rgba(239, 68, 68, 0.15)', border: '#ef4444', color: '#fca5a5', icon: '🔴' };
+                  }
+
+                  return (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '8px 16px',
+                      borderRadius: '20px',
+                      background: badge.bg,
+                      border: `1px solid ${badge.border}`,
+                      color: badge.color,
+                      fontSize: '0.85rem',
+                      fontWeight: '800'
+                    }}>
+                      <span>{badge.icon}</span>
+                      <span>{badge.text}</span>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              <div className="grid-responsive-3" style={{ gap: '16px', marginBottom: '16px' }}>
+                <div>
+                  <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#cbd5e1', display: 'block', marginBottom: '6px' }}>
+                    접수 시작 일시
+                  </label>
+                  <input
+                    type="datetime-local"
+                    className="form-input"
+                    value={regStartDate}
+                    onChange={(e) => setRegStartDate(e.target.value)}
+                    style={{ background: '#0f172a', color: 'white', borderColor: 'rgba(255,255,255,0.2)' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#cbd5e1', display: 'block', marginBottom: '6px' }}>
+                    접수 마감 일시
+                  </label>
+                  <input
+                    type="datetime-local"
+                    className="form-input"
+                    value={regEndDate}
+                    onChange={(e) => setRegEndDate(e.target.value)}
+                    style={{ background: '#0f172a', color: 'white', borderColor: 'rgba(255,255,255,0.2)' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#cbd5e1', display: 'block', marginBottom: '6px' }}>
+                    온라인 접수 강제 허용/중단
+                  </label>
+                  <select
+                    className="form-input"
+                    value={regEnabled ? 'ENABLED' : 'DISABLED'}
+                    onChange={(e) => setRegEnabled(e.target.value === 'ENABLED')}
+                    style={{ background: '#0f172a', color: 'white', borderColor: 'rgba(255,255,255,0.2)' }}
+                  >
+                    <option value="ENABLED">🟢 온라인 접수 활성화 (설정 기간에 따라 자동 오픈)</option>
+                    <option value="DISABLED">🔴 온라인 접수 비활성화 (강제 마감/차단)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#cbd5e1', display: 'block', marginBottom: '6px' }}>
+                  접수 마감 / 기간 외 안내 메시지 (참가자가 비허용 시간에 접속 시 표시)
+                </label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="예: 제20회 이순신장군배 전국윈드서핑대회 참가 신청 접수가 마감되었습니다."
+                  value={regNotice}
+                  onChange={(e) => setRegNotice(e.target.value)}
+                  style={{ background: '#0f172a', color: 'white', borderColor: 'rgba(255,255,255,0.2)' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={handleSaveRegistrationPeriod}
+                  disabled={regPeriodSaving}
+                  className="btn-primary"
+                  style={{ padding: '10px 22px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '800' }}
+                >
+                  <Save size={16} /> {regPeriodSaving ? '설정 저장 중...' : '접수 기간 및 권한 설정 저장'}
+                </button>
+              </div>
             </div>
+
+            {/* 질문 양식 구성 (폼빌더) 본문 */}
+            <div style={{ background: 'var(--bg-card)', padding: '24px', borderRadius: '16px', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}>
+              <div style={{ marginBottom: '20px' }}>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '8px' }}>신청서 질문 양식 구성 (폼빌더)</h2>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
+                  참가자가 제출할 양식의 질문과 동의서 내용을 자유롭게 설계할 수 있습니다.<br />
+                  <span style={{ color: '#EF4444', fontWeight: '600' }}>⚠️ 주의:</span> <strong>name (성명), birth (생년월일), gender (성별), phone (전화번호), club (소속), division (참가종목), tshirtSize (티셔츠 사이즈)</strong> 필드는 시스템 참가자 리스트와 직결되는 핵심 질문이므로 필드코드를 임의로 변경하지 않도록 유의해주세요.
+                </p>
+              </div>
 
             {formConfigLoading ? (
               <div style={{ padding: '40px', textAlign: 'center' }}><RefreshCw className="animate-spin" size={24} /> 로딩 중...</div>
@@ -1618,6 +1794,7 @@ export default function HostDashboardPage({
                 </div>
               </div>
             )}
+            </div>
           </div>
         )}
       </main>
@@ -1859,6 +2036,10 @@ function OverviewEditor({ tenant, subdomain, onSaveSuccess }: OverviewEditorProp
     entryFeeIndividual: '개인전 1종목당 20,000원',
     entryFeeGroup: '단체전 팀당 50,000원',
     deadlineDate: '2026년 10월 23일(금)',
+    registrationStartDate: '2026-08-10T09:00',
+    registrationEndDate: '2026-10-23T18:00',
+    registrationEnabled: true,
+    registrationNotice: '대회 참가 신청 접수 기간이 아닙니다.',
     rulesNote: '※ 참가 신청 시 소속 클럽 명확히 작성 필수.\n※ 단체전은 남녀 혼성 계영 4x50m 및 4x100m로 진행함.\n※ 모든 나이는 2026년 10월 31일을 기준으로 합니다.\n※ 1인 최대 2종목까지 신청 가능 (단체전 제외).\n※ 참가인원은 선착순으로 300명이 충족되면 참가접수 기한이 조기에 마감될 수 있습니다.\n※ 참가비가 납부되어야 정식 등록이 완료되며 기한 내 미납 시 참가가 자동 취소됩니다.\n※ 신청기간 이후에는 취소 및 참가비 환불이 불가합니다.',
     itineraryDay1: '10:00 - 12:00 : 선수단 현장등록 및 웜업\n12:00 - 13:00 : 중식\n13:00 - 13:30 : 개회식\n13:30 - 18:00 : 1일차 경기',
     itineraryDay2: '09:00 - 12:00 : 2일차 경기\n12:00 - 13:00 : 중식\n13:00 - 18:00 : 2일차 경기 및 시상식\n18:00 - : 폐회식 및 해산',
@@ -2030,9 +2211,81 @@ function OverviewEditor({ tenant, subdomain, onSaveSuccess }: OverviewEditorProp
 
           {/* 3. 접수 및 계좌 세션 */}
           <div>
-            <h4 style={{ color: 'var(--theme-primary)', fontWeight: '800', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '16px' }}>
-              3. 참가비 수납 및 마감 기일
-            </h4>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '16px' }}>
+              <h4 style={{ color: 'var(--theme-primary)', fontWeight: '800', margin: 0 }}>
+                3. 온라인 참가신청서 접수 기간 및 수납 정보
+              </h4>
+              
+              {/* 실시간 접수 상태 표시 */}
+              {(() => {
+                const now = new Date();
+                const s = config.registrationStartDate ? new Date(config.registrationStartDate) : null;
+                const e = config.registrationEndDate ? new Date(config.registrationEndDate) : null;
+                const enabled = config.registrationEnabled !== false;
+                let badge = { text: '접수 진행 중 (접수 가능)', bg: 'rgba(16, 185, 129, 0.15)', border: '#10b981', color: '#166534', icon: '🟢' };
+
+                if (!enabled) {
+                  badge = { text: '접수 일시 중단', bg: 'rgba(100, 116, 139, 0.15)', border: '#64748b', color: '#475569', icon: '⚫' };
+                } else if (s && !isNaN(s.getTime()) && now < s) {
+                  badge = { text: '접수 시작 전 (대기)', bg: 'rgba(234, 179, 8, 0.15)', border: '#eab308', color: '#854d0e', icon: '🟡' };
+                } else if (e && !isNaN(e.getTime()) && now > e) {
+                  badge = { text: '접수 기간 마감', bg: 'rgba(239, 68, 68, 0.15)', border: '#ef4444', color: '#991b1b', icon: '🔴' };
+                }
+
+                return (
+                  <span style={{ fontSize: '0.8rem', fontWeight: '800', background: badge.bg, border: `1px solid ${badge.border}`, color: badge.color, padding: '4px 10px', borderRadius: '14px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    {badge.icon} {badge.text}
+                  </span>
+                );
+              })()}
+            </div>
+
+            {/* 접수 기간 및 권한 통제 필드 */}
+            <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
+              <div className="grid-responsive-3" style={{ gap: '16px', marginBottom: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: '700', color: '#1e293b' }}>⏰ 온라인 접수 시작 일시</label>
+                  <input
+                    type="datetime-local"
+                    className="form-input"
+                    value={config.registrationStartDate || '2026-08-10T09:00'}
+                    onChange={e => handleChange('registrationStartDate', e.target.value)}
+                  />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: '700', color: '#1e293b' }}>⏰ 온라인 접수 마감 일시</label>
+                  <input
+                    type="datetime-local"
+                    className="form-input"
+                    value={config.registrationEndDate || '2026-10-23T18:00'}
+                    onChange={e => handleChange('registrationEndDate', e.target.value)}
+                  />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: '700', color: '#1e293b' }}>온라인 접수 상태 토글</label>
+                  <select
+                    className="form-input"
+                    value={config.registrationEnabled !== false ? 'ENABLED' : 'DISABLED'}
+                    onChange={e => handleChange('registrationEnabled', (e.target.value === 'ENABLED') as any)}
+                  >
+                    <option value="ENABLED">🟢 온라인 접수 활성화 (기간 일정에 따라 자동 오픈)</option>
+                    <option value="DISABLED">🔴 온라인 접수 비활성화 (강제 마감)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: '700', color: '#1e293b' }}>접수 마감/비허용 시 참가자 안내 메시지</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="예: 제20회 이순신장군배 전국윈드서핑대회 참가 신청 접수가 마감되었습니다."
+                  value={config.registrationNotice || ''}
+                  onChange={e => handleChange('registrationNotice', e.target.value)}
+                />
+              </div>
+            </div>
+
             <div className="grid-responsive-3" style={{ gap: '16px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>은행명</label>
@@ -2055,7 +2308,7 @@ function OverviewEditor({ tenant, subdomain, onSaveSuccess }: OverviewEditorProp
                 <input type="text" className="form-input" value={config.entryFeeGroup} onChange={e => handleChange('entryFeeGroup', e.target.value)} />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>접수 마감일</label>
+                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>접수 마감일 (표시용 텍스트)</label>
                 <input type="text" className="form-input" value={config.deadlineDate} onChange={e => handleChange('deadlineDate', e.target.value)} />
               </div>
             </div>

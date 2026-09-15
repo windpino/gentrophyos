@@ -38,7 +38,11 @@ export async function GET(
       tournaments,
     };
 
-    return NextResponse.json({ tenant });
+    return NextResponse.json({ tenant }, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=300',
+      },
+    });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
