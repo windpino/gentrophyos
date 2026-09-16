@@ -21,12 +21,19 @@ import {
   ExternalLink,
   Edit2,
   Medal,
-  Flag
+  Flag,
+  Plus,
+  Trash2,
+  AlertCircle
 } from 'lucide-react';
 
-type RoundKey = 'r1' | 'r2' | 'r3' | 'r4' | 'r5' | 'r6';
+export interface RoundItem {
+  key: string;
+  label: string;
+  short: string;
+}
 
-const ROUND_CONFIG: { key: RoundKey; label: string; short: string }[] = [
+const DEFAULT_ROUNDS: RoundItem[] = [
   { key: 'r1', label: '1라운드 (1R)', short: '1R' },
   { key: 'r2', label: '2라운드 (2R)', short: '2R' },
   { key: 'r3', label: '3라운드 (3R)', short: '3R' },
@@ -47,6 +54,9 @@ export default function RefereeMobilePage({
   const [activeTournament, setActiveTournament] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
+  // 라운드 동적 관리 상태
+  const [rounds, setRounds] = useState<RoundItem[]>(DEFAULT_ROUNDS);
+
   // 모드 분리 상태: 'input' (순위 입력란) vs 'confirm' (순위 확정 및 검토란)
   const [activeMode, setActiveMode] = useState<'input' | 'confirm'>('input');
 
@@ -57,13 +67,13 @@ export default function RefereeMobilePage({
   const [formFields, setFormFields] = useState<any[]>([]);
 
   // 순위 입력란 전용 상태
-  const [selectedRound, setSelectedRound] = useState<RoundKey>('r1');
+  const [selectedRound, setSelectedRound] = useState<string>('r1');
   const [currentRankNum, setCurrentRankNum] = useState<number>(1);
   const [bibInput, setBibInput] = useState<string>('');
   const [inputFeedback, setInputFeedback] = useState<{ text: string; isError: boolean } | null>(null);
 
   // 확정란 셀 선택 상태 (모바일 키패드/DNS/DNF 바용)
-  const [activeCell, setActiveCell] = useState<{ id: string; roundKey: RoundKey } | null>(null);
+  const [activeCell, setActiveCell] = useState<{ id: string; roundKey: string } | null>(null);
 
   // 인증 게이트
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -114,7 +124,7 @@ export default function RefereeMobilePage({
 
       if (tenantData.tenant) {
         setTenant(tenantData.tenant);
-        const ongoing = tenantData.tenant.tournaments.find((t: any) => t.status === 'ONGOING');
+        const ongoing = tenantData.tenant.tournaments?.find((t: any) => t.status === 'ONGOING');
         if (ongoing) {
           setActiveTournament(ongoing);
           await fetchRegistrations(ongoing.id);
@@ -145,21 +155,19 @@ export default function RefereeMobilePage({
               }
             } catch (e) {}
 
-            return {
+            const baseObj: any = {
               id: r.id,
               name: r.player.name,
               birth,
               division,
               bibNumber: r.bibNumber || '',
-              r1: null,
-              r2: null,
-              r3: null,
-              r4: null,
-              r5: null,
-              r6: null,
               total: 0,
               rank: '-'
             };
+            DEFAULT_ROUNDS.forEach(rd => {
+              baseObj[rd.key] = null;
+            });
+            return baseObj;
           });
         setRawRegistrations(parsed);
       }
@@ -173,6 +181,35 @@ export default function RefereeMobilePage({
       const res = await fetch(`/api/tenant/${subdomain}/leaderboard?tournamentId=${tId}&division=${encodeURIComponent(divisionName)}`);
       const data = await res.json();
       if (data.leaderboard && data.leaderboard.length > 0) {
+        // 1. 저장된 리더보드에서 라운드 키 감지 (r1, r2, ... rN)
+        const discoveredRoundKeys = new Set<string>();
+        data.leaderboard.forEach((item: any) => {
+          Object.keys(item).forEach(k => {
+            if (/^r\d+$/.test(k)) {
+              discoveredRoundKeys.add(k);
+            }
+          });
+        });
+
+        let activeRounds = [...DEFAULT_ROUNDS];
+        if (discoveredRoundKeys.size > 0) {
+          const sortedKeys = Array.from(discoveredRoundKeys).sort((a, b) => {
+            const numA = parseInt(a.replace('r', ''), 10);
+            const numB = parseInt(b.replace('r', ''), 10);
+            return numA - numB;
+          });
+          const maxNum = Math.max(...sortedKeys.map(k => parseInt(k.replace('r', ''), 10)), 6);
+          activeRounds = Array.from({ length: maxNum }, (_, idx) => {
+            const num = idx + 1;
+            return {
+              key: `r${num}`,
+              label: `${num}라운드 (${num}R)`,
+              short: `${num}R`
+            };
+          });
+        }
+        setRounds(activeRounds);
+
         const parseSavedRoundVal = (val: any) => {
           if (val === undefined || val === null || val === '') return null;
           if (val === 'DNS' || val === 'DNF') return val;
@@ -182,24 +219,20 @@ export default function RefereeMobilePage({
 
         const mapped = baseRegistrations.map((player) => {
           const savedRow = data.leaderboard.find((lItem: any) => lItem.name === player.name);
+          const updated: any = { ...player };
           if (savedRow) {
-            const r1 = parseSavedRoundVal(savedRow.r1);
-            const r2 = parseSavedRoundVal(savedRow.r2);
-            const r3 = parseSavedRoundVal(savedRow.r3);
-            const r4 = parseSavedRoundVal(savedRow.r4);
-            const r5 = parseSavedRoundVal(savedRow.r5);
-            const r6 = parseSavedRoundVal(savedRow.r6);
-            
-            const updated = {
-              ...player,
-              bibNumber: savedRow.bibNumber || player.bibNumber,
-              r1, r2, r3, r4, r5, r6,
-              rank: savedRow.rank || '-'
-            };
-            updated.total = calculateTotal(updated, baseRegistrations.length);
-            return updated;
+            updated.bibNumber = savedRow.bibNumber || player.bibNumber;
+            updated.rank = savedRow.rank || '-';
+            activeRounds.forEach(r => {
+              updated[r.key] = parseSavedRoundVal(savedRow[r.key]);
+            });
+          } else {
+            activeRounds.forEach(r => {
+              updated[r.key] = null;
+            });
           }
-          return player;
+          updated.total = calculateTotal(updated, baseRegistrations.length, activeRounds);
+          return updated;
         });
 
         mapped.sort((a, b) => {
@@ -210,7 +243,14 @@ export default function RefereeMobilePage({
         });
         setParticipants(mapped);
       } else {
-        setParticipants(baseRegistrations);
+        const initialized = baseRegistrations.map(p => {
+          const obj: any = { ...p };
+          rounds.forEach(r => { obj[r.key] = null; });
+          obj.total = 0;
+          obj.rank = '-';
+          return obj;
+        });
+        setParticipants(initialized);
       }
     } catch (e) {
       console.error(e);
@@ -222,7 +262,6 @@ export default function RefereeMobilePage({
     if (activeTournament && rawRegistrations.length > 0) {
       const filteredBase = rawRegistrations.filter(r => r.division === activeDivisionTab);
       loadLeaderboardForDivision(activeTournament.id, activeDivisionTab, filteredBase);
-      // Reset input pointers
       setCurrentRankNum(1);
       setBibInput('');
       setInputFeedback(null);
@@ -231,10 +270,10 @@ export default function RefereeMobilePage({
     }
   }, [activeDivisionTab, rawRegistrations, activeTournament]);
 
-  // 점수 및 총점 계산
-  const calculateTotal = (row: any, totalParticipants: number) => {
-    const rounds = [row.r1, row.r2, row.r3, row.r4, row.r5, row.r6];
-    const validScores = rounds.map(r => {
+  // 점수 및 총점 계산 (Sailing Low-point System)
+  const calculateTotal = (row: any, totalParticipants: number, activeRoundsList: RoundItem[] = rounds) => {
+    const roundValues = activeRoundsList.map(r => row[r.key]);
+    const validScores = roundValues.map(r => {
       if (r === null || r === undefined || r === '') return null;
       if (r === 'DNS' || r === 'DNF') return totalParticipants;
       const num = Number(r);
@@ -246,13 +285,94 @@ export default function RefereeMobilePage({
     const sum = validScores.reduce((acc, curr) => acc + curr, 0);
     if (validScores.length >= 4) {
       const maxVal = Math.max(...validScores);
-      return sum - maxVal; // 가장 높은 점수(가장 성적이 나쁜 라운드) 제외
+      return sum - maxVal; // 가장 높은 점수(가장 성적이 나쁜 라운드 1개) 제외
     }
     return sum;
   };
 
+  // ── [동적 라운드 추가 / 삭제 핸들러] ──
+  // 라운드 추가 (+1R)
+  const handleAddRound = () => {
+    const nextNum = rounds.length + 1;
+    const newKey = `r${nextNum}`;
+    const newRound: RoundItem = {
+      key: newKey,
+      label: `${nextNum}라운드 (${nextNum}R)`,
+      short: `${nextNum}R`
+    };
+    const updatedRounds = [...rounds, newRound];
+    setRounds(updatedRounds);
+
+    setParticipants(prev =>
+      prev.map(p => ({
+        ...p,
+        [newKey]: null
+      }))
+    );
+    setSelectedRound(newKey);
+    setCurrentRankNum(1);
+    setInputFeedback({ text: `✨ [${nextNum}R] 라운드가 추가되었습니다!`, isError: false });
+  };
+
+  // 특정 라운드 삭제
+  const handleDeleteRound = (roundKeyToDelete?: string) => {
+    if (rounds.length <= 1) {
+      alert('최소 1개 이상의 라운드가 유지되어야 합니다.');
+      return;
+    }
+
+    const targetKey = roundKeyToDelete || selectedRound;
+    const targetRound = rounds.find(r => r.key === targetKey);
+    const targetName = targetRound ? targetRound.short : targetKey;
+
+    const confirmed = window.confirm(
+      `정말 [${targetName}] 라운드를 삭제하시겠습니까?\n해당 라운드에 입력된 모든 선수의 순위 및 점수가 영구 삭제됩니다.`
+    );
+    if (!confirmed) return;
+
+    const updatedRounds = rounds.filter(r => r.key !== targetKey);
+    setRounds(updatedRounds);
+
+    setParticipants(prev =>
+      prev.map(p => {
+        const updated = { ...p };
+        delete updated[targetKey];
+        updated.total = calculateTotal(updated, prev.length, updatedRounds);
+        return updated;
+      })
+    );
+
+    if (selectedRound === targetKey) {
+      setSelectedRound(updatedRounds[updatedRounds.length - 1].key);
+      setCurrentRankNum(1);
+    }
+    setInputFeedback({ text: `🗑️ [${targetName}] 라운드가 삭제되었습니다.`, isError: false });
+  };
+
+  // 현재 라운드 전체 순위 초기화(전체 삭제)
+  const handleResetRoundScores = () => {
+    const targetRound = rounds.find(r => r.key === selectedRound);
+    const targetName = targetRound ? targetRound.short : selectedRound;
+
+    const confirmed = window.confirm(
+      `정말 [${targetName}] 라운드의 모든 순위 입력을 초기화(전체 삭제)하시겠습니까?`
+    );
+    if (!confirmed) return;
+
+    setParticipants(prev =>
+      prev.map(p => {
+        const updated = { ...p, [selectedRound]: null };
+        updated.total = calculateTotal(updated, prev.length, rounds);
+        return updated;
+      })
+    );
+    setCurrentRankNum(1);
+    setBibInput('');
+    setInputFeedback({ text: `🧹 [${targetName}] 라운드의 모든 순위가 초기화되었습니다.`, isError: false });
+  };
+
   // 개별 셀 점수 직접 입력 핸들러 (확정란 그리드 수정용)
-  const handleScoreInput = (id: string, roundKey: RoundKey, valString: string) => {
+  const handleScoreInput = (id: string, roundKey: string, valString: string) => {
     let val: any = valString.trim().toUpperCase();
     if (val === '') {
       val = null;
@@ -267,7 +387,7 @@ export default function RefereeMobilePage({
       prev.map(p => {
         if (p.id === id) {
           const updated = { ...p, [roundKey]: val };
-          updated.total = calculateTotal(updated, prev.length);
+          updated.total = calculateTotal(updated, prev.length, rounds);
           return updated;
         }
         return p;
@@ -277,18 +397,18 @@ export default function RefereeMobilePage({
 
   // ── [순위 입력란 전용 로직] ──
   // 특정 선수에게 특정 라운드의 순위(점수) 부여
-  const assignRankToPlayer = (playerId: string, roundKey: RoundKey, scoreOrRank: number | 'DNS' | 'DNF' | null) => {
+  const assignRankToPlayer = (playerId: string, roundKey: string, scoreOrRank: number | 'DNS' | 'DNF' | null) => {
     setParticipants(prev =>
       prev.map(p => {
         if (p.id === playerId) {
           const updated = { ...p, [roundKey]: scoreOrRank };
-          updated.total = calculateTotal(updated, prev.length);
+          updated.total = calculateTotal(updated, prev.length, rounds);
           return updated;
         }
         // 만약 다른 선수가 이미 해당 순위 번호를 가지고 있었다면 해제 (중복 방지)
         if (typeof scoreOrRank === 'number' && p[roundKey] === scoreOrRank) {
           const updated = { ...p, [roundKey]: null };
-          updated.total = calculateTotal(updated, prev.length);
+          updated.total = calculateTotal(updated, prev.length, rounds);
           return updated;
         }
         return p;
@@ -301,13 +421,13 @@ export default function RefereeMobilePage({
     if (e) e.preventDefault();
     const cleanBib = bibInput.trim();
     if (!cleanBib) {
-      setInputFeedback({ text: '배번(티넘버)을 입력해주세요.', isError: true });
+      setInputFeedback({ text: '배번(티넘버) 또는 선수 이름을 입력해주세요.', isError: true });
       return;
     }
 
     const matched = participants.find(
       p => (p.bibNumber && p.bibNumber.trim().toLowerCase() === cleanBib.toLowerCase()) ||
-           p.name.trim() === cleanBib
+           p.name.trim().toLowerCase() === cleanBib.toLowerCase()
     );
 
     if (matched) {
@@ -324,7 +444,7 @@ export default function RefereeMobilePage({
       }
     } else {
       setInputFeedback({
-        text: `⚠️ 배번 '${cleanBib}'에 일치하는 선수가 없습니다. 등록된 배번인지 확인해주세요.`,
+        text: `⚠️ '${cleanBib}'에 일치하는 선수가 없습니다. 등록된 배번인지 확인해주세요.`,
         isError: true,
       });
     }
@@ -348,7 +468,16 @@ export default function RefereeMobilePage({
     const holder = participants.find(p => p[selectedRound] === rankNum);
     if (holder) {
       assignRankToPlayer(holder.id, selectedRound, null);
-      setInputFeedback({ text: `${rankNum}위 배정이 취소되었습니다.`, isError: false });
+      setInputFeedback({ text: `🗑️ ${rankNum}위 '${holder.name}' 선수 배정이 취소(삭제)되었습니다.`, isError: false });
+    }
+  };
+
+  // 특정 선수 DNS / DNF 처리
+  const handleSetPlayerSpecialScore = (playerId: string, code: 'DNS' | 'DNF') => {
+    const p = participants.find(item => item.id === playerId);
+    if (p) {
+      assignRankToPlayer(playerId, selectedRound, code);
+      setInputFeedback({ text: `⚠️ '${p.name}' 선수가 ${code}로 처리되었습니다.`, isError: false });
     }
   };
 
@@ -366,8 +495,8 @@ export default function RefereeMobilePage({
   // 순위 자동 정렬
   const handleSortRankings = () => {
     const sorted = [...participants].sort((a, b) => {
-      const aHasScores = [a.r1, a.r2, a.r3, a.r4, a.r5, a.r6].some(r => r !== null);
-      const bHasScores = [b.r1, b.r2, b.r3, b.r4, b.r5, b.r6].some(r => r !== null);
+      const aHasScores = rounds.some(r => a[r.key] !== null && a[r.key] !== undefined && a[r.key] !== '');
+      const bHasScores = rounds.some(r => b[r.key] !== null && b[r.key] !== undefined && b[r.key] !== '');
       if (!aHasScores && bHasScores) return 1;
       if (aHasScores && !bHasScores) return -1;
       if (!aHasScores && !bHasScores) return 0;
@@ -704,27 +833,71 @@ export default function RefereeMobilePage({
         </div>
 
         {/* ═══════════════════════════════════════════════════════════
-            MODE 1: 순위 입력란 (종목 & 라운드 선택 및 1위부터 순서대로 배번 입력)
+            MODE 1: 순위 입력란 (종목 & 라운드 선택 및 1위부터 순서대로 배번 입력 / 수정 / 삭제)
             ═══════════════════════════════════════════════════════════ */}
         {activeMode === 'input' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             
-            {/* 라운드 선택 카테고리 탭 */}
+            {/* 라운드 선택 및 라운드 추가/삭제 제어기 */}
             <div className="glass-panel" style={{ background: 'white', color: 'black', padding: '16px', borderRadius: '16px', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: '800', color: '#475569' }}>
-                  🎯 경기 라운드 선택
+                <span style={{ fontSize: '0.85rem', fontWeight: '800', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  🎯 경기 라운드 선택 (총 {rounds.length}개 라운드)
                 </span>
-                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                  입력할 라운드를 터치하세요
-                </span>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button
+                    type="button"
+                    onClick={handleAddRound}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '5px 10px',
+                      borderRadius: '8px',
+                      border: '1px solid #93c5fd',
+                      background: '#eff6ff',
+                      color: '#1d4ed8',
+                      fontSize: '0.75rem',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                    }}
+                    title="다음 라운드를 추가합니다"
+                  >
+                    <Plus size={13} /> + 라운드 추가
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteRound(selectedRound)}
+                    disabled={rounds.length <= 1}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '5px 8px',
+                      borderRadius: '8px',
+                      border: '1px solid #fecaca',
+                      background: rounds.length <= 1 ? '#f1f5f9' : '#fef2f2',
+                      color: rounds.length <= 1 ? '#94a3b8' : '#dc2626',
+                      fontSize: '0.75rem',
+                      fontWeight: '800',
+                      cursor: rounds.length <= 1 ? 'not-allowed' : 'pointer',
+                    }}
+                    title="선택된 현재 라운드를 삭제합니다"
+                  >
+                    <Trash2 size={13} /> 라운드 삭제
+                  </button>
+                </div>
               </div>
+
+              {/* 라운드 버튼 목록 */}
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(6, 1fr)',
+                gridTemplateColumns: `repeat(${Math.min(rounds.length, 6)}, 1fr)`,
                 gap: '6px',
+                overflowX: 'auto',
+                paddingBottom: '4px'
               }}>
-                {ROUND_CONFIG.map(r => {
+                {rounds.map(r => {
                   const isSelected = selectedRound === r.key;
                   const filledCount = participants.filter(p => p[r.key] !== null && p[r.key] !== undefined && p[r.key] !== '').length;
                   return (
@@ -733,6 +906,7 @@ export default function RefereeMobilePage({
                       type="button"
                       onClick={() => {
                         setSelectedRound(r.key);
+                        setCurrentRankNum(1);
                         setInputFeedback(null);
                         setBibInput('');
                       }}
@@ -750,7 +924,8 @@ export default function RefereeMobilePage({
                         alignItems: 'center',
                         gap: '2px',
                         transition: 'all 0.15s',
-                        boxShadow: isSelected ? '0 2px 8px rgba(99,102,241,0.3)' : 'none'
+                        boxShadow: isSelected ? '0 2px 8px rgba(99,102,241,0.3)' : 'none',
+                        minWidth: '55px'
                       }}
                     >
                       <span>{r.short}</span>
@@ -765,9 +940,33 @@ export default function RefereeMobilePage({
                   );
                 })}
               </div>
+
+              {/* 라운드 관리 퀵 버튼 바 */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', paddingTop: '8px', borderTop: '1px dashed #e2e8f0' }}>
+                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                  현재 선택: <strong>{rounds.find(r => r.key === selectedRound)?.label || selectedRound}</strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={handleResetRoundScores}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#e11d48',
+                    fontSize: '0.75rem',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  <RotateCcw size={12} /> 해당 라운드 순위 전체 초기화
+                </button>
+              </div>
             </div>
 
-            {/* ── 1등부터 순위별 배번(티넘버) 순서 입력 카드 ── */}
+            {/* ── 1등부터 순위별 배번(티넘버) 순서 입력 및 수정/삭제 카드 ── */}
             <div className="glass-panel" style={{
               background: 'white',
               color: 'black',
@@ -822,7 +1021,7 @@ export default function RefereeMobilePage({
                     {currentRankNum === 1 ? '🥇 1위' : currentRankNum === 2 ? '🥈 2위' : currentRankNum === 3 ? '🥉 3위' : `🏅 ${currentRankNum}위`}
                   </div>
                   <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px', fontWeight: '600' }}>
-                    [{selectedRound.toUpperCase()}] 피니시 순위 입력
+                    [{rounds.find(r => r.key === selectedRound)?.short || selectedRound.toUpperCase()}] 피니시 순위 입력/수정
                   </div>
                 </div>
 
@@ -848,7 +1047,7 @@ export default function RefereeMobilePage({
                 </button>
               </div>
 
-              {/* 현재 순위에 이미 배정된 선수 표시 */}
+              {/* 현재 순위에 이미 배정된 선수 표시 및 삭제/수정 옵션 */}
               {currentRankPlayer ? (
                 <div style={{
                   background: '#ecfdf5',
@@ -862,7 +1061,7 @@ export default function RefereeMobilePage({
                 }}>
                   <div>
                     <div style={{ fontSize: '0.75rem', color: '#059669', fontWeight: '700' }}>
-                      현재 {currentRankNum}위에 배정된 선수
+                      현재 {currentRankNum}위에 배정된 선수 (수정하려면 아래에 새 배번을 입력하거나 삭제하세요)
                     </div>
                     <div style={{ fontSize: '1.05rem', fontWeight: '900', color: '#065f46' }}>
                       {currentRankPlayer.name} {currentRankPlayer.bibNumber && `(배번 #${currentRankPlayer.bibNumber})`}
@@ -876,8 +1075,8 @@ export default function RefereeMobilePage({
                       color: '#b91c1c',
                       border: '1px solid #fca5a5',
                       borderRadius: '8px',
-                      padding: '6px 12px',
-                      fontWeight: '700',
+                      padding: '8px 12px',
+                      fontWeight: '800',
                       fontSize: '0.8rem',
                       cursor: 'pointer',
                       display: 'flex',
@@ -885,16 +1084,18 @@ export default function RefereeMobilePage({
                       gap: '4px'
                     }}
                   >
-                    <X size={14} /> 배정 취소
+                    <Trash2 size={14} /> {currentRankNum}위 배정 삭제
                   </button>
                 </div>
               ) : null}
 
-              {/* 배번 입력 폼 */}
+              {/* 배번 입력 / 수정 폼 */}
               <form onSubmit={handleAssignBibSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <label style={{ fontSize: '0.9rem', fontWeight: '800', color: '#1e293b' }}>
-                  {currentRankNum}위 선수 배번(티넘버) 입력
-                </label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label style={{ fontSize: '0.9rem', fontWeight: '800', color: '#1e293b' }}>
+                    {currentRankPlayer ? `${currentRankNum}위 선수 변경/교체 (새 배번/이름 입력)` : `${currentRankNum}위 선수 배번(티넘버) 입력`}
+                  </label>
+                </div>
                 
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <input
@@ -934,7 +1135,7 @@ export default function RefereeMobilePage({
                       boxShadow: '0 2px 8px rgba(99,102,241,0.3)'
                     }}
                   >
-                    <Check size={18} /> {currentRankNum}위 등록
+                    <Check size={18} /> {currentRankPlayer ? `${currentRankNum}위 수정` : `${currentRankNum}위 등록`}
                   </button>
                 </div>
 
@@ -950,9 +1151,25 @@ export default function RefereeMobilePage({
                     fontWeight: '700',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px'
+                    justifyContent: 'space-between'
                   }}>
-                    <span>🏃 매칭된 선수: <strong>{matchedTypingPlayer.name}</strong> (배번: #{matchedTypingPlayer.bibNumber || '-'})</span>
+                    <span>🏃 매칭: <strong>{matchedTypingPlayer.name}</strong> (배번: #{matchedTypingPlayer.bibNumber || '-'})</span>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <button
+                        type="button"
+                        onClick={() => handleSetPlayerSpecialScore(matchedTypingPlayer.id, 'DNS')}
+                        style={{ padding: '3px 6px', background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer' }}
+                      >
+                        DNS 처리
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSetPlayerSpecialScore(matchedTypingPlayer.id, 'DNF')}
+                        style={{ padding: '3px 6px', background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer' }}
+                      >
+                        DNF 처리
+                      </button>
+                    </div>
                   </div>
                 )}
 
@@ -1013,14 +1230,14 @@ export default function RefereeMobilePage({
               )}
             </div>
 
-            {/* ── [3] 해당 라운드(selectedRound) 전체 순위표 리스트 ── */}
+            {/* ── [3] 해당 라운드(selectedRound) 전체 순위 현황표 및 개별 수정/삭제 리스트 ── */}
             <div className="glass-panel" style={{ background: 'white', color: 'black', padding: '20px', borderRadius: '18px', boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                 <h3 style={{ fontSize: '1rem', fontWeight: '800', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  📊 [{selectedRound.toUpperCase()}] 전체 순위 현황표
+                  📊 [{rounds.find(r => r.key === selectedRound)?.short || selectedRound.toUpperCase()}] 전체 순위 현황표
                 </h3>
-                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
-                  순위 행을 터치하면 해당 순위로 이동합니다
+                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                  행을 터치하여 수정하거나 삭제 버튼을 누르세요
                 </span>
               </div>
 
@@ -1038,7 +1255,11 @@ export default function RefereeMobilePage({
                     return (
                       <div
                         key={rankNum}
-                        onClick={() => setCurrentRankNum(rankNum)}
+                        onClick={() => {
+                          setCurrentRankNum(rankNum);
+                          setBibInput(assigned ? (assigned.bibNumber || assigned.name) : '');
+                          setInputFeedback(null);
+                        }}
                         style={{
                           display: 'flex',
                           alignItems: 'center',
@@ -1073,32 +1294,60 @@ export default function RefereeMobilePage({
                             </div>
                           ) : (
                             <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
-                              - 미입력 (터치하여 입력)
+                              - 미입력 (터치하여 배정)
                             </span>
                           )}
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           {assigned ? (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleClearCurrentRank(rankNum);
-                              }}
-                              style={{
-                                background: '#fee2e2',
-                                color: '#ef4444',
-                                border: 'none',
-                                borderRadius: '6px',
-                                padding: '4px 8px',
-                                fontSize: '0.75rem',
-                                fontWeight: '700',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              삭제
-                            </button>
+                            <>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setCurrentRankNum(rankNum);
+                                  setBibInput(assigned.bibNumber || assigned.name);
+                                }}
+                                style={{
+                                  background: '#eff6ff',
+                                  color: '#2563eb',
+                                  border: '1px solid #bfdbfe',
+                                  borderRadius: '6px',
+                                  padding: '4px 8px',
+                                  fontSize: '0.75rem',
+                                  fontWeight: '700',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '2px'
+                                }}
+                              >
+                                <Edit2 size={12} /> 수정
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleClearCurrentRank(rankNum);
+                                }}
+                                style={{
+                                  background: '#fee2e2',
+                                  color: '#ef4444',
+                                  border: '1px solid #fca5a5',
+                                  borderRadius: '6px',
+                                  padding: '4px 8px',
+                                  fontSize: '0.75rem',
+                                  fontWeight: '700',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '2px'
+                                }}
+                              >
+                                <Trash2 size={12} /> 삭제
+                              </button>
+                            </>
                           ) : (
                             <span style={{ fontSize: '0.75rem', color: isCurrentFocus ? 'var(--theme-primary)' : '#cbd5e1', fontWeight: '700' }}>
                               {isCurrentFocus ? '선택됨' : '입력 대기'}
@@ -1109,17 +1358,27 @@ export default function RefereeMobilePage({
                     );
                   })}
 
-                  {/* DNS / DNF 처리 섹션 */}
+                  {/* DNS / DNF 처리 선수 목록 */}
                   {dnsDnfPlayers.length > 0 && (
                     <div style={{ marginTop: '12px', padding: '12px', background: '#fff1f2', borderRadius: '10px', border: '1px solid #fecdd3' }}>
-                      <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#be123c', display: 'block', marginBottom: '6px' }}>
-                        ⚠️ DNS / DNF 명단:
-                      </span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#be123c' }}>
+                          ⚠️ DNS / DNF 선수 명단:
+                        </span>
+                      </div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                         {dnsDnfPlayers.map(p => (
-                          <span key={p.id} style={{ background: 'white', padding: '4px 8px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '700', border: '1px solid #fecdd3' }}>
-                            {p.name} ({p[selectedRound]})
-                          </span>
+                          <div key={p.id} style={{ background: 'white', padding: '4px 8px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '700', border: '1px solid #fecdd3', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span>{p.name} ({p[selectedRound]})</span>
+                            <button
+                              type="button"
+                              onClick={() => assignRankToPlayer(p.id, selectedRound, null)}
+                              style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0 }}
+                              title="취소"
+                            >
+                              <X size={13} />
+                            </button>
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -1163,12 +1422,53 @@ export default function RefereeMobilePage({
         {activeMode === 'confirm' && (
           <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '20px', background: 'white', color: 'black', padding: '20px', borderRadius: '18px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
             
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
               <div>
                 <h2 style={{ fontSize: '1.2rem', fontWeight: '900', margin: 0 }}>전체 순위 검토 및 최종 확정</h2>
                 <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>
                   각 라운드 점수를 직접 클릭하여 수정하거나 순위를 정렬 후 확정하세요.
                 </p>
+              </div>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <button
+                  type="button"
+                  onClick={handleAddRound}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #93c5fd',
+                    background: '#eff6ff',
+                    color: '#1d4ed8',
+                    fontSize: '0.8rem',
+                    fontWeight: '800',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Plus size={14} /> 라운드 추가
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteRound()}
+                  disabled={rounds.length <= 1}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '6px 10px',
+                    borderRadius: '8px',
+                    border: '1px solid #fecaca',
+                    background: rounds.length <= 1 ? '#f1f5f9' : '#fef2f2',
+                    color: rounds.length <= 1 ? '#94a3b8' : '#dc2626',
+                    fontSize: '0.8rem',
+                    fontWeight: '800',
+                    cursor: rounds.length <= 1 ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  <Trash2 size={14} /> 마지막 라운드 삭제
+                </button>
               </div>
             </div>
 
@@ -1226,9 +1526,11 @@ export default function RefereeMobilePage({
                     <th style={{ padding: '10px 8px', minWidth: '80px', textAlign: 'left' }}>이름</th>
                     <th style={{ padding: '10px 6px', width: '60px', textAlign: 'center' }}>배번</th>
                     <th style={{ padding: '10px 6px', width: '70px', textAlign: 'center' }}>생년월일</th>
-                    {ROUND_CONFIG.map(r => (
+                    {rounds.map(r => (
                       <th key={r.key} style={{ padding: '10px 4px', width: '50px', textAlign: 'center', color: '#1e293b' }}>
-                        {r.short}
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                          <span>{r.short}</span>
+                        </div>
                       </th>
                     ))}
                     <th style={{ padding: '10px 6px', width: '60px', textAlign: 'center', color: 'var(--theme-primary)' }}>총점</th>
@@ -1237,13 +1539,12 @@ export default function RefereeMobilePage({
                 <tbody>
                   {participants.length === 0 ? (
                     <tr>
-                      <td colSpan={11} style={{ padding: '30px', textAlign: 'center', color: '#94a3b8' }}>
+                      <td colSpan={5 + rounds.length} style={{ padding: '30px', textAlign: 'center', color: '#94a3b8' }}>
                         해당 종목에 승인된 신청자가 없거나 데이터를 불러올 수 없습니다.
                       </td>
                     </tr>
                   ) : (
                     participants.map((p) => {
-                      const rounds: RoundKey[] = ['r1', 'r2', 'r3', 'r4', 'r5', 'r6'];
                       return (
                         <tr key={p.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                           {/* 순위 */}
@@ -1272,28 +1573,31 @@ export default function RefereeMobilePage({
                             {p.birth ? p.birth.substring(2) : '-'}
                           </td>
                           {/* 라운드 스코어들 (직접 수정 가능) */}
-                          {rounds.map((rKey) => (
-                            <td key={rKey} style={{ padding: '4px', textAlign: 'center' }}>
-                              <input
-                                type="text"
-                                value={p[rKey] === null || p[rKey] === undefined ? '' : p[rKey]}
-                                onChange={(e) => handleScoreInput(p.id, rKey, e.target.value)}
-                                onFocus={() => setActiveCell({ id: p.id, roundKey: rKey })}
-                                placeholder="-"
-                                style={{
-                                  width: '40px',
-                                  padding: '6px 2px',
-                                  border: activeCell?.id === p.id && activeCell?.roundKey === rKey ? '2px solid var(--theme-primary)' : '1px solid #cbd5e1',
-                                  borderRadius: '6px',
-                                  textAlign: 'center',
-                                  fontSize: '0.85rem',
-                                  fontWeight: '800',
-                                  background: p[rKey] === 'DNS' || p[rKey] === 'DNF' ? '#fee2e2' : 'white',
-                                  color: p[rKey] === 'DNS' || p[rKey] === 'DNF' ? '#dc2626' : '#0f172a'
-                                }}
-                              />
-                            </td>
-                          ))}
+                          {rounds.map((rItem) => {
+                            const rKey = rItem.key;
+                            return (
+                              <td key={rKey} style={{ padding: '4px', textAlign: 'center' }}>
+                                <input
+                                  type="text"
+                                  value={p[rKey] === null || p[rKey] === undefined ? '' : p[rKey]}
+                                  onChange={(e) => handleScoreInput(p.id, rKey, e.target.value)}
+                                  onFocus={() => setActiveCell({ id: p.id, roundKey: rKey })}
+                                  placeholder="-"
+                                  style={{
+                                    width: '40px',
+                                    padding: '6px 2px',
+                                    border: activeCell?.id === p.id && activeCell?.roundKey === rKey ? '2px solid var(--theme-primary)' : '1px solid #cbd5e1',
+                                    borderRadius: '6px',
+                                    textAlign: 'center',
+                                    fontSize: '0.85rem',
+                                    fontWeight: '800',
+                                    background: p[rKey] === 'DNS' || p[rKey] === 'DNF' ? '#fee2e2' : 'white',
+                                    color: p[rKey] === 'DNS' || p[rKey] === 'DNF' ? '#dc2626' : '#0f172a'
+                                  }}
+                                />
+                              </td>
+                            );
+                          })}
                           {/* 총점 */}
                           <td style={{ padding: '8px', textAlign: 'center', fontWeight: '900', color: 'var(--theme-primary)' }}>
                             {p.total}점

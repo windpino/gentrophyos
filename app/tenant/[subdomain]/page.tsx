@@ -1590,6 +1590,22 @@ export default function TenantPortalPage({
                     };
 
                     const renderTable = (list: any[]) => {
+                      // 리더보드 데이터에서 활성 라운드 키 동적 추출 (r1, r2, ... rN)
+                      const discoveredKeys = new Set<string>();
+                      list.forEach((row: any) => {
+                        Object.keys(row).forEach(k => {
+                          if (/^r\d+$/.test(k) && row[k] !== undefined && row[k] !== null) {
+                            discoveredKeys.add(k);
+                          }
+                        });
+                      });
+
+                      const maxRoundNum = Math.max(
+                        ...Array.from(discoveredKeys).map(k => parseInt(k.replace('r', ''), 10)),
+                        6
+                      );
+                      const activeRoundKeys = Array.from({ length: maxRoundNum }, (_, i) => `r${i + 1}`);
+
                       return (
                         <div className="premium-table-container">
                           <table className="premium-table" style={{ fontSize: '0.9rem', width: '100%', borderCollapse: 'collapse', color: 'black' }}>
@@ -1599,15 +1615,18 @@ export default function TenantPortalPage({
                                 <th style={{ minWidth: '90px', fontWeight: '800' }}>성명</th>
                                 <th style={{ minWidth: '90px', fontWeight: '800' }}>배번</th>
                                 <th style={{ minWidth: '100px', fontWeight: '800' }}>생년월일</th>
-                                {['1R', '2R', '3R', '4R', '5R', '6R'].map(r => (
-                                  <th key={r} style={{ width: '60px', textAlign: 'center', fontWeight: '800' }}>{r}</th>
-                                ))}
+                                {activeRoundKeys.map(rKey => {
+                                  const num = rKey.replace('r', '');
+                                  return (
+                                    <th key={rKey} style={{ width: '60px', textAlign: 'center', fontWeight: '800' }}>{num}R</th>
+                                  );
+                                })}
                                 <th style={{ width: '80px', textAlign: 'center', fontWeight: '800', color: 'var(--theme-primary)' }}>총점</th>
                               </tr>
                             </thead>
                             <tbody>
                               {list.map((row: any, rIdx: number) => {
-                                const rounds = [row.r1, row.r2, row.r3, row.r4, row.r5, row.r6];
+                                const rounds = activeRoundKeys.map(rKey => row[rKey]);
                                 const numericScores = rounds.map(val => {
                                   if (val === null || val === undefined || val === '') return null;
                                   if (val === 'DNS' || val === 'DNF') return list.length;
