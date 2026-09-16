@@ -74,6 +74,7 @@ export default function HostDashboardPage({
   // 온라인 참가 신청 접수 기간 및 권한 설정 상태
   const [regStartDate, setRegStartDate] = useState('2026-08-10T09:00');
   const [regEndDate, setRegEndDate] = useState('2026-10-23T18:00');
+  const [regMode, setRegMode] = useState<'AUTO' | 'FORCE_ENABLED' | 'DISABLED'>('AUTO');
   const [regEnabled, setRegEnabled] = useState(true);
   const [regNotice, setRegNotice] = useState('');
   const [regPeriodSaving, setRegPeriodSaving] = useState(false);
@@ -116,7 +117,16 @@ export default function HostDashboardPage({
           const cfg = tenantData.tenant.overviewConfig;
           if (cfg.registrationStartDate) setRegStartDate(cfg.registrationStartDate);
           if (cfg.registrationEndDate) setRegEndDate(cfg.registrationEndDate);
-          if (cfg.registrationEnabled !== undefined) setRegEnabled(cfg.registrationEnabled);
+          if (cfg.registrationMode) {
+            setRegMode(cfg.registrationMode);
+          } else if (cfg.registrationEnabled === false) {
+            setRegMode('DISABLED');
+          } else if (cfg.registrationEnabled === 'FORCE_ENABLED') {
+            setRegMode('FORCE_ENABLED');
+          } else {
+            setRegMode('AUTO');
+          }
+          if (cfg.registrationEnabled !== undefined) setRegEnabled(cfg.registrationEnabled !== false);
           if (cfg.registrationNotice !== undefined) setRegNotice(cfg.registrationNotice);
         }
         const ongoing = tenantData.tenant.tournaments.find((t: any) => t.status === 'ONGOING');
@@ -140,7 +150,8 @@ export default function HostDashboardPage({
         ...currentConfig,
         registrationStartDate: regStartDate,
         registrationEndDate: regEndDate,
-        registrationEnabled: regEnabled,
+        registrationMode: regMode,
+        registrationEnabled: regMode !== 'DISABLED',
         registrationNotice: regNotice,
       };
       const res = await fetch(`/api/tenant/${subdomain}/overview`, {
@@ -1396,10 +1407,12 @@ export default function HostDashboardPage({
                   const now = new Date();
                   const s = regStartDate ? new Date(regStartDate) : null;
                   const e = regEndDate ? new Date(regEndDate) : null;
-                  let badge = { text: '접수 진행 중', bg: 'rgba(16, 185, 129, 0.15)', border: '#10b981', color: '#6ee7b7', icon: '🟢' };
+                  let badge = { text: '접수 진행 중 (자동 오픈)', bg: 'rgba(16, 185, 129, 0.15)', border: '#10b981', color: '#6ee7b7', icon: '🟢' };
 
-                  if (!regEnabled) {
-                    badge = { text: '접수 수동 중단(비활성)', bg: 'rgba(100, 116, 139, 0.2)', border: '#64748b', color: '#cbd5e1', icon: '⚫' };
+                  if (regMode === 'FORCE_ENABLED') {
+                    badge = { text: '온라인 접수 강제 활성화 (무조건 오픈)', bg: 'rgba(16, 185, 129, 0.25)', border: '#10b981', color: '#34d399', icon: '🟢' };
+                  } else if (regMode === 'DISABLED') {
+                    badge = { text: '온라인 접수 강제 비활성화 (차단/마감)', bg: 'rgba(100, 116, 139, 0.2)', border: '#64748b', color: '#cbd5e1', icon: '⚫' };
                   } else if (s && !isNaN(s.getTime()) && now < s) {
                     badge = { text: '접수 시작 전 (대기)', bg: 'rgba(234, 179, 8, 0.15)', border: '#eab308', color: '#fde047', icon: '🟡' };
                   } else if (e && !isNaN(e.getTime()) && now > e) {
@@ -1459,12 +1472,13 @@ export default function HostDashboardPage({
                   </label>
                   <select
                     className="form-input"
-                    value={regEnabled ? 'ENABLED' : 'DISABLED'}
-                    onChange={(e) => setRegEnabled(e.target.value === 'ENABLED')}
+                    value={regMode}
+                    onChange={(e) => setRegMode(e.target.value as any)}
                     style={{ background: '#0f172a', color: 'white', borderColor: 'rgba(255,255,255,0.2)' }}
                   >
-                    <option value="ENABLED">🟢 온라인 접수 활성화 (설정 기간에 따라 자동 오픈)</option>
-                    <option value="DISABLED">🔴 온라인 접수 비활성화 (강제 마감/차단)</option>
+                    <option value="AUTO">🟡 일정 기간에 따라 자동 오픈 (설정된 시작~마감 일시에만 접수)</option>
+                    <option value="FORCE_ENABLED">🟢 온라인 접수 강제 활성화 (기간 무관 즉시 강제 오픈)</option>
+                    <option value="DISABLED">🔴 온라인 접수 강제 비활성화 (기간 무관 즉시 강제 마감/차단)</option>
                   </select>
                 </div>
               </div>
@@ -2023,7 +2037,7 @@ function OverviewEditor({ tenant, subdomain, onSaveSuccess }: OverviewEditorProp
   // 기본 Fallback 데이터들 (2026년 이순신배)
   const defaultOverview = {
     title: '제20회 이순신장군배 전국윈드서핑대회',
-    duration: '2026. 10. 31(토) ~ 11. 1(일) 1박2일',
+    duration: '2026. 10. 31(토) ~ 11. 01(일) (1박 2일)',
     location: '경상남도 통영시 도남항 특설경기장 및 트라이애슬론 광장 일원',
     scale: '130명 (선착순 마감)',
     host: '통영시, 통영시요트협회',
@@ -2265,11 +2279,16 @@ function OverviewEditor({ tenant, subdomain, onSaveSuccess }: OverviewEditorProp
                   <label style={{ fontSize: '0.85rem', fontWeight: '700', color: '#1e293b' }}>온라인 접수 상태 토글</label>
                   <select
                     className="form-input"
-                    value={config.registrationEnabled !== false ? 'ENABLED' : 'DISABLED'}
-                    onChange={e => handleChange('registrationEnabled', (e.target.value === 'ENABLED') as any)}
+                    value={config.registrationMode || (config.registrationEnabled === false ? 'DISABLED' : (config.registrationEnabled === 'FORCE_ENABLED' ? 'FORCE_ENABLED' : 'AUTO'))}
+                    onChange={e => {
+                      const val = e.target.value;
+                      handleChange('registrationMode', val);
+                      handleChange('registrationEnabled', (val !== 'DISABLED') as any);
+                    }}
                   >
-                    <option value="ENABLED">🟢 온라인 접수 활성화 (기간 일정에 따라 자동 오픈)</option>
-                    <option value="DISABLED">🔴 온라인 접수 비활성화 (강제 마감)</option>
+                    <option value="AUTO">🟡 일정 기간에 따라 자동 오픈 (설정된 시작~마감 일시에만 접수)</option>
+                    <option value="FORCE_ENABLED">🟢 온라인 접수 강제 활성화 (기간 무관 즉시 강제 오픈)</option>
+                    <option value="DISABLED">🔴 온라인 접수 강제 비활성화 (기간 무관 즉시 강제 마감/차단)</option>
                   </select>
                 </div>
               </div>

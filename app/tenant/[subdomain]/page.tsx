@@ -76,7 +76,7 @@ const getDefaultTenantData = (subdomain: string): TenantData => ({
   rulesSummary: '제20회 이순신장군배 전국윈드서핑대회 요강',
   overviewConfig: {
     title: '제20회 이순신장군배 전국윈드서핑대회',
-    duration: '2026. 10. 31(토) ~ 11. 1(일) 1박2일',
+    duration: '2026. 10. 31(토) ~ 11. 01(일) (1박 2일)',
     location: '경상남도 통영시 도남항 특설경기장 및 트라이애슬론 광장 일원',
     scale: '130명 (선착순 마감)',
     host: '통영시, 통영시요트협회',
@@ -529,7 +529,7 @@ export default function TenantPortalPage({
 
   // 온라인 참가 신청 접수 기간 및 접근 권한 실시간 판정
   const regConfig = tenant.overviewConfig || {};
-  const registrationEnabled = regConfig.registrationEnabled !== false;
+  const regMode = regConfig.registrationMode || (regConfig.registrationEnabled === false ? 'DISABLED' : (regConfig.registrationEnabled === 'FORCE_ENABLED' ? 'FORCE_ENABLED' : 'AUTO'));
   const regStartDateStr = regConfig.registrationStartDate || '2026-08-10T09:00';
   const regEndDateStr = regConfig.registrationEndDate || '2026-10-23T18:00';
   const regNotice = regConfig.registrationNotice || '';
@@ -542,7 +542,11 @@ export default function TenantPortalPage({
   let regStatusMessage = '';
   let regStatusBadge = { text: '접수 진행 중', icon: '🟢' };
 
-  if (!registrationEnabled) {
+  if (regMode === 'FORCE_ENABLED') {
+    regStatusType = 'OPEN';
+    regStatusMessage = '온라인 참가 신청 접수가 강제 활성화(오픈)되었습니다.';
+    regStatusBadge = { text: '접수 진행 중 (강제 활성화)', icon: '🟢' };
+  } else if (regMode === 'DISABLED' || regConfig.registrationEnabled === false) {
     regStatusType = 'DISABLED';
     regStatusMessage = regNotice || '현재는 대회 주최 측에 의해 참가 신청 접수가 일시 중단되었습니다.';
     regStatusBadge = { text: '접수 일시 중단', icon: '⚫' };
@@ -692,7 +696,7 @@ export default function TenantPortalPage({
                 <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>주 최 :</strong> 통영시</p>
                 <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>주 관 :</strong> 통영시요트협회</p>
                 <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>후 원 :</strong> 통영시체육회, 경상남도요트협회, 한국윈드서핑협회</p>
-                <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>대회일정 :</strong> 2026. 10. 31(토) ~ 11. 1(일) 1박2일</p>
+                <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>대회일정 :</strong> 2026. 10. 31(토) ~ 11. 01(일) (1박 2일)</p>
                 <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>장 소 :</strong> 통영시 산양읍 영운리 수륙마을 내 수륙해수욕장</p>
                 <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>참가인원 :</strong> 130명</p>
               </div>
@@ -1057,7 +1061,7 @@ export default function TenantPortalPage({
                 flexDirection: 'column',
                 gap: '6px'
               }}>
-                <p style={{ margin: 0 }}>• <strong>대회 일정 :</strong> {overview.duration || '2026. 10. 31(토) ~ 11. 1(일) 1박2일'}</p>
+                <p style={{ margin: 0 }}>• <strong>대회 일정 :</strong> {overview.duration || '2026. 10. 31(토) ~ 11. 01(일) (1박 2일)'}</p>
                 <p style={{ margin: 0 }}>• <strong>대회 장소 :</strong> {overview.location || '경상남도 통영시 도남항 특설경기장 및 트라이애슬론 광장 일원'}</p>
                 <p style={{ margin: 0 }}>• <strong>참가 인원 :</strong> {overview.scale || '130명 (선착순 마감)'}</p>
                 <p style={{ margin: 0 }}>• <strong>문의 안내 :</strong> {overview.contactPhone || '대회 사무국 (010-3648-9838)'}</p>
@@ -2125,14 +2129,14 @@ export default function TenantPortalPage({
                 {/* 세부 대회 일정 (타임라인 카드) */}
                 <div className="glass-panel" style={{ padding: '24px 30px', background: 'white' }}>
                   <h2 style={{ fontSize: '1.4rem', fontWeight: '800', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)' }}>
-                    <Calendar style={{ color: 'var(--theme-primary)' }} size={22} /> 공식 대회 일정표 (1박2일)
+                    <Calendar style={{ color: 'var(--theme-primary)' }} size={22} /> 공식 대회 일정표 (1박 2일)
                   </h2>
                   
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
                     {/* 1일차 */}
                     <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
                       <h4 style={{ fontWeight: '800', color: 'var(--theme-primary)', borderBottom: '2px solid var(--theme-primary)', paddingBottom: '8px', marginBottom: '12px', margin: 0 }}>
-                        1일차 (9/10)
+                        1일차 : 10월 31일 (토)
                       </h4>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.8rem' }}>
                         {overview.itineraryDay1.split('\n').map((line: string, idx: number) => {
@@ -2149,7 +2153,7 @@ export default function TenantPortalPage({
                     {/* 2일차 */}
                     <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
                       <h4 style={{ fontWeight: '800', color: 'var(--theme-primary)', borderBottom: '2px solid var(--theme-primary)', paddingBottom: '8px', marginBottom: '12px', margin: 0 }}>
-                        2일차 (9/13)
+                        2일차 : 11월 01일 (일)
                       </h4>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.8rem' }}>
                         {overview.itineraryDay2.split('\n').map((line: string, idx: number) => {
@@ -2347,7 +2351,7 @@ export default function TenantPortalPage({
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', fontSize: '0.92rem', color: 'black' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <p style={{ margin: 0 }}><strong>대회명 :</strong> 제20회 이순신장군배 전국윈드서핑대회 (2026)</p>
-                        <p style={{ margin: 0 }}><strong>기간 :</strong> 2026년 10월 31일(토) ~ 11월 1일(일) [1박2일]</p>
+                        <p style={{ margin: 0 }}><strong>기간 :</strong> 2026년 10월 31일(토) ~ 11월 01일(일) (1박 2일)</p>
                         <p style={{ margin: 0 }}><strong>장소 :</strong> 통영 수륙해수욕장 일원 (통영윈드서핑협회)</p>
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -2380,7 +2384,7 @@ export default function TenantPortalPage({
                       {/* 2일차 */}
                       <div style={{ background: '#f8fafc', padding: '16px 20px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
                         <h4 style={{ fontWeight: '800', color: 'var(--theme-primary)', fontSize: '0.95rem', margin: '0 0 10px 0', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px' }}>
-                          2일차 : 11월 1일 (일)
+                          2일차 : 11월 01일 (일)
                         </h4>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.88rem', color: 'black' }}>
                           <p style={{ margin: 0 }}>• <strong>10:00 ~ 15:00 :</strong> 공식 결선 경기 (각 종목별 결승 및 단체전)</p>
