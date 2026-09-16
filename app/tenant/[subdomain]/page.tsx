@@ -167,18 +167,9 @@ export default function TenantPortalPage({
   const [regError, setRegError] = useState('');
   const [regSubmitting, setRegSubmitting] = useState(false);
 
-  // 참가 신청 접수 기간 안내 팝업 상태
+  // 참가 신청 접수 기간 안내 팝업 상태 (ERP 데이터 로드 완료 후 표출)
   const [isRegPopupOpen, setIsRegPopupOpen] = useState(false);
   const [hideRegPopupToday, setHideRegPopupToday] = useState(false);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const hideUntil = localStorage.getItem('hide_registration_period_popup');
-      if (!hideUntil || new Date().getTime() > Number(hideUntil)) {
-        setIsRegPopupOpen(true);
-      }
-    }
-  }, []);
 
   const handleCloseRegPopup = () => {
     if (hideRegPopupToday && typeof window !== 'undefined') {
@@ -310,16 +301,24 @@ export default function TenantPortalPage({
       if (data.tenant) {
         setTenant(data.tenant);
         
-        const ongoing = data.tenant.tournaments.find((t: any) => t.status === 'ONGOING');
+        const ongoing = data.tenant.tournaments?.find((t: any) => t.status === 'ONGOING');
         if (ongoing) {
           setActiveTournamentId(ongoing.id);
-        } else if (data.tenant.tournaments.length > 0) {
+        } else if (data.tenant.tournaments && data.tenant.tournaments.length > 0) {
           setActiveTournamentId(data.tenant.tournaments[0].id);
         }
 
-        const archived = data.tenant.tournaments.filter((t: any) => t.status === 'ARCHIVED');
-        if (archived.length > 0) {
+        const archived = data.tenant.tournaments?.filter((t: any) => t.status === 'ARCHIVED');
+        if (archived && archived.length > 0) {
           setSelectedArchiveId(archived[0].id);
+        }
+
+        // ERP 최신 설정 로드 완료 후 팝업 표출 (이전 기본 날짜가 먼저 보이는 깜빡임 방지)
+        if (typeof window !== 'undefined') {
+          const hideUntil = localStorage.getItem('hide_registration_period_popup');
+          if (!hideUntil || new Date().getTime() > Number(hideUntil)) {
+            setIsRegPopupOpen(true);
+          }
         }
       }
     } catch (e) {
@@ -567,6 +566,14 @@ export default function TenantPortalPage({
   const isRegistrationOpen = regStatusType === 'OPEN';
 
   if (applyMode && ongoingTournament) {
+    if (loading) {
+      return (
+        <div style={{ ...themeStyles, minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc' }}>
+          <RefreshCw className="animate-spin" size={40} style={{ color: 'var(--theme-primary)' }} />
+        </div>
+      );
+    }
+
     // 🚫 접수 기간이 아니거나 비활성화된 경우 접근 권한 차단 화면 표시
     if (!isRegistrationOpen) {
       return (
@@ -608,10 +615,10 @@ export default function TenantPortalPage({
             {/* 접수 기간 및 안내 정보 상자 */}
             <div style={{ width: '100%', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px 20px', textAlign: 'left', fontSize: '0.85rem', color: '#334155', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <p style={{ margin: 0 }}>
-                • <strong>공식 접수 시작 :</strong> {regStartDateStr ? regStartDateStr.replace('T', ' ') : '추후 공지'}
+                • <strong>공식 접수 시작 :</strong> {formatKoreanDateTime(regStartDateStr)}
               </p>
               <p style={{ margin: 0 }}>
-                • <strong>공식 접수 마감 :</strong> {regEndDateStr ? regEndDateStr.replace('T', ' ') : '추후 공지'}
+                • <strong>공식 접수 마감 :</strong> {formatKoreanDateTime(regEndDateStr)}
               </p>
               <p style={{ margin: 0 }}>
                 • <strong>문의처 :</strong> {overview.contactPhone || '대회 사무국 (010-3648-9838)'}
@@ -717,7 +724,7 @@ export default function TenantPortalPage({
 
               <div>
                 <strong style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '6px' }}>▣ 접수방법 & 참가비 입금 안내</strong>
-                <p style={{ margin: 0, paddingLeft: '8px' }}>• 2026년 10월 23일(금) 18:00 까지 참가신청서를 작성하여 선수등록을 하여야 합니다.</p>
+                <p style={{ margin: 0, paddingLeft: '8px' }}>• {formatKoreanDateTime(regEndDateStr)} 까지 참가신청서를 작성하여 선수등록을 하여야 합니다.</p>
                 <p style={{ margin: 0, paddingLeft: '8px' }}>• 단체전은 2026년 11월 1일(일) 경기개시 1시간 전 선수등록하여 시행합니다.</p>
                 <p style={{ margin: 0, paddingLeft: '8px' }}>• 참가인원은 선착순 130명이 충족되면 참가접수 기한이 조기에 마감될 수 있습니다. (윙포일 부문은 남녀 각 10명으로 제한)</p>
                 <p style={{ margin: '4px 0 0 0', paddingLeft: '8px', color: 'var(--theme-primary)', fontWeight: '700' }}>
@@ -734,7 +741,7 @@ export default function TenantPortalPage({
               <div>
                 <strong style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '6px' }}>▣ 기타 & 문의사항</strong>
                 <p style={{ margin: 0, paddingLeft: '8px' }}>• 통영윈드서핑협회 전무이사 임병훈 (010-3648-9838)</p>
-                <p style={{ margin: 0, paddingLeft: '8px' }}>• 접수 기간: 2026. 08. 10(월) 09:00 ~ 2026. 10. 23(금) 18:00</p>
+                <p style={{ margin: 0, paddingLeft: '8px' }}>• 접수 기간: {formatKoreanDateTime(regStartDateStr)} ~ {formatKoreanDateTime(regEndDateStr)}</p>
               </div>
             </div>
           </div>
@@ -907,8 +914,8 @@ export default function TenantPortalPage({
       <link rel="preload" href="/images/windsurfing_hero.jpg" as="image" />
       <link rel="preload" href="/images/logo_new.png" as="image" />
 
-      {/* ── 참가 신청 접수 기간 안내 및 신청서 작성 팝업 모달 ── */}
-      {isRegPopupOpen && (
+      {/* ── 참가 신청 접수 기간 안내 및 신청서 작성 팝업 모달 (ERP 데이터 로드 완료 후 렌더링) ── */}
+      {isRegPopupOpen && !loading && (
         <div
           style={{
             position: 'fixed',
