@@ -179,8 +179,11 @@ export default function HostDashboardPage({
       const currentConfig = tenant?.overviewConfig || {};
       const updatedConfig = {
         ...currentConfig,
-        registrationStartDate: regStartDate,
-        registrationEndDate: regEndDate,
+        duration: '2026. 10. 31(토) ~ 11. 01(일) (1박 2일)',
+        registrationStartDate: '2026-08-10T09:00',
+        registrationEndDate: '2026-10-23T18:00',
+        deadlineDate: '2026년 10월 23일(금) 18:00',
+        location: '경상남도 통영시 도남항 특설경기장 및 트라이애슬론 광장 일원',
         registrationMode: regMode,
         registrationEnabled: regMode !== 'DISABLED',
         registrationNotice: regNotice,
@@ -191,14 +194,13 @@ export default function HostDashboardPage({
         body: JSON.stringify({ overviewConfig: updatedConfig }),
       });
       if (res.ok) {
-        alert('참가 신청서 접수 기간 및 권한 설정이 성공적으로 저장되었습니다!');
+        alert('온라인 접수 운영 상태가 성공적으로 저장되었습니다!');
         await fetchInitialData();
       } else {
-        const data = await res.json();
-        alert(data.error || '저장 실패');
+        alert('저장에 실패했습니다.');
       }
-    } catch (err: any) {
-      alert('저장 중 오류 발생: ' + err.message);
+    } catch {
+      alert('오류가 발생했습니다.');
     } finally {
       setRegPeriodSaving(false);
     }
@@ -1499,33 +1501,25 @@ export default function HostDashboardPage({
               <div className="grid-responsive-3" style={{ gap: '16px', marginBottom: '16px' }}>
                 <div>
                   <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#cbd5e1', display: 'block', marginBottom: '6px' }}>
-                    접수 시작 일시
+                    접수 시작 일시 (공식 고정)
                   </label>
-                  <input
-                    type="datetime-local"
-                    className="form-input"
-                    value={regStartDate}
-                    onChange={(e) => setRegStartDate(e.target.value)}
-                    style={{ background: '#0f172a', color: 'white', borderColor: 'rgba(255,255,255,0.2)' }}
-                  />
+                  <div style={{ background: '#0f172a', color: '#94a3b8', padding: '10px 14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', fontSize: '0.88rem', fontWeight: '600' }}>
+                    🔒 2026-08-10 09:00 (공식 일정)
+                  </div>
                 </div>
 
                 <div>
                   <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#cbd5e1', display: 'block', marginBottom: '6px' }}>
-                    접수 마감 일시
+                    접수 마감 일시 (공식 고정)
                   </label>
-                  <input
-                    type="datetime-local"
-                    className="form-input"
-                    value={regEndDate}
-                    onChange={(e) => setRegEndDate(e.target.value)}
-                    style={{ background: '#0f172a', color: 'white', borderColor: 'rgba(255,255,255,0.2)' }}
-                  />
+                  <div style={{ background: '#0f172a', color: '#94a3b8', padding: '10px 14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', fontSize: '0.88rem', fontWeight: '600' }}>
+                    🔒 2026-10-23 18:00 (공식 마감)
+                  </div>
                 </div>
 
                 <div>
                   <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#cbd5e1', display: 'block', marginBottom: '6px' }}>
-                    온라인 접수 강제 허용/중단
+                    온라인 접수 운영 상태 제어
                   </label>
                   <select
                     className="form-input"
@@ -1533,9 +1527,9 @@ export default function HostDashboardPage({
                     onChange={(e) => setRegMode(e.target.value as any)}
                     style={{ background: '#0f172a', color: 'white', borderColor: 'rgba(255,255,255,0.2)' }}
                   >
-                    <option value="AUTO">🟡 일정 기간에 따라 자동 오픈 (설정된 시작~마감 일시에만 접수)</option>
-                    <option value="FORCE_ENABLED">🟢 온라인 접수 강제 활성화 (기간 무관 즉시 강제 오픈)</option>
-                    <option value="DISABLED">🔴 온라인 접수 강제 비활성화 (기간 무관 즉시 강제 마감/차단)</option>
+                    <option value="AUTO">🟡 자동 운영 (10월 23일 18:00까지 정상 접수)</option>
+                    <option value="FORCE_ENABLED">🟢 강제 활성화 (기간 무관 즉시 강제 오픈)</option>
+                    <option value="DISABLED">🔴 강제 비활성화 (기간 무관 즉시 강제 마감/차단)</option>
                   </select>
                 </div>
               </div>
@@ -1562,7 +1556,7 @@ export default function HostDashboardPage({
                   className="btn-primary"
                   style={{ padding: '10px 22px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '800' }}
                 >
-                  <Save size={16} /> {regPeriodSaving ? '설정 저장 중...' : '접수 기간 및 권한 설정 저장'}
+                  <Save size={16} /> {regPeriodSaving ? '설정 저장 중...' : '온라인 접수 운영 상태 저장'}
                 </button>
               </div>
             </div>
@@ -2173,6 +2167,11 @@ function OverviewEditor({ tenant, subdomain, onSaveSuccess }: OverviewEditorProp
         body: JSON.stringify({
           overviewConfig: {
             ...config,
+            duration: '2026. 10. 31(토) ~ 11. 01(일) (1박 2일)',
+            deadlineDate: '2026년 10월 23일(금) 18:00',
+            registrationStartDate: '2026-08-10T09:00',
+            registrationEndDate: '2026-10-23T18:00',
+            location: config.location || '경상남도 통영시 도남항 특설경기장 및 트라이애슬론 광장 일원',
             divisionsList,
             awardsList
           }
@@ -2225,8 +2224,10 @@ function OverviewEditor({ tenant, subdomain, onSaveSuccess }: OverviewEditorProp
                 <input type="text" className="form-input" value={config.title} onChange={e => handleChange('title', e.target.value)} />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>대회 기간</label>
-                <input type="text" className="form-input" value={config.duration} onChange={e => handleChange('duration', e.target.value)} />
+                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>대회 기간 (공식 고정)</label>
+                <div style={{ background: '#f8fafc', color: '#475569', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.9rem', fontWeight: '700' }}>
+                  🔒 2026. 10. 31(토) ~ 11. 01(일) (1박 2일)
+                </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>대회 장소</label>
@@ -2315,22 +2316,16 @@ function OverviewEditor({ tenant, subdomain, onSaveSuccess }: OverviewEditorProp
             <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
               <div className="grid-responsive-3" style={{ gap: '16px', marginBottom: '12px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: '700', color: '#1e293b' }}>⏰ 온라인 접수 시작 일시</label>
-                  <input
-                    type="datetime-local"
-                    className="form-input"
-                    value={config.registrationStartDate || '2026-08-10T09:00'}
-                    onChange={e => handleChange('registrationStartDate', e.target.value)}
-                  />
+                  <label style={{ fontSize: '0.85rem', fontWeight: '700', color: '#1e293b' }}>⏰ 온라인 접수 시작 일시 (공식 고정)</label>
+                  <div style={{ background: '#f8fafc', color: '#475569', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.85rem', fontWeight: '700' }}>
+                    🔒 2026-08-10 09:00
+                  </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: '700', color: '#1e293b' }}>⏰ 온라인 접수 마감 일시</label>
-                  <input
-                    type="datetime-local"
-                    className="form-input"
-                    value={config.registrationEndDate || '2026-10-23T18:00'}
-                    onChange={e => handleChange('registrationEndDate', e.target.value)}
-                  />
+                  <label style={{ fontSize: '0.85rem', fontWeight: '700', color: '#1e293b' }}>⏰ 온라인 접수 마감 일시 (공식 고정)</label>
+                  <div style={{ background: '#f8fafc', color: '#475569', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.85rem', fontWeight: '700' }}>
+                    🔒 2026-10-23 18:00
+                  </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label style={{ fontSize: '0.85rem', fontWeight: '700', color: '#1e293b' }}>온라인 접수 상태 토글</label>

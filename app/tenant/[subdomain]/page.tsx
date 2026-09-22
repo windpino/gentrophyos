@@ -128,7 +128,13 @@ export default function TenantPortalPage({
   const defaultData = getDefaultTenantData(subdomain);
   const overview = {
     ...defaultData.overviewConfig,
-    ...(tenant?.overviewConfig || {})
+    ...(tenant?.overviewConfig || {}),
+    // 공식 대회 일정 및 필수 정보 영구 불변 고정 (외부 변경 불가)
+    duration: '2026. 10. 31(토) ~ 11. 01(일) (1박 2일)',
+    deadlineDate: '2026년 10월 23일(금) 18:00',
+    registrationStartDate: '2026-08-10T09:00',
+    registrationEndDate: '2026-10-23T18:00',
+    location: '경상남도 통영시 도남항 특설경기장 및 트라이애슬론 광장 일원',
   };
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'notice' | 'intro' | 'live' | 'gallery' | 'archive'>('overview');
@@ -289,6 +295,20 @@ export default function TenantPortalPage({
       const res = await fetch(`/api/tenant/${subdomain}?_t=${Date.now()}`, { cache: 'no-store' });
       const data = await res.json();
       if (data.tenant) {
+        if (data.tenant.overviewConfig) {
+          data.tenant.overviewConfig.duration = '2026. 10. 31(토) ~ 11. 01(일) (1박 2일)';
+          data.tenant.overviewConfig.deadlineDate = '2026년 10월 23일(금) 18:00';
+          data.tenant.overviewConfig.registrationStartDate = '2026-08-10T09:00';
+          data.tenant.overviewConfig.registrationEndDate = '2026-10-23T18:00';
+          data.tenant.overviewConfig.location = '경상남도 통영시 도남항 특설경기장 및 트라이애슬론 광장 일원';
+        }
+        if (data.tenant.tournaments) {
+          data.tenant.tournaments = data.tenant.tournaments.map((t: any) => (
+            t.status === 'ONGOING'
+              ? { ...t, startDate: '2026-10-31', endDate: '2026-11-01' }
+              : t
+          ));
+        }
         setTenant(data.tenant);
         
         const ongoing = data.tenant.tournaments?.find((t: any) => t.status === 'ONGOING');
@@ -510,11 +530,18 @@ export default function TenantPortalPage({
     '--theme-primary-rgb': '0, 128, 128',
   } as React.CSSProperties;
 
-  // 온라인 참가 신청 접수 기간 및 접근 권한 실시간 판정
-  const regConfig = tenant.overviewConfig || {};
+  // 온라인 참가 신청 접수 기간 및 접근 권한 실시간 판정 (공식 일정 불변 고정)
+  const regConfig = {
+    ...(tenant.overviewConfig || {}),
+    duration: '2026. 10. 31(토) ~ 11. 01(일) (1박 2일)',
+    deadlineDate: '2026년 10월 23일(금) 18:00',
+    registrationStartDate: '2026-08-10T09:00',
+    registrationEndDate: '2026-10-23T18:00',
+    location: '경상남도 통영시 도남항 특설경기장 및 트라이애슬론 광장 일원',
+  };
   const regMode = regConfig.registrationMode || (regConfig.registrationEnabled === false ? 'DISABLED' : (regConfig.registrationEnabled === 'FORCE_ENABLED' ? 'FORCE_ENABLED' : 'AUTO'));
-  const regStartDateStr = regConfig.registrationStartDate || '2026-08-10T09:00';
-  const regEndDateStr = regConfig.registrationEndDate || '2026-10-23T18:00';
+  const regStartDateStr = '2026-08-10T09:00';
+  const regEndDateStr = '2026-10-23T18:00';
   const regNotice = regConfig.registrationNotice || '';
 
   const now = new Date();
