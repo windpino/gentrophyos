@@ -76,24 +76,24 @@ const getDefaultTenantData = (subdomain: string): TenantData => ({
   rulesSummary: '제20회 이순신장군배 전국윈드서핑대회 요강',
   overviewConfig: {
     title: '제20회 이순신장군배 전국윈드서핑대회',
-    duration: '2026. 10. 31(토) ~ 11. 01(일) (1박 2일)',
-    location: '경상남도 통영시 도남항 특설경기장 및 트라이애슬론 광장 일원',
+    duration: '2026년 9월 12일(토) ~ 13일(일) (1박 2일)',
+    location: '경상남도 통영시 산양읍 영운리 수륙마을 수륙해수욕장 일원',
     scale: '130명 (선착순 마감)',
-    host: '통영시, 통영시요트협회',
-    sponsor: '경상남도, 경상남도체육회, 통영시체육회',
-    supporter: '대한윈드서핑카이트보딩협회',
-    office: '경상남도 통영시 도남로 269-20 통영시요트협회 사무국',
+    host: '통영시',
+    sponsor: '통영시요트협회',
+    supporter: '통영시체육회, 경상남도요트협회, 한국윈드서핑협회',
+    office: '수륙해수욕장내 대회본부',
     bankName: '농협 (NH농협)',
     accountNo: '351-1334-8643-33',
     accountHolder: '통영시요트협회',
     entryFeeIndividual: '개인전 1종목당 30,000원',
     entryFeeGroup: '단체전 팀당 50,000원',
-    deadlineDate: '2026년 10월 23일(금) 18:00',
+    deadlineDate: '2026년 8월 27일(목) 18:00',
     registrationEnabled: true,
-    registrationStartDate: '2026-08-10T09:00',
-    registrationEndDate: '2026-10-23T18:00',
+    registrationStartDate: '2026-08-01T09:00',
+    registrationEndDate: '2026-08-27T18:00',
     registrationNotice: '',
-    rulesNote: '※ 참가 신청 시 소속 클럽 명확히 작성 필수.\n※ 모든 나이는 2026년 10월 31일을 기준으로 합니다.\n※ 참가인원은 선착순으로 130명이 충족되면 참가접수 기한이 조기에 마감될 수 있습니다.\n※ 참가비 입금계좌: 농협 351-1334-8643-33 (예금주: 통영시요트협회)\n※ 참가 신청서에 입력한 이름으로 반드시 입금해 주시기 바랍니다.\n※ 입금 완료 순서(입금순)로 선착순 130명 참가 확정 처리되며, 참가 확정 안내는 대회 공식 홈페이지에서 확인하실 수 있습니다.\n※ 신청기간 이후에는 취소 및 참가비 환불이 불가합니다.',
+    rulesNote: '※ 참가 신청 시 소속 클럽 명확히 작성 필수.\n※ 모든 나이는 대회 시작일을 기준으로 합니다.\n※ 참가인원은 선착순으로 130명이 충족되면 참가접수 기한이 조기에 마감될 수 있습니다.\n※ 참가비 입금계좌: 농협 351-1334-8643-33 (예금주: 통영시요트협회)\n※ 참가 신청서에 입력한 이름으로 반드시 입금해 주시기 바랍니다.\n※ 입금 완료 순서(입금순)로 선착순 130명 참가 확정 처리되며, 참가 확정 안내는 대회 공식 홈페이지에서 확인하실 수 있습니다.\n※ 신청기간 이후에는 취소 및 참가비 환불이 불가합니다.',
     itineraryDay1: '10:00 - 12:00 : 선수단 현장등록 및 웜업\n12:00 - 13:00 : 중식\n13:00 - 13:30 : 개회식\n13:30 - 18:00 : 1일차 경기',
     itineraryDay2: '09:00 - 12:00 : 2일차 경기\n12:00 - 13:00 : 중식\n13:00 - 18:00 : 2일차 경기 및 시상식\n18:00 - : 폐회식 및 해산',
     itineraryDay3: '',
@@ -106,8 +106,8 @@ const getDefaultTenantData = (subdomain: string): TenantData => ({
       id: 'tour-active',
       title: '제20회 이순신장군배 전국윈드서핑대회',
       status: 'ONGOING',
-      startDate: '2026-10-31',
-      endDate: '2026-11-01',
+      startDate: '2026-09-12',
+      endDate: '2026-09-13',
     }
   ]
 });
@@ -1907,7 +1907,7 @@ export default function TenantPortalPage({
                     {/* 1일차 */}
                     <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
                       <h4 style={{ fontWeight: '800', color: 'var(--theme-primary)', borderBottom: '2px solid var(--theme-primary)', paddingBottom: '8px', marginBottom: '12px', margin: 0 }}>
-                        1일차 : 10월 31일 (토)
+                        1일차 경기 일정
                       </h4>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.8rem' }}>
                         {overview.itineraryDay1.split('\n').map((line: string, idx: number) => {
@@ -1924,7 +1924,7 @@ export default function TenantPortalPage({
                     {/* 2일차 */}
                     <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
                       <h4 style={{ fontWeight: '800', color: 'var(--theme-primary)', borderBottom: '2px solid var(--theme-primary)', paddingBottom: '8px', marginBottom: '12px', margin: 0 }}>
-                        2일차 : 11월 01일 (일)
+                        2일차 경기 일정
                       </h4>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.8rem' }}>
                         {overview.itineraryDay2.split('\n').map((line: string, idx: number) => {
@@ -2121,14 +2121,16 @@ export default function TenantPortalPage({
                     </h3>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', fontSize: '0.92rem', color: 'black' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <p style={{ margin: 0 }}><strong>대회명 :</strong> 제20회 이순신장군배 전국윈드서핑대회 (2026)</p>
-                        <p style={{ margin: 0 }}><strong>기간 :</strong> 2026년 10월 31일(토) ~ 11월 01일(일) (1박 2일)</p>
-                        <p style={{ margin: 0 }}><strong>장소 :</strong> 통영 수륙해수욕장 일원 (통영윈드서핑협회)</p>
+                        <p style={{ margin: 0 }}><strong>대회명 :</strong> {overview.title || '제20회 이순신장군배 전국윈드서핑대회'}</p>
+                        <p style={{ margin: 0 }}><strong>기간 :</strong> {overview.duration}</p>
+                        <p style={{ margin: 0 }}><strong>장소 :</strong> {overview.location}</p>
+                        <p style={{ margin: 0 }}><strong>참가규모 :</strong> {overview.scale}</p>
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <p style={{ margin: 0 }}><strong>주최 :</strong> 통영시</p>
-                        <p style={{ margin: 0 }}><strong>주관 :</strong> 통영시윈드서핑연맹, 한국윈드서핑협회</p>
-                        <p style={{ margin: 0 }}><strong>후원 :</strong> 경상남도, 경상남도체육회, 통영시체육회</p>
+                        <p style={{ margin: 0 }}><strong>주최 :</strong> {overview.host}</p>
+                        <p style={{ margin: 0 }}><strong>주관 :</strong> {overview.sponsor}</p>
+                        <p style={{ margin: 0 }}><strong>후원 :</strong> {overview.supporter}</p>
+                        <p style={{ margin: 0 }}><strong>대회본부 :</strong> {overview.office}</p>
                       </div>
                     </div>
                   </div>
@@ -2143,23 +2145,36 @@ export default function TenantPortalPage({
                       {/* 1일차 */}
                       <div style={{ background: '#f8fafc', padding: '16px 20px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
                         <h4 style={{ fontWeight: '800', color: 'var(--theme-primary)', fontSize: '0.95rem', margin: '0 0 10px 0', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px' }}>
-                          1일차 : 10월 31일 (토)
+                          1일차 경기 일정
                         </h4>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.88rem', color: 'black' }}>
-                          <p style={{ margin: 0 }}>• <strong>09:00 ~ 10:00 :</strong> 참가 선수단 등록 및 출정식 (계류장 특설무대 / 안전 교육)</p>
-                          <p style={{ margin: 0 }}>• <strong>10:00 ~ 17:00 :</strong> 공식 경기 (예선 및 본선 경기)</p>
-                          <p style={{ margin: 0 }}>• <strong>18:00 ~ 20:00 :</strong> 리셉션 및 환영 만찬 (수륙해수욕장 특설무대)</p>
+                          {overview.itineraryDay1.split('\n').map((line: string, idx: number) => {
+                            const splitIdx = line.indexOf(':');
+                            if (splitIdx > -1) {
+                              const time = line.substring(0, splitIdx).trim();
+                              const desc = line.substring(splitIdx + 1).trim();
+                              return <p key={idx} style={{ margin: 0 }}>• <strong>{time} :</strong> {desc}</p>;
+                            }
+                            return <p key={idx} style={{ margin: 0 }}>{line}</p>;
+                          })}
                         </div>
                       </div>
 
                       {/* 2일차 */}
                       <div style={{ background: '#f8fafc', padding: '16px 20px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
                         <h4 style={{ fontWeight: '800', color: 'var(--theme-primary)', fontSize: '0.95rem', margin: '0 0 10px 0', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px' }}>
-                          2일차 : 11월 01일 (일)
+                          2일차 경기 일정
                         </h4>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.88rem', color: 'black' }}>
-                          <p style={{ margin: 0 }}>• <strong>10:00 ~ 15:00 :</strong> 공식 결선 경기 (각 종목별 결승 및 단체전)</p>
-                          <p style={{ margin: 0 }}>• <strong>15:30 ~ :</strong> 시상식 및 폐회식 (수륙해수욕장 특설무대)</p>
+                          {overview.itineraryDay2.split('\n').map((line: string, idx: number) => {
+                            const splitIdx = line.indexOf(':');
+                            if (splitIdx > -1) {
+                              const time = line.substring(0, splitIdx).trim();
+                              const desc = line.substring(splitIdx + 1).trim();
+                              return <p key={idx} style={{ margin: 0 }}>• <strong>{time} :</strong> {desc}</p>;
+                            }
+                            return <p key={idx} style={{ margin: 0 }}>{line}</p>;
+                          })}
                         </div>
                       </div>
 
