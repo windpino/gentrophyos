@@ -68,13 +68,15 @@ export async function POST(req: NextRequest) {
       const response = NextResponse.json({
         success: true,
         role,
+        token,
         message: '인증 성공',
       });
 
-      // HttpOnly, Secure, SameSite=Lax 쿠키 발급
+      // HttpOnly, SameSite=Lax 쿠키 발급 (HTTPS 접속 시에만 secure 플래그 활성화)
+      const isHttps = req.nextUrl.protocol === 'https:' || req.headers.get('x-forwarded-proto') === 'https';
       response.cookies.set(SESSION_COOKIE_NAME, token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: isHttps,
         sameSite: 'lax',
         path: '/',
         maxAge: 7 * 24 * 60 * 60, // 7일

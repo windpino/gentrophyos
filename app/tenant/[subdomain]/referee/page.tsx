@@ -86,7 +86,15 @@ export default function RefereeMobilePage({
   useEffect(() => {
     const checkSession = async () => {
       try {
-        const res = await fetch('/api/auth/verify?role=referee', { cache: 'no-store' });
+        const token = typeof window !== 'undefined' ? localStorage.getItem('gentrophy_referee_token') : null;
+        const headers: Record<string, string> = {};
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+        const res = await fetch('/api/auth/verify?role=referee', { 
+          cache: 'no-store',
+          headers
+        });
         const data = await res.json();
         if (data.authenticated) {
           setIsAuthenticated(true);
@@ -108,12 +116,15 @@ export default function RefereeMobilePage({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: passwordInput, role: 'referee', subdomain }),
       });
+      const data = await res.json();
       if (res.ok) {
+        if (data.token && typeof window !== 'undefined') {
+          localStorage.setItem('gentrophy_referee_token', data.token);
+        }
         setIsAuthenticated(true);
         setAuthError('');
         setPasswordInput('');
       } else {
-        const data = await res.json();
         setAuthError(data.message || '비밀번호가 올바르지 않습니다.');
         setPasswordInput('');
       }
@@ -124,6 +135,9 @@ export default function RefereeMobilePage({
 
   const handleLogout = async () => {
     try {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('gentrophy_referee_token');
+      }
       await fetch('/api/auth/verify', { method: 'DELETE' });
       setIsAuthenticated(false);
       setPasswordInput('');

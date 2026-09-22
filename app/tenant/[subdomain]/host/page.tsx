@@ -84,11 +84,33 @@ export default function HostDashboardPage({
 
   const [authChecking, setAuthChecking] = useState(true);
 
+  // Dual-channel 인증 토큰 헤더 헬퍼
+  const getAuthHeaders = (extraHeaders: Record<string, string> = {}) => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('gentrophy_auth_token') : null;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...extraHeaders,
+    };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+      headers['x-auth-token'] = token;
+    }
+    return headers;
+  };
+
   // 세션 확인 (이미 로그인된 경우 자동 인증)
   useEffect(() => {
     const checkSession = async () => {
       try {
-        const res = await fetch('/api/auth/verify?role=admin', { cache: 'no-store' });
+        const token = typeof window !== 'undefined' ? localStorage.getItem('gentrophy_auth_token') : null;
+        const headers: Record<string, string> = {};
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+        const res = await fetch('/api/auth/verify?role=admin', { 
+          cache: 'no-store',
+          headers
+        });
         const data = await res.json();
         if (data.authenticated) {
           setIsAuthenticated(true);
@@ -110,12 +132,15 @@ export default function HostDashboardPage({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: passwordInput, role: 'admin', subdomain }),
       });
+      const data = await res.json();
       if (res.ok) {
+        if (data.token && typeof window !== 'undefined') {
+          localStorage.setItem('gentrophy_auth_token', data.token);
+        }
         setIsAuthenticated(true);
         setAuthError('');
         setPasswordInput('');
       } else {
-        const data = await res.json();
         setAuthError(data.message || '올바르지 않은 비밀번호입니다. 다시 입력해 주세요.');
         setPasswordInput('');
       }
@@ -126,6 +151,9 @@ export default function HostDashboardPage({
 
   const handleLogout = async () => {
     try {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('gentrophy_auth_token');
+      }
       await fetch('/api/auth/verify', { method: 'DELETE' });
       setIsAuthenticated(false);
       setPasswordInput('');
@@ -182,22 +210,23 @@ export default function HostDashboardPage({
         duration: '2026. 10. 31(토) ~ 11. 01(일) (1박 2일)',
         registrationStartDate: '2026-08-10T09:00',
         registrationEndDate: '2026-10-23T18:00',
-        deadlineDate: '2026년 10월 23일(금) 18:00',
-        location: '경상남도 통영시 도남항 특설경기장 및 트라이애슬론 광장 일원',
+        deadlineDate: currentConfig.deadlineDate || '2026년 10월 23일(금) 18:00',
+        location: currentConfig.location || '경상남도 통영시 도남항 특설경기장 및 트라이애슬론 광장 일원',
         registrationMode: regMode,
         registrationEnabled: regMode !== 'DISABLED',
         registrationNotice: regNotice,
       };
       const res = await fetch(`/api/tenant/${subdomain}/overview`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ overviewConfig: updatedConfig }),
       });
       if (res.ok) {
         alert('온라인 접수 운영 상태가 성공적으로 저장되었습니다!');
         await fetchInitialData();
       } else {
-        alert('저장에 실패했습니다.');
+        const errData = await res.json().catch(() => ({}));
+        alert(errData.error || '저장에 실패했습니다.');
       }
     } catch {
       alert('오류가 발생했습니다.');
@@ -362,7 +391,7 @@ export default function HostDashboardPage({
       try {
         const res = await fetch(`/api/tenant/${subdomain}/registrations/bulk-update`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAuthHeaders(),
           body: JSON.stringify({
             tournamentId: activeTournament.id,
             updatedList: [],
@@ -402,7 +431,7 @@ export default function HostDashboardPage({
     try {
       const res = await fetch(`/api/tenant/${subdomain}/registrations/bulk-update`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           tournamentId: activeTournament.id,
           updatedList,
@@ -447,7 +476,7 @@ export default function HostDashboardPage({
     try {
       const res = await fetch(`/api/tenant/${subdomain}/rules-detail`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           tournamentId: activeTournament.id,
           rulesList: updatedRules,
@@ -1834,7 +1863,7 @@ export default function HostDashboardPage({
                       try {
                         const res = await fetch(`/api/tenant/${subdomain}/form-configs`, {
                           method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
+                          headers: getAuthHeaders(),
                           body: JSON.stringify({ fields: formFields }),
                         });
                         if (res.ok) {
@@ -2161,17 +2190,19 @@ function OverviewEditor({ tenant, subdomain, onSaveSuccess }: OverviewEditorProp
   const handleSave = async () => {
     setSaving(true);
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('gentrophy_auth_token') : null;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+        headers['x-auth-token'] = token;
+      }
       const res = await fetch(`/api/tenant/${subdomain}/overview`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           overviewConfig: {
             ...config,
             duration: '2026. 10. 31(토) ~ 11. 01(일) (1박 2일)',
-            deadlineDate: '2026년 10월 23일(금) 18:00',
-            registrationStartDate: '2026-08-10T09:00',
-            registrationEndDate: '2026-10-23T18:00',
-            location: config.location || '경상남도 통영시 도남항 특설경기장 및 트라이애슬론 광장 일원',
             divisionsList,
             awardsList
           }
@@ -2641,9 +2672,15 @@ function NoticeEditor({ tenant, subdomain, onSaveSuccess }: NoticeEditorProps) {
     setSaving(true);
     try {
       const currentConfig = tenant?.overviewConfig || {};
+      const token = typeof window !== 'undefined' ? localStorage.getItem('gentrophy_auth_token') : null;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+        headers['x-auth-token'] = token;
+      }
       const res = await fetch(`/api/tenant/${subdomain}/overview`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           overviewConfig: {
             ...currentConfig,

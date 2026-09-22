@@ -29,14 +29,14 @@ export async function GET(
 
     const tenantData = tenantDoc.data();
 
-    // 대회 일정 및 장소 강제 고정 및 정규화
+    // 대회 일정 및 정보 정규화 (대회 기간 10/31~11/01 유지, 그 외 ERP에서 수정한 장소/마감일/상세내용 완벽 보존)
     const sanitizedOverviewConfig = {
       ...(tenantData.overviewConfig || {}),
       duration: OFFICIAL_DURATION,
-      deadlineDate: OFFICIAL_DEADLINE,
-      registrationStartDate: OFFICIAL_REG_START,
-      registrationEndDate: OFFICIAL_REG_END,
-      location: OFFICIAL_LOCATION,
+      deadlineDate: tenantData.overviewConfig?.deadlineDate || OFFICIAL_DEADLINE,
+      registrationStartDate: tenantData.overviewConfig?.registrationStartDate || OFFICIAL_REG_START,
+      registrationEndDate: tenantData.overviewConfig?.registrationEndDate || OFFICIAL_REG_END,
+      location: tenantData.overviewConfig?.location || OFFICIAL_LOCATION,
     };
 
     // 만약 DB에 기존 레거시 날짜가 남아있다면 Firestore에 즉시 영구 정제 업데이트

@@ -31,15 +31,18 @@ export async function POST(
       return NextResponse.json({ error: '존재하지 않는 대회 채널입니다.' }, { status: 404 });
     }
 
-    // Firestore 테넌트 문서의 overviewConfig 필드를 부분 업데이트 또는 병합하여 저장
-    // 공식 대회 일정 및 주요 정보는 불변 고정 (변조 및 변경 불가)
+    const existingData = tenantSnap.data();
+    const existingConfig = existingData.overviewConfig || {};
+
+    // Firestore 테넌트 문서의 overviewConfig 필드를 병합하여 저장
     const sanitizedOverview = {
+      ...existingConfig,
       ...overviewConfig,
       duration: '2026. 10. 31(토) ~ 11. 01(일) (1박 2일)',
-      deadlineDate: '2026년 10월 23일(금) 18:00',
-      registrationStartDate: '2026-08-10T09:00',
-      registrationEndDate: '2026-10-23T18:00',
-      location: '경상남도 통영시 도남항 특설경기장 및 트라이애슬론 광장 일원',
+      deadlineDate: overviewConfig.deadlineDate || existingConfig.deadlineDate || '2026년 10월 23일(금) 18:00',
+      registrationStartDate: overviewConfig.registrationStartDate || existingConfig.registrationStartDate || '2026-08-10T09:00',
+      registrationEndDate: overviewConfig.registrationEndDate || existingConfig.registrationEndDate || '2026-10-23T18:00',
+      location: overviewConfig.location || existingConfig.location || '경상남도 통영시 도남항 특설경기장 및 트라이애슬론 광장 일원',
     };
 
     await setDoc(tenantRef, {

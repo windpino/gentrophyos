@@ -125,9 +125,21 @@ export function verifySessionToken(token: string): SessionPayload | null {
   }
 }
 
-// NextRequest에서 세션 추출
+// NextRequest에서 세션 추출 (쿠키, Authorization 헤더, x-auth-token 헤더 모두 지원)
 export function getSessionFromRequest(req: NextRequest): SessionPayload | null {
-  const token = req.cookies.get(SESSION_COOKIE_NAME)?.value;
+  let token = req.cookies.get(SESSION_COOKIE_NAME)?.value;
+
+  if (!token) {
+    const authHeader = req.headers.get('authorization');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7).trim();
+    }
+  }
+
+  if (!token) {
+    token = req.headers.get('x-auth-token') || undefined;
+  }
+
   if (!token) return null;
   return verifySessionToken(token);
 }
