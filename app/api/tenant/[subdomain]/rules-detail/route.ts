@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/src/lib/db';
+import { authenticateApiRequest } from '@/src/lib/auth';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function GET(
   req: NextRequest,
@@ -51,6 +55,11 @@ export async function POST(
   { params }: { params: Promise<{ subdomain: string }> }
 ) {
   try {
+    const auth = authenticateApiRequest(req, ['admin']);
+    if (!auth.authorized) {
+      return auth.errorResponse!;
+    }
+
     const { subdomain } = await params;
     const body = await req.json();
     const { tournamentId, rulesList } = body; // rulesList: Array<{ id, priority, ruleType }>

@@ -2,12 +2,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db as firestore } from '@/src/lib/firebase';
 import { doc, getDoc, updateDoc, collection, query, where, getDocs, setDoc } from 'firebase/firestore';
 import { eventEmitter, EVENTS } from '@/src/lib/events';
+import { authenticateApiRequest } from '@/src/lib/auth';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ subdomain: string }> }
 ) {
   try {
+    const auth = authenticateApiRequest(req, ['admin', 'referee']);
+    if (!auth.authorized) {
+      return auth.errorResponse!;
+    }
+
     const { subdomain } = await params;
     const body = await req.json();
     const { matchId, p1Id, p2Id, p1Score, p2Score, isCompleted } = body;

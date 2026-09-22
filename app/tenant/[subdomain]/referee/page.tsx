@@ -77,9 +77,28 @@ export default function RefereeMobilePage({
 
   // 인증 게이트
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authChecking, setAuthChecking] = useState(true);
   const [passwordInput, setPasswordInput] = useState('');
   const [authError, setAuthError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // 세션 확인 (이미 로그인된 경우 자동 인증)
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const res = await fetch('/api/auth/verify?role=referee', { cache: 'no-store' });
+        const data = await res.json();
+        if (data.authenticated) {
+          setIsAuthenticated(true);
+        }
+      } catch (err) {
+        console.error('심판 세션 확인 실패:', err);
+      } finally {
+        setAuthChecking(false);
+      }
+    };
+    checkSession();
+  }, []);
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,11 +106,12 @@ export default function RefereeMobilePage({
       const res = await fetch('/api/auth/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: passwordInput }),
+        body: JSON.stringify({ password: passwordInput, role: 'referee', subdomain }),
       });
       if (res.ok) {
         setIsAuthenticated(true);
         setAuthError('');
+        setPasswordInput('');
       } else {
         const data = await res.json();
         setAuthError(data.message || '비밀번호가 올바르지 않습니다.');
@@ -99,6 +119,16 @@ export default function RefereeMobilePage({
       }
     } catch {
       setAuthError('서버 연결 오류가 발생했습니다. 다시 시도해 주세요.');
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/verify', { method: 'DELETE' });
+      setIsAuthenticated(false);
+      setPasswordInput('');
+    } catch (err) {
+      console.error('로그아웃 오류:', err);
     }
   };
 
@@ -540,6 +570,14 @@ export default function RefereeMobilePage({
   };
 
   // 인증 게이트 UI
+  if (authChecking) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' }}>
+        <RefreshCw className="animate-spin" size={36} style={{ color: '#3b82f6' }} />
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
     return (
       <div style={{
@@ -554,7 +592,7 @@ export default function RefereeMobilePage({
           <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>⚖️</div>
           <h1 style={{ fontSize: '1.4rem', fontWeight: '900', color: 'white', marginBottom: '6px' }}>심판 모바일 제어기</h1>
           <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem', marginBottom: '28px' }}>
-            접근 권한 확인이 필요합니다
+            심판 인증 번호 또는 주최자 비밀번호를 입력해 주세요
           </p>
           <form onSubmit={handleAuthSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <input
@@ -712,27 +750,48 @@ export default function RefereeMobilePage({
             <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)' }}>{tenant.name}</span>
           </div>
         </div>
-        <a
-          href={typeof window !== 'undefined' && window.location.pathname.startsWith('/tenant/') ? `/tenant/${subdomain}` : '/'}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            background: 'white',
-            color: '#1e293b',
-            padding: '7px 14px',
-            borderRadius: '8px',
-            fontSize: '0.85rem',
-            fontWeight: '700',
-            textDecoration: 'none',
-            border: '1px solid rgba(0, 0, 0, 0.1)',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            whiteSpace: 'nowrap',
-            cursor: 'pointer'
-          }}
-        >
-          <Home size={15} /> 홈페이지
-        </a>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button
+            onClick={handleLogout}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              background: 'rgba(239, 68, 68, 0.15)',
+              color: '#f87171',
+              padding: '7px 12px',
+              borderRadius: '8px',
+              fontSize: '0.8rem',
+              fontWeight: '700',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            로그아웃
+          </button>
+          <a
+            href={typeof window !== 'undefined' && window.location.pathname.startsWith('/tenant/') ? `/tenant/${subdomain}` : '/'}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: 'white',
+              color: '#1e293b',
+              padding: '7px 14px',
+              borderRadius: '8px',
+              fontSize: '0.85rem',
+              fontWeight: '700',
+              textDecoration: 'none',
+              border: '1px solid rgba(0, 0, 0, 0.1)',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              whiteSpace: 'nowrap',
+              cursor: 'pointer'
+            }}
+          >
+            <Home size={15} /> 홈페이지
+          </a>
+        </div>
       </header>
 
       <div style={{ maxWidth: '850px', margin: '0 auto', padding: '16px 12px 60px 12px' }}>

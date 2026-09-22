@@ -82,17 +82,38 @@ export default function HostDashboardPage({
   // 동점자 룰
   const [rules, setRules] = useState<TieBreakerRule[]>([]);
 
+  const [authChecking, setAuthChecking] = useState(true);
+
+  // 세션 확인 (이미 로그인된 경우 자동 인증)
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const res = await fetch('/api/auth/verify?role=admin', { cache: 'no-store' });
+        const data = await res.json();
+        if (data.authenticated) {
+          setIsAuthenticated(true);
+        }
+      } catch (err) {
+        console.error('세션 확인 실패:', err);
+      } finally {
+        setAuthChecking(false);
+      }
+    };
+    checkSession();
+  }, []);
+
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       const res = await fetch('/api/auth/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: passwordInput }),
+        body: JSON.stringify({ password: passwordInput, role: 'admin', subdomain }),
       });
       if (res.ok) {
         setIsAuthenticated(true);
         setAuthError('');
+        setPasswordInput('');
       } else {
         const data = await res.json();
         setAuthError(data.message || '올바르지 않은 비밀번호입니다. 다시 입력해 주세요.');
@@ -103,13 +124,23 @@ export default function HostDashboardPage({
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/verify', { method: 'DELETE' });
+      setIsAuthenticated(false);
+      setPasswordInput('');
+    } catch (err) {
+      console.error('로그아웃 오류:', err);
+    }
+  };
+
   useEffect(() => {
     fetchInitialData();
   }, [subdomain]);
 
   const fetchInitialData = async () => {
     try {
-      const tenantRes = await fetch(`/api/tenant/${subdomain}`);
+      const tenantRes = await fetch(`/api/tenant/${subdomain}?_t=${Date.now()}`, { cache: 'no-store' });
       const tenantData = await tenantRes.json();
       if (tenantData.tenant) {
         setTenant(tenantData.tenant);
@@ -179,9 +210,9 @@ export default function HostDashboardPage({
       
       // Fetch registrations, rules-detail, and form-configs in parallel!
       const [regRes, ruleRes, formRes] = await Promise.all([
-        fetch(`/api/tenant/${subdomain}/registrations?tournamentId=${tId}`),
-        fetch(`/api/tenant/${subdomain}/rules-detail?tournamentId=${tId}`),
-        fetch(`/api/tenant/${subdomain}/form-configs`)
+        fetch(`/api/tenant/${subdomain}/registrations?tournamentId=${tId}&_t=${Date.now()}`, { cache: 'no-store' }),
+        fetch(`/api/tenant/${subdomain}/rules-detail?tournamentId=${tId}&_t=${Date.now()}`, { cache: 'no-store' }),
+        fetch(`/api/tenant/${subdomain}/form-configs?_t=${Date.now()}`, { cache: 'no-store' })
       ]);
 
       const [regData, ruleData, formData] = await Promise.all([
@@ -511,6 +542,14 @@ export default function HostDashboardPage({
     '--theme-gold': '#c5a880',
   } as React.CSSProperties;
 
+  if (authChecking) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0f172a' }}>
+        <RefreshCw className="animate-spin" size={36} style={{ color: '#c5a880' }} />
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
     return (
       <div style={{
@@ -782,7 +821,25 @@ export default function HostDashboardPage({
             <p style={{ color: 'var(--text-muted)' }}>{activeTournament.title}</p>
           </div>
 
-          <div style={{ display: 'flex', gap: '12px' }}>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <button
+              onClick={handleLogout}
+              style={{
+                fontSize: '0.85rem',
+                padding: '10px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: '#fee2e2',
+                color: '#dc2626',
+                border: '1px solid #fecaca',
+                borderRadius: '8px',
+                fontWeight: '700',
+                cursor: 'pointer'
+              }}
+            >
+              로그아웃
+            </button>
             <a
               href={typeof window !== 'undefined' && window.location.pathname.startsWith('/tenant/') ? `/tenant/${subdomain}` : '/'}
               className="btn-secondary"
@@ -2124,7 +2181,7 @@ function OverviewEditor({ tenant, subdomain, onSaveSuccess }: OverviewEditorProp
       const data = await res.json();
       if (res.ok) {
         alert('대회 요강 내용이 성공적으로 업데이트되어 전체 페이지에 반영되었습니다!');
-        onSaveSuccess();
+        await onSaveSuccess();
       } else {
         alert(data.error || '저장 실패');
       }
@@ -2605,7 +2662,7 @@ function NoticeEditor({ tenant, subdomain, onSaveSuccess }: NoticeEditorProps) {
       const data = await res.json();
       if (res.ok) {
         alert('개최공시서 파일이 성공적으로 업로드 및 저장되었습니다!');
-        onSaveSuccess();
+        await onSaveSuccess();
       } else {
         alert(data.error || '저장 실패');
       }

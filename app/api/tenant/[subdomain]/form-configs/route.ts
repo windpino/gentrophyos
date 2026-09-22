@@ -39,6 +39,9 @@ async function getActiveTournamentId(subdomain: string) {
   return activeTours[0].id;
 }
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ subdomain: string }> }
@@ -61,7 +64,9 @@ export async function GET(
 
     return NextResponse.json({ fields }, {
       headers: {
-        'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=300',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
       },
     });
   } catch (error: any) {
@@ -69,11 +74,18 @@ export async function GET(
   }
 }
 
+import { authenticateApiRequest } from '@/src/lib/auth';
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ subdomain: string }> }
 ) {
   try {
+    const auth = authenticateApiRequest(req, ['admin']);
+    if (!auth.authorized) {
+      return auth.errorResponse!;
+    }
+
     const { subdomain } = await params;
     const body = await req.json();
     const { fields } = body;

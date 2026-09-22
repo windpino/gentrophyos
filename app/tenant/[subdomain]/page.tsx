@@ -167,17 +167,7 @@ export default function TenantPortalPage({
   const [regError, setRegError] = useState('');
   const [regSubmitting, setRegSubmitting] = useState(false);
 
-  // 참가 신청 접수 기간 안내 팝업 상태 (ERP 데이터 로드 완료 후 표출)
-  const [isRegPopupOpen, setIsRegPopupOpen] = useState(false);
-  const [hideRegPopupToday, setHideRegPopupToday] = useState(false);
 
-  const handleCloseRegPopup = () => {
-    if (hideRegPopupToday && typeof window !== 'undefined') {
-      const expireTime = new Date().getTime() + 24 * 60 * 60 * 1000;
-      localStorage.setItem('hide_registration_period_popup', String(expireTime));
-    }
-    setIsRegPopupOpen(false);
-  };
 
   const formatKoreanDateTime = (dtStr?: string) => {
     if (!dtStr) return '추후 공지';
@@ -202,7 +192,7 @@ export default function TenantPortalPage({
     if (!subdomain) return;
     const fetchFormConfigs = async () => {
       try {
-        const res = await fetch(`/api/tenant/${subdomain}/form-configs`);
+        const res = await fetch(`/api/tenant/${subdomain}/form-configs?_t=${Date.now()}`, { cache: 'no-store' });
         const data = await res.json();
         if (data.fields) {
           setFormFields(data.fields);
@@ -296,7 +286,7 @@ export default function TenantPortalPage({
 
   const fetchTenantInfo = async () => {
     try {
-      const res = await fetch(`/api/tenant/${subdomain}`);
+      const res = await fetch(`/api/tenant/${subdomain}?_t=${Date.now()}`, { cache: 'no-store' });
       const data = await res.json();
       if (data.tenant) {
         setTenant(data.tenant);
@@ -313,13 +303,7 @@ export default function TenantPortalPage({
           setSelectedArchiveId(archived[0].id);
         }
 
-        // ERP 최신 설정 로드 완료 후 팝업 표출 (이전 기본 날짜가 먼저 보이는 깜빡임 방지)
-        if (typeof window !== 'undefined') {
-          const hideUntil = localStorage.getItem('hide_registration_period_popup');
-          if (!hideUntil || new Date().getTime() > Number(hideUntil)) {
-            setIsRegPopupOpen(true);
-          }
-        }
+
       }
     } catch (e) {
       console.error(e);
@@ -353,7 +337,7 @@ export default function TenantPortalPage({
       const results = await Promise.all(
         divisionList.map(async (div: string) => {
           try {
-            const res = await fetch(`/api/tenant/${subdomain}/leaderboard?tournamentId=${tId}&division=${encodeURIComponent(div)}`);
+            const res = await fetch(`/api/tenant/${subdomain}/leaderboard?tournamentId=${tId}&division=${encodeURIComponent(div)}&_t=${Date.now()}`, { cache: 'no-store' });
             const data = await res.json();
             return { division: div, list: data.leaderboard || [] };
           } catch (e) {
@@ -378,7 +362,7 @@ export default function TenantPortalPage({
   const fetchRegistrations = async (tId: string) => {
     setRegsLoading(true);
     try {
-      const res = await fetch(`/api/tenant/${subdomain}/registrations?tournamentId=${tId}`);
+      const res = await fetch(`/api/tenant/${subdomain}/registrations?tournamentId=${tId}&_t=${Date.now()}`, { cache: 'no-store' });
       const data = await res.json();
       if (data.registrations) {
         const approved = data.registrations.filter((r: any) => r.status === 'APPROVED');
@@ -393,7 +377,7 @@ export default function TenantPortalPage({
 
   const fetchMatches = async (tId: string) => {
     try {
-      const res = await fetch(`/api/tenant/${subdomain}/matches?tournamentId=${tId}`);
+      const res = await fetch(`/api/tenant/${subdomain}/matches?tournamentId=${tId}&_t=${Date.now()}`, { cache: 'no-store' });
       const data = await res.json();
       if (data.matches) {
         setMatches(data.matches);
@@ -422,10 +406,10 @@ export default function TenantPortalPage({
   const fetchArchiveData = async (archivedId: string) => {
     setArchiveLoading(true);
     try {
-      const lRes = await fetch(`/api/tenant/${subdomain}/leaderboard?tournamentId=${archivedId}`);
+      const lRes = await fetch(`/api/tenant/${subdomain}/leaderboard?tournamentId=${archivedId}&_t=${Date.now()}`, { cache: 'no-store' });
       const lData = await lRes.json();
       
-      const mRes = await fetch(`/api/tenant/${subdomain}/matches?tournamentId=${archivedId}`);
+      const mRes = await fetch(`/api/tenant/${subdomain}/matches?tournamentId=${archivedId}&_t=${Date.now()}`, { cache: 'no-store' });
       const mData = await mRes.json();
 
       setArchiveLeaderboard(lData.leaderboard || []);
@@ -914,246 +898,7 @@ export default function TenantPortalPage({
       <link rel="preload" href="/images/windsurfing_hero.jpg" as="image" />
       <link rel="preload" href="/images/logo_new.png" as="image" />
 
-      {/* ── 참가 신청 접수 기간 안내 및 신청서 작성 팝업 모달 (ERP 데이터 로드 완료 후 렌더링) ── */}
-      {isRegPopupOpen && !loading && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(15, 23, 42, 0.75)',
-            backdropFilter: 'blur(8px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '16px',
-            zIndex: 99999,
-            animation: 'fadeIn 0.25s ease-out'
-          }}
-          onClick={handleCloseRegPopup}
-        >
-          <div
-            style={{
-              backgroundColor: '#ffffff',
-              borderRadius: '20px',
-              maxWidth: '540px',
-              width: '100%',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-              maxHeight: '90vh',
-              animation: 'scaleUp 0.25s ease-out',
-              color: '#1e293b'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* 모달 헤더 */}
-            <div
-              style={{
-                background: 'linear-gradient(135deg, #0f766e 0%, #008080 100%)',
-                color: 'white',
-                padding: '24px 24px 20px 24px',
-                position: 'relative'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                <span style={{
-                  background: 'rgba(255, 255, 255, 0.2)',
-                  color: 'white',
-                  fontSize: '0.75rem',
-                  fontWeight: '800',
-                  padding: '3px 10px',
-                  borderRadius: '20px',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}>
-                  📢 접수 안내
-                </span>
-                <span style={{ fontSize: '0.8rem', color: '#ccfbf1', fontWeight: '600' }}>
-                  {tenant?.name || '제20회 이순신장군배 전국윈드서핑대회'}
-                </span>
-              </div>
-              <h2 style={{ fontSize: '1.35rem', fontWeight: '900', margin: 0, lineHeight: '1.35', color: '#ffffff' }}>
-                대회 참가 신청서 접수 기간 안내
-              </h2>
 
-              <button
-                type="button"
-                onClick={handleCloseRegPopup}
-                style={{
-                  position: 'absolute',
-                  top: '18px',
-                  right: '18px',
-                  background: 'rgba(255, 255, 255, 0.15)',
-                  border: 'none',
-                  color: '#ffffff',
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
-                aria-label="닫기"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* 모달 본문 */}
-            <div style={{ padding: '22px 24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              
-              {/* 접수 상태 뱃지 */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                background: regStatusType === 'OPEN' ? '#f0fdf4' : regStatusType === 'BEFORE' ? '#fefce8' : '#fef2f2',
-                border: `1px solid ${regStatusType === 'OPEN' ? '#bbf7d0' : regStatusType === 'BEFORE' ? '#fef08a' : '#fecaca'}`,
-                padding: '12px 16px',
-                borderRadius: '12px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '1.2rem' }}>{regStatusBadge.icon}</span>
-                  <span style={{
-                    fontWeight: '800',
-                    fontSize: '0.95rem',
-                    color: regStatusType === 'OPEN' ? '#166534' : regStatusType === 'BEFORE' ? '#854d0e' : '#991b1b'
-                  }}>
-                    {regStatusBadge.text}
-                  </span>
-                </div>
-                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
-                  정원 130명 선착순
-                </span>
-              </div>
-
-              {/* ERP에 저장된 접수 기간 안내 박스 */}
-              <div style={{
-                background: '#f8fafc',
-                border: '1px solid #e2e8f0',
-                borderRadius: '14px',
-                padding: '16px 18px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '10px'
-              }}>
-                <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  ⏰ 온라인 참가 신청 접수 일정 (ERP 설정)
-                </h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.88rem', color: '#334155' }}>
-                  <p style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    • <strong style={{ color: '#0f766e', minWidth: '70px' }}>접수 시작 :</strong>
-                    <span style={{ fontWeight: '700' }}>{formatKoreanDateTime(regStartDateStr)}</span>
-                  </p>
-                  <p style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    • <strong style={{ color: '#dc2626', minWidth: '70px' }}>접수 마감 :</strong>
-                    <span style={{ fontWeight: '700' }}>{formatKoreanDateTime(regEndDateStr)}</span>
-                  </p>
-                </div>
-              </div>
-
-              {/* 대회 기본 정보 카드 */}
-              <div style={{
-                background: '#ffffff',
-                border: '1px solid #e2e8f0',
-                borderRadius: '12px',
-                padding: '14px 16px',
-                fontSize: '0.85rem',
-                color: '#475569',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '6px'
-              }}>
-                <p style={{ margin: 0 }}>• <strong>대회 일정 :</strong> {overview.duration || '2026. 10. 31(토) ~ 11. 01(일) (1박 2일)'}</p>
-                <p style={{ margin: 0 }}>• <strong>대회 장소 :</strong> {overview.location || '경상남도 통영시 도남항 특설경기장 및 트라이애슬론 광장 일원'}</p>
-                <p style={{ margin: 0 }}>• <strong>참가 인원 :</strong> {overview.scale || '130명 (선착순 마감)'}</p>
-                <p style={{ margin: 0 }}>• <strong>문의 안내 :</strong> {overview.contactPhone || '대회 사무국 (010-3648-9838)'}</p>
-              </div>
-
-              {/* 참가 신청서 작성 버튼 */}
-              <button
-                type="button"
-                onClick={() => {
-                  if (isRegistrationOpen) {
-                    handleCloseRegPopup();
-                    window.location.href = window.location.pathname.startsWith('/tenant/')
-                      ? `${window.location.pathname}?mode=apply`
-                      : `/tenant/${subdomain}?mode=apply`;
-                  } else {
-                    alert(regStatusMessage);
-                  }
-                }}
-                className="btn-primary"
-                style={{
-                  width: '100%',
-                  padding: '16px',
-                  fontSize: '1.05rem',
-                  fontWeight: '800',
-                  justifyContent: 'center',
-                  background: isRegistrationOpen
-                    ? 'linear-gradient(135deg, #008080 0%, #0f766e 100%)'
-                    : '#94a3b8',
-                  boxShadow: isRegistrationOpen ? '0 4px 14px rgba(0, 128, 128, 0.35)' : 'none',
-                  cursor: isRegistrationOpen ? 'pointer' : 'not-allowed',
-                  borderRadius: '12px',
-                  color: '#ffffff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
-              >
-                <FileText size={20} />
-                <span>{isRegistrationOpen ? '참가신청서 작성하기' : `참가신청 (${regStatusBadge.text})`}</span>
-              </button>
-            </div>
-
-            {/* 모달 푸터 */}
-            <div
-              style={{
-                borderTop: '1px solid #e2e8f0',
-                padding: '14px 20px',
-                background: '#f8fafc',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                gap: '12px'
-              }}
-            >
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.82rem', color: '#64748b', userSelect: 'none' }}>
-                <input
-                  type="checkbox"
-                  checked={hideRegPopupToday}
-                  onChange={(e) => setHideRegPopupToday(e.target.checked)}
-                  style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--theme-primary)' }}
-                />
-                오늘 하루 동안 이 창 열지 않기
-              </label>
-
-              <button
-                type="button"
-                onClick={handleCloseRegPopup}
-                style={{
-                  background: '#334155',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '10px',
-                  padding: '8px 18px',
-                  fontSize: '0.85rem',
-                  fontWeight: '700',
-                  cursor: 'pointer'
-                }}
-              >
-                닫기
-              </button>
-            </div>
-
-          </div>
-        </div>
-      )}
 
       {/* 1. 상단 화이트 브랜드 헤더 */}
       <header className="site-header">

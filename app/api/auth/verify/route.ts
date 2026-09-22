@@ -1,21 +1,116 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import {
+  verifyPassword,
+  createSessionToken,
+  getSessionFromRequest,
+  checkRateLimit,
+  recordAuthAttempt,
+  SESSION_COOKIE_NAME,
+} from '@/src/lib/auth';
 
-// POST /api/auth/verify
-// body: { password: string }
-// 비밀번호는 서버 환경변수에서만 읽어서 클라이언트에 절대 노출되지 않음
-export async function POST(req: NextRequest) {
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+// GET /api/auth/verify?role=admin|referee
+// 현재 세션 쿠키가 유효한지 확인
+export async function GET(req: NextRequest) {
   try {
-    const { password } = await req.json();
-    const adminPassword = (process.env.ADMIN_PASSWORD || '781818').trim();
- 
-    if (password?.toString().trim() === adminPassword) {
-      return NextResponse.json({ success: true });
-    } else {
-      // 잘못된 비밀번호는 항상 401 + 동일 지연(timing attack 방지)
-      return NextResponse.json({ success: false, message: '비밀번호가 올바르지 않습니다.' }, { status: 401 });
+    const searchParams = req.nextUrl.searchParams;
+    const requiredRole = (searchParams.get('role') as 'admin' | 'referee') || 'admin';
+
+    const session = getSessionFromRequest(req);
+    if (!session) {
+      return NextResponse.json({ authenticated: false }, { status: 401 });
     }
+
+    // admin 세션은 referee 페이지 접근도 허용
+    if (session.role === 'admin' || session.role === requiredRole) {
+      return NextResponse.json({ authenticated: true, role: session.role });
+    }
+
+    return NextResponse.json({ authenticated: false, message: '권한이 일치하지 않습니다.' }, { status: 403 });
   } catch {
-    return NextResponse.json({ success: false, message: '요청 처리 오류' }, { status: 400 });
+    return NextResponse.json({ authenticated: false }, { status: 500 });
   }
 }
+
+// POST /api/auth/verify
+// body: { password: string, role?: 'admin' | 'referee', subdomain?: string }
+export async function POST(req: NextRequest) {
+  try {
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || '127.0.0.1';
+
+    // 1. 무차별 대입 방어 확인
+    const rateLimit = checkRateLimit(ip);
+    if (rateLimit.isLocked) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `비밀번호를 5회 이상 잘못 입력하여 잠금 처리되었습니다. ${rateLimit.remainingSeconds}초 후 다시 시도해 주세요.`,
+          isLocked: true,
+          remainingSeconds: rateLimit.remainingSeconds,
+        },
+        { status: 429 }
+      );
+    }
+
+    const body = await req.json();
+    const { password, role = 'admin', subdomain } = body;
+
+    const isValid = verifyPassword(password, role as 'admin' | 'referee');
+
+    if (isValid) {
+      recordAuthAttempt(ip, true);
+
+      // 보안 서명된 세션 토큰 생성
+      const token = createSessionToken(role as 'admin' | 'referee', subdomain);
+
+      const response = NextResponse.json({
+        success: true,
+        role,
+        message: '인증 성공',
+      });
+
+      // HttpOnly, Secure, SameSite=Lax 쿠키 발급
+      response.cookies.set(SESSION_COOKIE_NAME, token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 7 * 24 * 60 * 60, // 7일
+      });
+
+      return response;
+    } else {
+      recordAuthAttempt(ip, false);
+
+      const afterCheck = checkRateLimit(ip);
+      const lockMsg = afterCheck.isLocked
+        ? ` 5회 연속 실패로 5분간 입력이 제한됩니다.`
+        : '';
+
+      return NextResponse.json(
+        {
+          success: false,
+          message: `비밀번호가 올바르지 않습니다.${lockMsg}`,
+          isLocked: afterCheck.isLocked,
+        },
+        { status: 401 }
+      );
+    }
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, message: '요청 처리 중 오류가 발생했습니다.' },
+      { status: 400 }
+    );
+  }
+}
+
+// DELETE /api/auth/verify
+// 로그아웃 시 세션 쿠키 삭제
+export async function DELETE() {
+  const response = NextResponse.json({ success: true, message: '로그아웃되었습니다.' });
+  response.cookies.delete(SESSION_COOKIE_NAME);
+  return response;
+}
+
