@@ -36,6 +36,21 @@ interface TieBreakerRule {
   ruleType: string;
 }
 
+const DEFAULT_FORM_FIELDS = [
+  { id: 'name', label: '1. 성명', type: 'text', required: true, placeholder: '실명을 입력해 주세요.' },
+  { id: 'birth', label: '2. 생년월일 (8자리) 예) 19450815', type: 'text', required: true, placeholder: '예) 19901024' },
+  { id: 'gender', label: '3. 성별', type: 'radio', required: true, options: ['남자', '여자'] },
+  { id: 'phone', label: '4. 전화번호 (휴대폰번호)', type: 'text', required: true, placeholder: '예) 01012345678' },
+  { id: 'club', label: '5. 소속협회 또는 클럽', type: 'text', required: true, placeholder: '소속 단체명을 입력해 주세요.' },
+  { id: 'division', label: '6. 참가종목', type: 'radio', required: true, options: ['윈드포일 (남자부)', '윈드포일 (여자부)', '윙포일 (남자부)', '윙포일 (여자부)', '혼합오픈 (남자부)', '혼합오픈 (여자부)', '펀엔포뮬러 (남자부)', '펀엔포뮬러 (여자부)'] },
+  { id: 'tshirtSize', label: '7. 티셔츠(기념품)사이즈', type: 'radio', required: true, options: ['S (95)', 'M (100)', 'L (105)', 'XL (110)'] },
+  { id: 'vestAgreement', label: '8. 당일 대회본부에 조끼(배번티)를 반드시 수령하셔야 합니다.', type: 'checkbox', required: true, notice: '대회운영본부 수령 필수 (사용 후 반드시 반납바랍니다)', agreeLabel: '네. 확인했습니다.' },
+  { id: 'paymentNoticeAgreement', label: '9. 참가비 입금 안내 확인 동의', type: 'checkbox', required: true, notice: '• 입금계좌: 농협 351-1334-8643-33 (예금주: 통영시요트협회)\n• 참가 신청서에 작성하신 성명(이름)으로 반드시 입금해 주시기 바랍니다.\n• 입금 완료 순서(입금순)로 선착순 130명 참가 확정 처리됩니다.\n• 참가 확정 및 선수등록 승인 안내는 대회 공식 홈페이지에서 확인하실 수 있습니다.', agreeLabel: '네. 확인했습니다.' },
+  { id: 'liabilityWaiver', label: '10. 면책 동의서 서약에 동의합니다.', type: 'textarea', required: true, textareaContent: '본인은 제20회 이순신장군배 전국윈드서핑대회 참가 활동 중 본인의 부주의로 인해 발생할 수 있는 사고, 즉 개인적 부상, 재산상 피해, 의학적인 사고 등 대회기간 중 발생한 사고에 대한 책임은 본인의 자의적인 참가에 의한 본인의 책임이며, 본 대회를 주관하는 관계자 및 기관에 대한 면책은 물론 책임전가를 하지 않을 것을 서약합니다.', agreeLabel: '네. 동의합니다.' },
+  { id: 'privacyConsent', label: '11. 개인정보 수집에 동의합니다.', type: 'textarea', required: true, textareaContent: '• 정보수집 및 이용기관 : 통영시요트협회\n• 수집 정보 : 성명, 생년월일, 전화번호, 이메일, 소속 단체\n• 수집 목적 : 참가자 관리 및 보험가입, 대회 공지 전송 등\n• 보존 기간 : 대회 정산 이후 즉시 폐기합니다.', agreeLabel: '네. 동의합니다.' },
+  { id: 'mediaConsent', label: '12. 초상권 및 저작권 사용 동의', type: 'textarea', required: true, textareaContent: '• 정보수집 및 이용기관 : 통영시요트협회\n• 수집 목적 : 대회 홍보, 결과 보도, 미디어 자료 활용 등\n• 활용 대상 : 대회 사진, 동영상 등 촬영물\n• 보존 기간 : 통영시요트협회 아카이브 보관용으로 영구 보존 및 활용에 동의합니다.', agreeLabel: '네. 동의합니다.' }
+];
+
 export default function HostDashboardPage({
   params,
 }: {
@@ -52,15 +67,10 @@ export default function HostDashboardPage({
   const [tenant, setTenant] = useState<any>(null);
   const [activeTournament, setActiveTournament] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeSection, setActiveSection] = useState<'applicants' | 'tie-breaker' | 'overview' | 'notice' | 'form-builder'>('applicants');
+  const [activeSection, setActiveSection] = useState<'applicants' | 'tie-breaker' | 'notice'>('applicants');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [filterSortCategory, setFilterSortCategory] = useState<string>('all');
   const [subFilterValue, setSubFilterValue] = useState<string>('all');
-
-  // 동적 신청서 폼 양식 (폼빌더) 상태
-  const [formFields, setFormFields] = useState<any[]>([]);
-  const [formConfigLoading, setFormConfigLoading] = useState(false);
-  const [formConfigSaving, setFormConfigSaving] = useState(false);
 
   // 스프레드시트 그리드 상태 관리
   const [gridData, setGridData] = useState<GridRow[]>([]);
@@ -237,19 +247,15 @@ export default function HostDashboardPage({
 
   const loadSectionData = async (tId: string) => {
     try {
-      setFormConfigLoading(true);
-      
-      // Fetch registrations, rules-detail, and form-configs in parallel!
-      const [regRes, ruleRes, formRes] = await Promise.all([
+      // Fetch registrations and rules-detail in parallel!
+      const [regRes, ruleRes] = await Promise.all([
         fetch(`/api/tenant/${subdomain}/registrations?tournamentId=${tId}&_t=${Date.now()}`, { cache: 'no-store' }),
         fetch(`/api/tenant/${subdomain}/rules-detail?tournamentId=${tId}&_t=${Date.now()}`, { cache: 'no-store' }),
-        fetch(`/api/tenant/${subdomain}/form-configs?_t=${Date.now()}`, { cache: 'no-store' })
       ]);
 
-      const [regData, ruleData, formData] = await Promise.all([
+      const [regData, ruleData] = await Promise.all([
         regRes.json(),
         ruleRes.json(),
-        formRes.json()
       ]);
 
       setRawRegistrations(regData.registrations || []);
@@ -313,29 +319,8 @@ export default function HostDashboardPage({
 
       setGridData(parsedRows);
       setRules(ruleData.rules || []);
-      
-      if (formData.fields) {
-        setFormFields(formData.fields);
-      }
     } catch (e) {
       console.error(e);
-    } finally {
-      setFormConfigLoading(false);
-    }
-  };
-
-  const fetchFormConfigs = async () => {
-    setFormConfigLoading(true);
-    try {
-      const res = await fetch(`/api/tenant/${subdomain}/form-configs`);
-      const data = await res.json();
-      if (data.fields) {
-        setFormFields(data.fields);
-      }
-    } catch (err) {
-      console.error('폼 설정 조회 실패:', err);
-    } finally {
-      setFormConfigLoading(false);
     }
   };
 
@@ -703,9 +688,7 @@ export default function HostDashboardPage({
         </div>
         <div style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--theme-gold)' }}>
           {activeSection === 'applicants' ? '참가자' : 
-           activeSection === 'form-builder' ? '폼설정' :
-           activeSection === 'tie-breaker' ? '룰설정' : 
-           activeSection === 'overview' ? '요강' : '공시서'}
+           activeSection === 'tie-breaker' ? '룰설정' : '공시서'}
         </div>
       </div>
 
@@ -730,9 +713,7 @@ export default function HostDashboardPage({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {[
                 { id: 'applicants', label: '참가자관리', icon: Users },
-                { id: 'form-builder', label: '참가신청서 양식 설정', icon: Settings },
                 { id: 'tie-breaker', label: '동점자 순위 규칙 설정', icon: Award },
-                { id: 'overview', label: '대회 요강 내용 편집', icon: FileText },
                 { id: 'notice', label: '개최공시서 업로드', icon: Upload },
               ].map((item) => {
                 const Icon = item.icon;
@@ -797,9 +778,7 @@ export default function HostDashboardPage({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {[
             { id: 'applicants', label: '참가자관리', icon: Users },
-            { id: 'form-builder', label: '참가신청서 양식 설정', icon: Settings },
             { id: 'tie-breaker', label: '동점자 순위 규칙 설정', icon: Award },
-            { id: 'overview', label: '대회 요강 내용 편집', icon: FileText },
             { id: 'notice', label: '개최공시서 업로드', icon: Upload },
           ].map((item) => {
             const Icon = item.icon;
@@ -845,9 +824,7 @@ export default function HostDashboardPage({
           <div>
             <h1 style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '8px' }}>
               {activeSection === 'applicants' ? '참가자관리' : 
-               activeSection === 'form-builder' ? '참가신청서 양식 설정 (폼빌더)' :
-               activeSection === 'tie-breaker' ? 'Tie-breaker 가중치 제어기' : 
-               activeSection === 'overview' ? '대회 요강 내용 편집기' : '개최공시서 업로드'}
+               activeSection === 'tie-breaker' ? 'Tie-breaker 가중치 제어기' : '개최공시서 업로드'}
             </h1>
             <p style={{ color: 'var(--text-muted)' }}>{activeTournament.title}</p>
           </div>
@@ -1452,445 +1429,11 @@ export default function HostDashboardPage({
           </div>
         )}
 
-        {/* SECTION C: 대회 요강 내용 편집 */}
-        {activeSection === 'overview' && (
-          <OverviewEditor tenant={tenant} subdomain={subdomain} onSaveSuccess={fetchInitialData} />
-        )}
-
-        {/* SECTION D: 개최공시서 내용 편집 */}
+        {/* SECTION C: 개최공시서 업로드 */}
         {activeSection === 'notice' && (
           <NoticeEditor tenant={tenant} subdomain={subdomain} onSaveSuccess={fetchInitialData} />
         )}
 
-        {/* SECTION E: 참가신청서 양식 설정 (폼빌더) */}
-        {activeSection === 'form-builder' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            
-            {/* ⏰ 참가 신청서 접수 기간 및 접근 권한 설정 카드 */}
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%)',
-              border: '1px solid var(--border-color)',
-              borderRadius: '16px',
-              padding: '24px',
-              boxShadow: '0 10px 25px -5px rgba(0,0,0,0.2)',
-              color: 'var(--text-main)'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '16px', marginBottom: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ background: 'rgba(197, 168, 128, 0.2)', padding: '10px', borderRadius: '12px', color: 'var(--theme-gold)' }}>
-                    <Clock size={24} />
-                  </div>
-                  <div>
-                    <h3 style={{ fontSize: '1.15rem', fontWeight: '800', margin: 0, color: '#f8fafc' }}>
-                      참가 신청서 접수 기간 및 접근 권한 제어
-                    </h3>
-                    <p style={{ fontSize: '0.85rem', color: '#94a3b8', margin: '4px 0 0 0' }}>
-                      설정된 접수 기간 중에만 일반 참가자가 참가신청서에 접근하고 제출할 수 있도록 권한을 통제합니다.
-                    </p>
-                  </div>
-                </div>
-
-                {/* 실시간 상태 뱃지 */}
-                {(() => {
-                  const now = new Date();
-                  const s = regStartDate ? new Date(regStartDate) : null;
-                  const e = regEndDate ? new Date(regEndDate) : null;
-                  let badge = { text: '접수 진행 중 (자동 오픈)', bg: 'rgba(16, 185, 129, 0.15)', border: '#10b981', color: '#6ee7b7', icon: '🟢' };
-
-                  if (regMode === 'FORCE_ENABLED') {
-                    badge = { text: '온라인 접수 강제 활성화 (무조건 오픈)', bg: 'rgba(16, 185, 129, 0.25)', border: '#10b981', color: '#34d399', icon: '🟢' };
-                  } else if (regMode === 'DISABLED') {
-                    badge = { text: '온라인 접수 강제 비활성화 (차단/마감)', bg: 'rgba(100, 116, 139, 0.2)', border: '#64748b', color: '#cbd5e1', icon: '⚫' };
-                  } else if (s && !isNaN(s.getTime()) && now < s) {
-                    badge = { text: '접수 시작 전 (대기)', bg: 'rgba(234, 179, 8, 0.15)', border: '#eab308', color: '#fde047', icon: '🟡' };
-                  } else if (e && !isNaN(e.getTime()) && now > e) {
-                    badge = { text: '접수 기간 마감', bg: 'rgba(239, 68, 68, 0.15)', border: '#ef4444', color: '#fca5a5', icon: '🔴' };
-                  }
-
-                  return (
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      padding: '8px 16px',
-                      borderRadius: '20px',
-                      background: badge.bg,
-                      border: `1px solid ${badge.border}`,
-                      color: badge.color,
-                      fontSize: '0.85rem',
-                      fontWeight: '800'
-                    }}>
-                      <span>{badge.icon}</span>
-                      <span>{badge.text}</span>
-                    </div>
-                  );
-                })()}
-              </div>
-
-              <div className="grid-responsive-3" style={{ gap: '16px', marginBottom: '16px' }}>
-                <div>
-                  <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#cbd5e1', display: 'block', marginBottom: '6px' }}>
-                    접수 시작 일시 (공식 고정)
-                  </label>
-                  <div style={{ background: '#0f172a', color: '#94a3b8', padding: '10px 14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', fontSize: '0.88rem', fontWeight: '600' }}>
-                    🔒 2026-08-10 09:00 (공식 일정)
-                  </div>
-                </div>
-
-                <div>
-                  <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#cbd5e1', display: 'block', marginBottom: '6px' }}>
-                    접수 마감 일시 (공식 고정)
-                  </label>
-                  <div style={{ background: '#0f172a', color: '#94a3b8', padding: '10px 14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', fontSize: '0.88rem', fontWeight: '600' }}>
-                    🔒 2026-10-23 18:00 (공식 마감)
-                  </div>
-                </div>
-
-                <div>
-                  <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#cbd5e1', display: 'block', marginBottom: '6px' }}>
-                    온라인 접수 운영 상태 제어
-                  </label>
-                  <select
-                    className="form-input"
-                    value={regMode}
-                    onChange={(e) => setRegMode(e.target.value as any)}
-                    style={{ background: '#0f172a', color: 'white', borderColor: 'rgba(255,255,255,0.2)' }}
-                  >
-                    <option value="AUTO">🟡 자동 운영 (10월 23일 18:00까지 정상 접수)</option>
-                    <option value="FORCE_ENABLED">🟢 강제 활성화 (기간 무관 즉시 강제 오픈)</option>
-                    <option value="DISABLED">🔴 강제 비활성화 (기간 무관 즉시 강제 마감/차단)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#cbd5e1', display: 'block', marginBottom: '6px' }}>
-                  접수 마감 / 기간 외 안내 메시지 (참가자가 비허용 시간에 접속 시 표시)
-                </label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="예: 제20회 이순신장군배 전국윈드서핑대회 참가 신청 접수가 마감되었습니다."
-                  value={regNotice}
-                  onChange={(e) => setRegNotice(e.target.value)}
-                  style={{ background: '#0f172a', color: 'white', borderColor: 'rgba(255,255,255,0.2)' }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <button
-                  type="button"
-                  onClick={handleSaveRegistrationPeriod}
-                  disabled={regPeriodSaving}
-                  className="btn-primary"
-                  style={{ padding: '10px 22px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '800' }}
-                >
-                  <Save size={16} /> {regPeriodSaving ? '설정 저장 중...' : '온라인 접수 운영 상태 저장'}
-                </button>
-              </div>
-            </div>
-
-            {/* 질문 양식 구성 (폼빌더) 본문 */}
-            <div style={{ background: 'var(--bg-card)', padding: '24px', borderRadius: '16px', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}>
-              <div style={{ marginBottom: '20px' }}>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '8px' }}>신청서 질문 양식 구성 (폼빌더)</h2>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
-                  참가자가 제출할 양식의 질문과 동의서 내용을 자유롭게 설계할 수 있습니다.<br />
-                  <span style={{ color: '#EF4444', fontWeight: '600' }}>⚠️ 주의:</span> <strong>name (성명), birth (생년월일), gender (성별), phone (전화번호), club (소속), division (참가종목), tshirtSize (티셔츠 사이즈)</strong> 필드는 시스템 참가자 리스트와 직결되는 핵심 질문이므로 필드코드를 임의로 변경하지 않도록 유의해주세요.
-                </p>
-              </div>
-
-            {formConfigLoading ? (
-              <div style={{ padding: '40px', textAlign: 'center' }}><RefreshCw className="animate-spin" size={24} /> 로딩 중...</div>
-            ) : (
-              <div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
-                  {formFields.map((field, idx) => (
-                    <div key={idx} style={{
-                      background: 'rgba(255, 255, 255, 0.02)',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '8px',
-                      padding: '16px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '12px'
-                    }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--theme-primary)' }}>Q{idx + 1}.</span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (idx === 0) return;
-                              const newFields = [...formFields];
-                              const temp = newFields[idx];
-                              newFields[idx] = newFields[idx - 1];
-                              newFields[idx - 1] = temp;
-                              setFormFields(newFields);
-                            }}
-                            disabled={idx === 0}
-                            style={{ padding: '4px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: idx === 0 ? 'not-allowed' : 'pointer' }}
-                          >
-                            <ArrowUp size={16} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (idx === formFields.length - 1) return;
-                              const newFields = [...formFields];
-                              const temp = newFields[idx];
-                              newFields[idx] = newFields[idx + 1];
-                              newFields[idx + 1] = temp;
-                              setFormFields(newFields);
-                            }}
-                            disabled={idx === formFields.length - 1}
-                            style={{ padding: '4px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: idx === formFields.length - 1 ? 'not-allowed' : 'pointer' }}
-                          >
-                            <ArrowDown size={16} />
-                          </button>
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <label style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
-                            <input
-                              type="checkbox"
-                              checked={!!field.required}
-                              onChange={(e) => {
-                                const newFields = [...formFields];
-                                newFields[idx].required = e.target.checked;
-                                setFormFields(newFields);
-                              }}
-                            />
-                            <span>필수 입력</span>
-                          </label>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (confirm('이 질문을 삭제하시겠습니까?')) {
-                                const newFields = formFields.filter((_, i) => i !== idx);
-                                setFormFields(newFields);
-                              }
-                            }}
-                            style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', background: 'rgba(239, 68, 68, 0.1)', color: '#F87171', border: '1px solid #EF4444', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem' }}
-                          >
-                            <Trash2 size={12} /> 삭제
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="grid-responsive-3" style={{ gap: '12px' }}>
-                        <div>
-                          <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>필드코드 (영문 ID)</label>
-                          <input
-                            type="text"
-                            value={field.id || ''}
-                            onChange={(e) => {
-                              const newFields = [...formFields];
-                              newFields[idx].id = e.target.value;
-                              setFormFields(newFields);
-                            }}
-                            style={{ width: '100%', padding: '8px 12px', background: 'rgba(0,0,0,0.1)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'white' }}
-                            placeholder="예: name, phone 등"
-                          />
-                        </div>
-
-                        <div>
-                          <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>질문 항목 이름 (라벨)</label>
-                          <input
-                            type="text"
-                            value={field.label || ''}
-                            onChange={(e) => {
-                              const newFields = [...formFields];
-                              newFields[idx].label = e.target.value;
-                              setFormFields(newFields);
-                            }}
-                            style={{ width: '100%', padding: '8px 12px', background: 'rgba(0,0,0,0.1)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'white' }}
-                            placeholder="예: 1. 성명"
-                          />
-                        </div>
-
-                        <div>
-                          <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>입력 양식 타입 (유형)</label>
-                          <select
-                            value={field.type || 'text'}
-                            onChange={(e) => {
-                              const newFields = [...formFields];
-                              newFields[idx].type = e.target.value;
-                              setFormFields(newFields);
-                            }}
-                            style={{ width: '100%', padding: '8px 12px', background: 'rgba(0,0,0,0.1)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'black' }}
-                          >
-                            <option value="text">Text (한줄 입력)</option>
-                            <option value="radio">Radio (점선택)</option>
-                            <option value="checkbox">Checkbox (동의 체크박스)</option>
-                            <option value="textarea">Textarea (여러줄 설명/동의문구)</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      {/* 타입별 상세 설정 */}
-                      {field.type === 'text' && (
-                        <div>
-                          <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>플레이스홀더 (Placeholder)</label>
-                          <input
-                            type="text"
-                            value={field.placeholder || ''}
-                            onChange={(e) => {
-                              const newFields = [...formFields];
-                              newFields[idx].placeholder = e.target.value;
-                              setFormFields(newFields);
-                            }}
-                            style={{ width: '100%', padding: '8px 12px', background: 'rgba(0,0,0,0.1)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'white' }}
-                            placeholder="입력창 힌트 문구"
-                          />
-                        </div>
-                      )}
-
-                      {field.type === 'radio' && (
-                        <div>
-                          <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>선택 항목 옵션 목록 (쉼표로 구분)</label>
-                          <input
-                            type="text"
-                            value={field.options ? field.options.join(', ') : ''}
-                            onChange={(e) => {
-                              const newFields = [...formFields];
-                              newFields[idx].options = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
-                              setFormFields(newFields);
-                            }}
-                            style={{ width: '100%', padding: '8px 12px', background: 'rgba(0,0,0,0.1)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'white' }}
-                            placeholder="예: 남자, 여자 또는 S (95), M (100), L (105)"
-                          />
-                        </div>
-                      )}
-
-                      {field.type === 'checkbox' && (
-                        <div className="grid-responsive-2" style={{ gap: '12px' }}>
-                          <div>
-                            <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>부가 안내/설명 문구 (선택)</label>
-                            <input
-                              type="text"
-                              value={field.notice || ''}
-                              onChange={(e) => {
-                                const newFields = [...formFields];
-                                newFields[idx].notice = e.target.value;
-                                setFormFields(newFields);
-                              }}
-                              style={{ width: '100%', padding: '8px 12px', background: 'rgba(0,0,0,0.1)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'white' }}
-                              placeholder="체크박스 위 설명 문구"
-                            />
-                          </div>
-                          <div>
-                            <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>체크 동의 라벨 (예: 네. 확인했습니다.)</label>
-                            <input
-                              type="text"
-                              value={field.agreeLabel || ''}
-                              onChange={(e) => {
-                                const newFields = [...formFields];
-                                newFields[idx].agreeLabel = e.target.value;
-                                setFormFields(newFields);
-                              }}
-                              style={{ width: '100%', padding: '8px 12px', background: 'rgba(0,0,0,0.1)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'white' }}
-                              placeholder="동의 버튼 라벨 문구"
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      {field.type === 'textarea' && (
-                        <div>
-                          <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>약관 및 면책 동의 원문 내용</label>
-                          <textarea
-                            value={field.textareaContent || ''}
-                            onChange={(e) => {
-                              const newFields = [...formFields];
-                              newFields[idx].textareaContent = e.target.value;
-                              setFormFields(newFields);
-                            }}
-                            rows={3}
-                            style={{ width: '100%', padding: '8px 12px', background: 'rgba(0,0,0,0.1)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'white', fontFamily: 'inherit', resize: 'vertical' }}
-                            placeholder="참가자에게 동의를 구하는 상세 텍스트 정보 입력"
-                          />
-                          <div style={{ marginTop: '8px' }}>
-                            <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>체크 동의 라벨 (예: 네. 동의합니다.)</label>
-                            <input
-                              type="text"
-                              value={field.agreeLabel || ''}
-                              onChange={(e) => {
-                                const newFields = [...formFields];
-                                newFields[idx].agreeLabel = e.target.value;
-                                setFormFields(newFields);
-                              }}
-                              style={{ width: '100%', padding: '8px 12px', background: 'rgba(0,0,0,0.1)', border: '1px solid var(--border-color)', borderRadius: '6px', color: 'white' }}
-                              placeholder="동의 버튼 라벨 문구"
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-
-                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const newFields = [...formFields, {
-                        id: `custom_${Date.now().toString().slice(-4)}`,
-                        label: '새 질문 항목',
-                        type: 'text',
-                        required: false,
-                        placeholder: ''
-                      }];
-                      setFormFields(newFields);
-                    }}
-                    className="btn-secondary"
-                    style={{ padding: '10px 18px', display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--border-color)', borderRadius: '8px', cursor: 'pointer' }}
-                  >
-                    <Plus size={16} /> 새 질문 추가
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      const ids = formFields.map(f => f.id);
-                      const hasDuplicates = ids.some((val, i) => ids.indexOf(val) !== i);
-                      if (hasDuplicates) {
-                        alert('동일한 필드코드(영문 ID)가 존재합니다. 질문간의 코드는 고유해야 합니다.');
-                        return;
-                      }
-
-                      setFormConfigSaving(true);
-                      try {
-                        const res = await fetch(`/api/tenant/${subdomain}/form-configs`, {
-                          method: 'POST',
-                          headers: getAuthHeaders(),
-                          body: JSON.stringify({ fields: formFields }),
-                        });
-                        if (res.ok) {
-                          alert('참가신청서 양식이 성공적으로 저장되었습니다!');
-                          await fetchFormConfigs();
-                        } else {
-                          const errData = await res.json();
-                          alert(`저장 실패: ${errData.error || '알 수 없는 오류'}`);
-                        }
-                      } catch (err: any) {
-                        alert(`저장 중 오류 발생: ${err.message}`);
-                      } finally {
-                        setFormConfigSaving(false);
-                      }
-                    }}
-                    className="btn-primary"
-                    disabled={formConfigSaving}
-                    style={{ padding: '10px 20px', display: 'flex', alignItems: 'center', gap: '6px', borderRadius: '8px', cursor: 'pointer', background: 'var(--theme-primary)', border: 'none', color: 'white', fontWeight: '700' }}
-                  >
-                    <Save size={16} /> {formConfigSaving ? '저장 중...' : '폼 양식 설정 저장'}
-                  </button>
-                </div>
-              </div>
-            )}
-            </div>
-          </div>
-        )}
       </main>
 
       {/* 3. 참가 신청서 원본 복제형 상세 뷰 모달 (12단계 네이버 폼 정보 정밀 복사) */}
@@ -2034,7 +1577,7 @@ export default function HostDashboardPage({
 
                 {/* 질문 항목 및 응답 리스트 */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                  {formFields.map((field) => {
+                  {DEFAULT_FORM_FIELDS.map((field: any) => {
                     // 기본 필수 인적사항은 이미 위 그리드 영역에서 표시했으므로 생략
                     if (['name', 'birth', 'gender', 'phone', 'club', 'division', 'tshirtSize'].includes(field.id)) {
                       return null;
@@ -2103,494 +1646,6 @@ export default function HostDashboardPage({
           </div>
         );
       })()}
-    </div>
-  );
-}
-
-interface OverviewEditorProps {
-  tenant: any;
-  subdomain: string;
-  onSaveSuccess: () => void;
-}
-
-function OverviewEditor({ tenant, subdomain, onSaveSuccess }: OverviewEditorProps) {
-  // 기본 Fallback 데이터들 (2026년 이순신배)
-  const defaultOverview = {
-    title: '제20회 이순신장군배 전국윈드서핑대회',
-    duration: '2026. 10. 31(토) ~ 11. 01(일) (1박 2일)',
-    location: '경상남도 통영시 도남항 특설경기장 및 트라이애슬론 광장 일원',
-    scale: '130명 (선착순 마감)',
-    host: '통영시, 통영시요트협회',
-    sponsor: '경상남도, 경상남도체육회, 통영시체육회',
-    supporter: '대한윈드서핑카이트보딩협회',
-    office: '경상남도 통영시 도남로 269-20 통영시요트협회 사무국',
-    bankName: '농협 (NH농협)',
-    accountNo: '351-1334-8643-33',
-    accountHolder: '통영시요트협회',
-    entryFeeIndividual: '개인전 1종목당 30,000원',
-    entryFeeGroup: '단체전 팀당 50,000원',
-    deadlineDate: '2026년 10월 23일(금) 18:00',
-    registrationStartDate: '2026-08-10T09:00',
-    registrationEndDate: '2026-10-23T18:00',
-    registrationEnabled: true,
-    registrationNotice: '',
-    rulesNote: '※ 참가 신청 시 소속 클럽 명확히 작성 필수.\n※ 모든 나이는 2026년 10월 31일을 기준으로 합니다.\n※ 참가인원은 선착순으로 130명이 충족되면 참가접수 기한이 조기에 마감될 수 있습니다.\n※ 참가비 입금계좌: 농협 351-1334-8643-33 (예금주: 통영시요트협회)\n※ 참가 신청서에 입력한 이름으로 반드시 입금해 주시기 바랍니다.\n※ 입금 완료 순서(입금순)로 선착순 130명 참가 확정 처리되며, 참가 확정 안내는 대회 공식 홈페이지에서 확인하실 수 있습니다.\n※ 신청기간 이후에는 취소 및 참가비 환불이 불가합니다.',
-    itineraryDay1: '10:00 - 12:00 : 선수단 현장등록 및 웜업\n12:00 - 13:00 : 중식\n13:00 - 13:30 : 개회식\n13:30 - 18:00 : 1일차 경기',
-    itineraryDay2: '09:00 - 12:00 : 2일차 경기\n12:00 - 13:00 : 중식\n13:00 - 18:00 : 2일차 경기 및 시상식\n18:00 - : 폐회식 및 해산',
-    contactPhone: '통영윈드서핑협회 전무이사 임병훈 (010-3648-9838)',
-    contactNote: '* 대회 참가자 전원에게 기념 티셔츠 및 참가 기념품을 제공합니다.'
-  };
-
-  const initialConfig = {
-    ...defaultOverview,
-    ...(tenant.overviewConfig || {})
-  };
-
-  const [config, setConfig] = useState(initialConfig);
-  const [divisionsList, setDivisionsList] = useState<any[]>(
-    tenant.overviewConfig?.divisionsList || [
-      { category: '일반부', class: '대학/일반', note: '-' },
-      { category: '청소년부', class: '고등부, 중등부, 초등부', note: '-' },
-      { category: '마스터즈', class: '마스터즈 1부, 마스터즈 2부, 마스터즈 3부', note: '※ 1부 (만 20~29세), 2부 (만 30~39세), 3부 (만 40세 이상)' },
-      { category: '엘리트', class: '등록선수 (학생/일반)', note: '-' },
-      { category: '단체전 (Relay)', class: '각 클럽/동호회팀별 릴레이', note: '남녀 혼성 계영 4x50m 및 4x100m로 진행함.' }
-    ]
-  );
-  const [awardsList, setAwardsList] = useState<any[]>(
-    tenant.overviewConfig?.awardsList || [
-      { type: '개인전', class: '전 클래스', standard: '1위: 상장 및 메달\n2위: 상장 및 메달\n3위: 상장 및 메달', note: '각 클래스별 참가자가 3명 미만일 경우 시상만 하고 메달 수여는 제외될 수 있습니다.' },
-      { type: '단체전', class: '각 클래스별 릴레이', standard: '1위: 상패 및 메달\n2위: 상패 및 메달\n3위: 상패 및 메달', note: '-' },
-      { type: '종합시상', class: '종합', standard: '종합 우승: 우승기 및 트로피\n종합 준우승: 트로피\n종합 3위: 트로피', note: '각 종목별 점수를 합산하여 산출함 (1위 9점, 2위 7점, 3위 6점, 4위 5점, 5위 4점, 6위 3점, 7위 2점, 8위 1점. 단체전은 배점 2배).' }
-    ]
-  );
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (tenant?.overviewConfig) {
-      setConfig({
-        ...defaultOverview,
-        ...tenant.overviewConfig
-      });
-      if (tenant.overviewConfig.divisionsList) {
-        setDivisionsList(tenant.overviewConfig.divisionsList);
-      }
-      if (tenant.overviewConfig.awardsList) {
-        setAwardsList(tenant.overviewConfig.awardsList);
-      }
-    }
-  }, [tenant]);
-
-  const handleChange = (field: string, value: string) => {
-    setConfig((prev: any) => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('gentrophy_auth_token') : null;
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-        headers['x-auth-token'] = token;
-      }
-      const res = await fetch(`/api/tenant/${subdomain}/overview`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          overviewConfig: {
-            ...config,
-            duration: '2026. 10. 31(토) ~ 11. 01(일) (1박 2일)',
-            divisionsList,
-            awardsList
-          }
-        })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        alert('대회 요강 내용이 성공적으로 업데이트되어 전체 페이지에 반영되었습니다!');
-        await onSaveSuccess();
-      } else {
-        alert(data.error || '저장 실패');
-      }
-    } catch (e: any) {
-      alert(e.message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '30px', maxWidth: '1000px' }} className="animate-fade-in">
-      <div className="glass-panel" style={{ background: 'white', padding: '30px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', borderBottom: '1px solid var(--border-color)', paddingBottom: '16px' }}>
-          <div>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: '800', margin: 0 }}>대회 요강 폼 편집기</h3>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>수정된 요강 내용은 메인 홈페이지의 요강 및 캘린더 일정표에 실시간 적용됩니다.</p>
-          </div>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="btn-primary"
-            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', fontSize: '0.9rem' }}
-          >
-            {saving ? <RefreshCw className="animate-spin" size={16} /> : <Save size={16} />}
-            대회 요강 저장하기
-          </button>
-        </div>
-
-        {/* 폼 그리드 구성 */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          
-          {/* 1. 기본 개요 세션 */}
-          <div>
-            <h4 style={{ color: 'var(--theme-primary)', fontWeight: '800', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '16px' }}>
-              1. 대회 기본 개요 명세
-            </h4>
-            <div className="grid-responsive-2" style={{ gap: '16px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>대회명</label>
-                <input type="text" className="form-input" value={config.title} onChange={e => handleChange('title', e.target.value)} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>대회 기간 (공식 고정)</label>
-                <div style={{ background: '#f8fafc', color: '#475569', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.9rem', fontWeight: '700' }}>
-                  🔒 2026. 10. 31(토) ~ 11. 01(일) (1박 2일)
-                </div>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>대회 장소</label>
-                <input type="text" className="form-input" value={config.location} onChange={e => handleChange('location', e.target.value)} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>참가규모</label>
-                <input type="text" className="form-input" value={config.scale} onChange={e => handleChange('scale', e.target.value)} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>주최</label>
-                <input type="text" className="form-input" value={config.host} onChange={e => handleChange('host', e.target.value)} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>주관</label>
-                <input type="text" className="form-input" value={config.sponsor} onChange={e => handleChange('sponsor', e.target.value)} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>후원</label>
-                <input type="text" className="form-input" value={config.supporter} onChange={e => handleChange('supporter', e.target.value)} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>임시사무실</label>
-                <input type="text" className="form-input" value={config.office} onChange={e => handleChange('office', e.target.value)} />
-              </div>
-            </div>
-          </div>
-
-          {/* 2. 일정표 세션 */}
-          <div>
-            <h4 style={{ color: 'var(--theme-primary)', fontWeight: '800', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '16px' }}>
-              2. 공식 일자별 타임라인 (줄바꿈 단위 기입)
-            </h4>
-            <div className="grid-responsive-2" style={{ gap: '20px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>1일차 일정 정보</label>
-                <textarea
-                  style={{ minHeight: '150px', lineHeight: '1.6', fontSize: '0.9rem', width: '100%', padding: '12px', border: '1px solid var(--border-color)', borderRadius: '8px' }}
-                  value={config.itineraryDay1}
-                  onChange={e => handleChange('itineraryDay1', e.target.value)}
-                />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>2일차 일정 정보</label>
-                <textarea
-                  style={{ minHeight: '150px', lineHeight: '1.6', fontSize: '0.9rem', width: '100%', padding: '12px', border: '1px solid var(--border-color)', borderRadius: '8px' }}
-                  value={config.itineraryDay2}
-                  onChange={e => handleChange('itineraryDay2', e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* 3. 접수 및 계좌 세션 */}
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '16px' }}>
-              <h4 style={{ color: 'var(--theme-primary)', fontWeight: '800', margin: 0 }}>
-                3. 온라인 참가신청서 접수 기간 및 수납 정보
-              </h4>
-              
-              {/* 실시간 접수 상태 표시 */}
-              {(() => {
-                const now = new Date();
-                const s = config.registrationStartDate ? new Date(config.registrationStartDate) : null;
-                const e = config.registrationEndDate ? new Date(config.registrationEndDate) : null;
-                const enabled = config.registrationEnabled !== false;
-                let badge = { text: '접수 진행 중 (접수 가능)', bg: 'rgba(16, 185, 129, 0.15)', border: '#10b981', color: '#166534', icon: '🟢' };
-
-                if (!enabled) {
-                  badge = { text: '접수 일시 중단', bg: 'rgba(100, 116, 139, 0.15)', border: '#64748b', color: '#475569', icon: '⚫' };
-                } else if (s && !isNaN(s.getTime()) && now < s) {
-                  badge = { text: '접수 시작 전 (대기)', bg: 'rgba(234, 179, 8, 0.15)', border: '#eab308', color: '#854d0e', icon: '🟡' };
-                } else if (e && !isNaN(e.getTime()) && now > e) {
-                  badge = { text: '접수 기간 마감', bg: 'rgba(239, 68, 68, 0.15)', border: '#ef4444', color: '#991b1b', icon: '🔴' };
-                }
-
-                return (
-                  <span style={{ fontSize: '0.8rem', fontWeight: '800', background: badge.bg, border: `1px solid ${badge.border}`, color: badge.color, padding: '4px 10px', borderRadius: '14px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                    {badge.icon} {badge.text}
-                  </span>
-                );
-              })()}
-            </div>
-
-            {/* 접수 기간 및 권한 통제 필드 */}
-            <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
-              <div className="grid-responsive-3" style={{ gap: '16px', marginBottom: '12px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: '700', color: '#1e293b' }}>⏰ 온라인 접수 시작 일시 (공식 고정)</label>
-                  <div style={{ background: '#f8fafc', color: '#475569', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.85rem', fontWeight: '700' }}>
-                    🔒 2026-08-10 09:00
-                  </div>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: '700', color: '#1e293b' }}>⏰ 온라인 접수 마감 일시 (공식 고정)</label>
-                  <div style={{ background: '#f8fafc', color: '#475569', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.85rem', fontWeight: '700' }}>
-                    🔒 2026-10-23 18:00
-                  </div>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: '700', color: '#1e293b' }}>온라인 접수 상태 토글</label>
-                  <select
-                    className="form-input"
-                    value={config.registrationMode || (config.registrationEnabled === false ? 'DISABLED' : (config.registrationEnabled === 'FORCE_ENABLED' ? 'FORCE_ENABLED' : 'AUTO'))}
-                    onChange={e => {
-                      const val = e.target.value;
-                      handleChange('registrationMode', val);
-                      handleChange('registrationEnabled', (val !== 'DISABLED') as any);
-                    }}
-                  >
-                    <option value="AUTO">🟡 일정 기간에 따라 자동 오픈 (설정된 시작~마감 일시에만 접수)</option>
-                    <option value="FORCE_ENABLED">🟢 온라인 접수 강제 활성화 (기간 무관 즉시 강제 오픈)</option>
-                    <option value="DISABLED">🔴 온라인 접수 강제 비활성화 (기간 무관 즉시 강제 마감/차단)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: '700', color: '#1e293b' }}>접수 마감/비허용 시 참가자 안내 메시지</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="예: 제20회 이순신장군배 전국윈드서핑대회 참가 신청 접수가 마감되었습니다."
-                  value={config.registrationNotice || ''}
-                  onChange={e => handleChange('registrationNotice', e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="grid-responsive-3" style={{ gap: '16px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>은행명</label>
-                <input type="text" className="form-input" value={config.bankName} onChange={e => handleChange('bankName', e.target.value)} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>계좌번호</label>
-                <input type="text" className="form-input" value={config.accountNo} onChange={e => handleChange('accountNo', e.target.value)} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>예금주</label>
-                <input type="text" className="form-input" value={config.accountHolder} onChange={e => handleChange('accountHolder', e.target.value)} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>개인전 참가비</label>
-                <input type="text" className="form-input" value={config.entryFeeIndividual} onChange={e => handleChange('entryFeeIndividual', e.target.value)} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>단체전 참가비</label>
-                <input type="text" className="form-input" value={config.entryFeeGroup} onChange={e => handleChange('entryFeeGroup', e.target.value)} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>접수 마감일 (표시용 텍스트)</label>
-                <input type="text" className="form-input" value={config.deadlineDate} onChange={e => handleChange('deadlineDate', e.target.value)} />
-              </div>
-            </div>
-          </div>
-
-          {/* 4. 안전 및 규칙 정보 */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <h4 style={{ color: 'var(--theme-primary)', fontWeight: '800', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '16px' }}>
-              4. 경기 규칙 및 안전 수칙 (줄바꿈 단위 기입)
-            </h4>
-            <textarea
-              style={{ minHeight: '120px', lineHeight: '1.6', fontSize: '0.9rem', width: '100%', padding: '12px', border: '1px solid var(--border-color)', borderRadius: '8px' }}
-              value={config.rulesNote}
-              onChange={e => handleChange('rulesNote', e.target.value)}
-            />
-          </div>
-
-          {/* 5. 경기 종목 및 세부 클래스 설정 */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
-            <h4 style={{ color: 'var(--theme-primary)', fontWeight: '800', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '16px' }}>
-              5. 경기 종목 및 세부 클래스 설정 (대회 요강 탭)
-            </h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {divisionsList.map((row, rIdx) => (
-                <div key={rIdx} className="division-row" style={{ gap: '10px' }}>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={row.category || ''}
-                    onChange={(e) => {
-                      const newD = [...divisionsList];
-                      newD[rIdx].category = e.target.value;
-                      setDivisionsList(newD);
-                    }}
-                    placeholder="경기 종목 (예: 일반부)"
-                  />
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={row.class || ''}
-                    onChange={(e) => {
-                      const newD = [...divisionsList];
-                      newD[rIdx].class = e.target.value;
-                      setDivisionsList(newD);
-                    }}
-                    placeholder="세부 클래스"
-                  />
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={row.note || ''}
-                    onChange={(e) => {
-                      const newD = [...divisionsList];
-                      newD[rIdx].note = e.target.value;
-                      setDivisionsList(newD);
-                    }}
-                    placeholder="비고"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setDivisionsList(divisionsList.filter((_, i) => i !== rIdx))}
-                    style={{ padding: '8px', background: 'rgba(239,68,68,0.1)', color: '#F87171', border: '1px solid #EF4444', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
-                  >
-                    삭제
-                  </button>
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={() => setDivisionsList([...divisionsList, { category: '', class: '', note: '' }])}
-                className="btn-secondary"
-                style={{ alignSelf: 'flex-start', padding: '8px 16px', fontSize: '0.85rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', color: 'black', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
-              >
-                + 종목 행 추가
-              </button>
-            </div>
-          </div>
-
-          {/* 6. 공식 시상 내역 설정 */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
-            <h4 style={{ color: 'var(--theme-primary)', fontWeight: '800', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '16px' }}>
-              6. 공식 시상 내역 설정 (대회 요강 탭)
-            </h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {awardsList.map((row, rIdx) => (
-                <div key={rIdx} className="awards-row" style={{ gap: '10px' }}>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={row.type || ''}
-                    onChange={(e) => {
-                      const newA = [...awardsList];
-                      newA[rIdx].type = e.target.value;
-                      setAwardsList(newA);
-                    }}
-                    placeholder="구분 (예: 개인전)"
-                  />
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={row.class || ''}
-                    onChange={(e) => {
-                      const newA = [...awardsList];
-                      newA[rIdx].class = e.target.value;
-                      setAwardsList(newA);
-                    }}
-                    placeholder="클래스"
-                  />
-                  <textarea
-                    style={{ padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '6px', fontSize: '0.85rem', minHeight: '38px', resize: 'vertical', background: '#f8fafc', color: 'black' }}
-                    value={row.standard || ''}
-                    onChange={(e) => {
-                      const newA = [...awardsList];
-                      newA[rIdx].standard = e.target.value;
-                      setAwardsList(newA);
-                    }}
-                    placeholder="시상 및 기준"
-                  />
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={row.note || ''}
-                    onChange={(e) => {
-                      const newA = [...awardsList];
-                      newA[rIdx].note = e.target.value;
-                      setAwardsList(newA);
-                    }}
-                    placeholder="비고"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setAwardsList(awardsList.filter((_, i) => i !== rIdx))}
-                    style={{ padding: '8px', background: 'rgba(239,68,68,0.1)', color: '#F87171', border: '1px solid #EF4444', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
-                  >
-                    삭제
-                  </button>
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={() => setAwardsList([...awardsList, { type: '', class: '', standard: '', note: '' }])}
-                className="btn-secondary"
-                style={{ alignSelf: 'flex-start', padding: '8px 16px', fontSize: '0.85rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', color: 'black', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
-              >
-                + 시상 행 추가
-              </button>
-            </div>
-          </div>
-
-          {/* 7. 문의 및 운영진 설정 */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
-            <h4 style={{ color: 'var(--theme-primary)', fontWeight: '800', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px', marginBottom: '16px' }}>
-              7. 문의처 및 운영진 안내 설정
-            </h4>
-            <div className="grid-responsive-2" style={{ gap: '16px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>문의처 / 연락처 정보</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={config.contactPhone || ''}
-                  onChange={e => handleChange('contactPhone', e.target.value)}
-                  placeholder="예: 인천광역시 핀수영협회 사무국 : 032-888-2940"
-                />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: '700' }}>안내 / 공지 사항 문구</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={config.contactNote || ''}
-                  onChange={e => handleChange('contactNote', e.target.value)}
-                  placeholder="예: * 대회 참가자 전원에게 기념 티셔츠를 제공합니다."
-                />
-              </div>
-            </div>
-          </div>
-
-        </div>
-      </div>
     </div>
   );
 }
