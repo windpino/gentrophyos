@@ -1080,14 +1080,6 @@ export default function TenantPortalPage({
           })}
         </nav>
 
-        <div className="header-actions">
-          <a href="/host" className="btn-secondary" style={{ padding: '8px 16px', fontSize: '0.85rem', background: '#f8fafc', border: '1px solid var(--border-color)', color: 'var(--text-main)' }}>
-            주최자 ERP
-          </a>
-          <a href="/referee" className="btn-primary" style={{ padding: '8px 16px', fontSize: '0.85rem', background: 'var(--theme-primary)', color: 'white', boxShadow: 'none' }}>
-            심판 입력기
-          </a>
-        </div>
 
         {/* 모바일 전용 빠른 참가신청 버튼 */}
         <div className="mobile-header-apply">
@@ -2496,7 +2488,7 @@ export default function TenantPortalPage({
                   transition: 'all 0.2s'
                 }}
               >
-                🔐 주최자 관리 콘솔
+                🔐 주최자 ERP
               </a>
               <a
                 href={typeof window !== 'undefined' && window.location.pathname.startsWith('/tenant/') ? `/tenant/${subdomain}/referee` : '/referee'}
@@ -2515,7 +2507,7 @@ export default function TenantPortalPage({
                   transition: 'all 0.2s'
                 }}
               >
-                ⚖️ 심판 모바일 제어기
+                ⚖️ 심판 입력기
               </a>
             </div>
           </div>
