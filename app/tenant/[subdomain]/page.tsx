@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, use } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Award, Calendar, Layers, FileText, CheckCircle2, UserPlus, RefreshCw, Archive, Search, Compass, MapPin, Phone, Sparkles, Trophy, Smartphone, ShieldCheck, X, AlertTriangle, Menu } from 'lucide-react';
+import { Award, Calendar, Layers, FileText, CheckCircle2, User, UserPlus, RefreshCw, Archive, Search, Compass, MapPin, Phone, Sparkles, Trophy, Smartphone, ShieldCheck, X, AlertTriangle, Menu, Copy, Check } from 'lucide-react';
 
 interface TenantData {
   id: string;
@@ -175,6 +175,9 @@ export default function TenantPortalPage({
   const [regSuccess, setRegSuccess] = useState('');
   const [regError, setRegError] = useState('');
   const [regSubmitting, setRegSubmitting] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [submittedApplicantName, setSubmittedApplicantName] = useState('');
+  const [accountCopied, setAccountCopied] = useState(false);
 
 
 
@@ -486,13 +489,9 @@ export default function TenantPortalPage({
         throw new Error(data.error || '접수 실패');
       }
 
-      setRegSuccess(
-        '참가 신청서가 성공적으로 제출되었습니다!\n\n' +
-        '• 참가비 입금계좌: 농협 351-1334-8643-33 (예금주: 통영시요트협회)\n' +
-        '• 입금자명: 참가 신청서에 작성하신 성명(이름)과 동일하게 입금해 주시기 바랍니다.\n' +
-        '• 참가 확정 기준: 입금 완료 순서(입금순)로 선착순 130명 참가 확정 처리됩니다.\n' +
-        '• 확정 안내: 선수등록 승인 및 참가 확정 내역은 대회 공식 홈페이지에서 확인하실 수 있습니다.'
-      );
+      setSubmittedApplicantName(name);
+      setShowSuccessModal(true);
+      setRegSuccess('참가 신청서가 성공적으로 접수되었습니다. 입금 안내창을 확인해 주세요.');
       
       // 폼 초기화
       const resetResponses: Record<string, any> = {};
@@ -582,6 +581,221 @@ export default function TenantPortalPage({
   }
 
   const isRegistrationOpen = regStatusType === 'OPEN';
+
+  // 참가 신청 완료 안내 팝업 모달
+  const renderSuccessModal = () => {
+    if (!showSuccessModal) return null;
+
+    const handleConfirmAndGoHome = () => {
+      setShowSuccessModal(false);
+      if (typeof window !== 'undefined') {
+        const homeUrl = window.location.pathname.startsWith('/tenant/') ? `/tenant/${subdomain}` : '/';
+        window.location.href = homeUrl;
+      }
+    };
+
+    const handleCopyAccount = () => {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        navigator.clipboard.writeText('351-1334-8643-33');
+        setAccountCopied(true);
+        setTimeout(() => setAccountCopied(false), 2000);
+      }
+    };
+
+    return (
+      <div 
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.75)',
+          backdropFilter: 'blur(6px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px',
+          zIndex: 99999,
+          animation: 'fadeIn 0.2s ease-out'
+        }}
+      >
+        <div 
+          style={{
+            background: '#ffffff',
+            borderRadius: '24px',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+            width: '100%',
+            maxWidth: '540px',
+            maxHeight: '92vh',
+            overflowY: 'auto',
+            padding: 'clamp(24px, 5vw, 36px) clamp(20px, 4vw, 32px)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            textAlign: 'center',
+            border: '2px solid #0284c7',
+            position: 'relative'
+          }}
+        >
+          {/* 상단 축하/확인 뱃지 아이콘 */}
+          <div style={{
+            width: '64px',
+            height: '64px',
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#ffffff',
+            boxShadow: '0 10px 20px -5px rgba(16, 185, 129, 0.4)',
+            marginBottom: '16px'
+          }}>
+            <CheckCircle2 size={36} strokeWidth={2.5} />
+          </div>
+
+          <h3 style={{ fontSize: 'clamp(1.3rem, 4vw, 1.55rem)', fontWeight: '900', color: '#0f172a', margin: '0 0 6px 0', letterSpacing: '-0.02em' }}>
+            참가 신청서 접수 완료
+          </h3>
+          <p style={{ fontSize: '0.95rem', color: '#64748b', margin: '0 0 24px 0', fontWeight: '500' }}>
+            제20회 이순신장군배 전국윈드서핑대회
+          </p>
+
+          {/* ⚠️ [핵심 필독 안내 1] 선착순 입금순 확정 경고 박스 */}
+          <div style={{
+            width: '100%',
+            background: '#fef2f2',
+            border: '2px solid #ef4444',
+            borderRadius: '16px',
+            padding: '16px 18px',
+            textAlign: 'left',
+            marginBottom: '16px',
+            boxShadow: '0 4px 12px rgba(239, 68, 68, 0.08)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <span style={{ background: '#ef4444', color: '#ffffff', fontSize: '0.75rem', fontWeight: '900', padding: '3px 8px', borderRadius: '6px' }}>
+                필독 1
+              </span>
+              <span style={{ fontSize: '1rem', fontWeight: '900', color: '#b91c1c' }}>
+                참가비 입금 순서로 최종 130명 확정!
+              </span>
+            </div>
+            <p style={{ margin: 0, fontSize: '0.88rem', color: '#991b1b', lineHeight: '1.55', fontWeight: '600' }}>
+              본 대회는 <span style={{ textDecoration: 'underline', textDecorationThickness: '2px', fontWeight: '800' }}>참가비 입금 완료 순서(선착순 130명)</span>로 최종 참가가 확정됩니다. 신청서만 제출하시고 입금을 늦게 하시면 조기 마감되어 참가가 취소될 수 있으니 바로 입금해 주시기 바랍니다.
+            </p>
+          </div>
+
+          {/* ⚠️ [핵심 필독 안내 2] 신청서 성명과 동일하게 입금 경고 박스 */}
+          <div style={{
+            width: '100%',
+            background: '#eff6ff',
+            border: '2px solid #3b82f6',
+            borderRadius: '16px',
+            padding: '16px 18px',
+            textAlign: 'left',
+            marginBottom: '20px',
+            boxShadow: '0 4px 12px rgba(59, 130, 246, 0.08)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <span style={{ background: '#2563eb', color: '#ffffff', fontSize: '0.75rem', fontWeight: '900', padding: '3px 8px', borderRadius: '6px' }}>
+                필독 2
+              </span>
+              <span style={{ fontSize: '1rem', fontWeight: '900', color: '#1d4ed8' }}>
+                신청서 성명과 동일한 이름으로 입금 필수!
+              </span>
+            </div>
+            <p style={{ margin: 0, fontSize: '0.88rem', color: '#1e40af', lineHeight: '1.55', fontWeight: '600' }}>
+              반드시 참가 신청서에 기재하신 <span style={{ background: '#fef08a', color: '#854d0e', padding: '2px 6px', borderRadius: '4px', fontWeight: '900' }}>성명(이름: {submittedApplicantName || '신청자 성명'})</span>과 <strong>정확히 일치하는 입금자명</strong>으로 송금해 주셔야 즉시 전산 대조 및 참가 확정 승인이 이루어집니다.
+            </p>
+          </div>
+
+          {/* 계좌 정보 카드 */}
+          <div style={{
+            width: '100%',
+            background: '#f8fafc',
+            border: '1px solid #cbd5e1',
+            borderRadius: '16px',
+            padding: '16px 18px',
+            marginBottom: '24px',
+            textAlign: 'left'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                참가비 입금 계좌 안내
+              </span>
+              <button
+                type="button"
+                onClick={handleCopyAccount}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  background: accountCopied ? '#10b981' : '#ffffff',
+                  color: accountCopied ? '#ffffff' : '#0284c7',
+                  border: accountCopied ? '1px solid #10b981' : '1px solid #bae6fd',
+                  borderRadius: '6px',
+                  padding: '4px 10px',
+                  fontSize: '0.78rem',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                {accountCopied ? <Check size={13} /> : <Copy size={13} />}
+                <span>{accountCopied ? '복사됨!' : '계좌 복사'}</span>
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '0.9rem', color: '#1e293b' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ color: '#64748b', fontSize: '0.85rem' }}>입금 은행</span>
+                <span style={{ fontWeight: '800' }}>농협</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ color: '#64748b', fontSize: '0.85rem' }}>계좌 번호</span>
+                <span style={{ fontWeight: '900', color: '#0f172a', fontSize: '1.05rem', letterSpacing: '0.02em' }}>
+                  351-1334-8643-33
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ color: '#64748b', fontSize: '0.85rem' }}>예금주</span>
+                <span style={{ fontWeight: '800' }}>통영시요트협회</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px dashed #e2e8f0', paddingTop: '6px', marginTop: '2px' }}>
+                <span style={{ color: '#64748b', fontSize: '0.85rem' }}>참가비</span>
+                <span style={{ fontWeight: '800', color: '#0284c7' }}>일반 70,000원 / 학생 50,000원</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 확인 버튼 (클릭 시 모달 닫고 홈페이지 메인창으로 이동) */}
+          <button
+            type="button"
+            onClick={handleConfirmAndGoHome}
+            style={{
+              width: '100%',
+              background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '14px',
+              padding: '16px 20px',
+              fontSize: '1.08rem',
+              fontWeight: '900',
+              cursor: 'pointer',
+              boxShadow: '0 10px 20px -5px rgba(2, 132, 199, 0.4)',
+              transition: 'transform 0.1s ease',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
+            }}
+          >
+            <span>확인 (홈페이지 메인으로 이동)</span>
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   if (applyMode && ongoingTournament) {
     if (loading) {
@@ -926,6 +1140,9 @@ export default function TenantPortalPage({
 
           </form>
         </div>
+
+        {/* 참가 신청 완료 안내 팝업 모달 */}
+        {renderSuccessModal()}
       </div>
     );
   }
@@ -2795,6 +3012,8 @@ export default function TenantPortalPage({
         </div>
       </div>
 
+      {/* 참가 신청 완료 안내 팝업 모달 */}
+      {renderSuccessModal()}
     </div>
   );
 }
