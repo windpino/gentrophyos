@@ -51,6 +51,49 @@ const DEFAULT_FORM_FIELDS = [
   { id: 'mediaConsent', label: '12. 초상권 및 저작권 사용 동의', type: 'textarea', required: true, textareaContent: '• 정보수집 및 이용기관 : 통영시요트협회\n• 수집 목적 : 대회 홍보, 결과 보도, 미디어 자료 활용 등\n• 활용 대상 : 대회 사진, 동영상 등 촬영물\n• 보존 기간 : 통영시요트협회 아카이브 보관용으로 영구 보존 및 활용에 동의합니다.', agreeLabel: '네. 동의합니다.' }
 ];
 
+const DIVISION_OPTIONS = [
+  '윈드포일 (남자부)',
+  '윈드포일 (여자부)',
+  '윙포일 (남자부)',
+  '윙포일 (여자부)',
+  '혼합오픈 (남자부)',
+  '혼합오픈 (여자부)',
+  '펀엔포뮬러 (남자부)',
+  '펀엔포뮬러 (여자부)'
+];
+
+const TSHIRT_OPTIONS = [
+  'S (95)',
+  'M (100)',
+  'L (105)',
+  'XL (110)'
+];
+
+const normalizeTshirtSize = (size?: string): string => {
+  if (!size) return 'M (100)';
+  const s = String(size).trim();
+  if (TSHIRT_OPTIONS.includes(s)) return s;
+  if (s === '95' || s.toUpperCase() === 'S') return 'S (95)';
+  if (s === '100' || s.toUpperCase() === 'M') return 'M (100)';
+  if (s === '105' || s.toUpperCase() === 'L') return 'L (105)';
+  if (s === '110' || s.toUpperCase() === 'XL') return 'XL (110)';
+  return s;
+};
+
+const normalizeDivision = (div?: string, gender?: string): string => {
+  if (!div) return gender === '여자' ? '윈드포일 (여자부)' : '윈드포일 (남자부)';
+  const d = String(div).trim();
+  if (DIVISION_OPTIONS.includes(d)) return d;
+  
+  const isFemale = d.includes('여자') || gender === '여자';
+  const suffix = isFemale ? ' (여자부)' : ' (남자부)';
+  if (d.includes('윙포일')) return `윙포일${suffix}`;
+  if (d.includes('혼합오픈')) return `혼합오픈${suffix}`;
+  if (d.includes('펀엔포뮬러') || d.includes('펀&포뮬러')) return `펀엔포뮬러${suffix}`;
+  if (d.includes('윈드포일')) return `윈드포일${suffix}`;
+  return d;
+};
+
 export default function HostDashboardPage({
   params,
 }: {
@@ -291,8 +334,8 @@ export default function HostDashboardPage({
         let gender = '남자';
         let phone = '';
         let club = '미소속';
-        let division = '윈드포일';
-        let tshirtSize = '100';
+        let division = '윈드포일 (남자부)';
+        let tshirtSize = 'M (100)';
         let vestAgreement = '';
         let paymentNoticeAgreement = '';
         let liabilityWaiver = '';
@@ -301,14 +344,14 @@ export default function HostDashboardPage({
 
         try {
           if (r.formResponses) {
-            const extra = JSON.parse(r.formResponses);
+            const extra = typeof r.formResponses === 'string' ? JSON.parse(r.formResponses) : r.formResponses;
             birth = extra.birth || '';
             gender = extra.gender || '남자';
             // formResponses에 phone이 있으면 우선 사용
             phone = extra.phone || '';
             club = extra.club || '미소속';
-            division = extra.division || '윈드포일';
-            tshirtSize = extra.tshirtSize || '100';
+            division = normalizeDivision(extra.division, gender);
+            tshirtSize = normalizeTshirtSize(extra.tshirtSize);
             vestAgreement = extra.vestAgreement || '';
             paymentNoticeAgreement = extra.paymentNoticeAgreement || '';
             liabilityWaiver = extra.liabilityWaiver || '';
@@ -355,11 +398,15 @@ export default function HostDashboardPage({
     setGridData(
       gridData.map((row) => {
         if (row.id === rowId) {
-          return {
+          const updated: GridRow = {
             ...row,
             [field]: value,
             isEdited: true, // 변경점 추적
           };
+          if (field === 'gender' && row.division) {
+            updated.division = normalizeDivision(row.division, value);
+          }
+          return updated;
         }
         return row;
       })
@@ -376,8 +423,8 @@ export default function HostDashboardPage({
       gender: '남자',
       phone: '',
       club: '',
-      division: '윈드포일',
-      tshirtSize: '100',
+      division: '윈드포일 (남자부)',
+      tshirtSize: 'M (100)',
       vestAgreement: '네. 확인했습니다.',
       paymentNoticeAgreement: '네. 확인했습니다.',
       liabilityWaiver: '네. 동의합니다.',
@@ -1266,16 +1313,22 @@ export default function HostDashboardPage({
                             style={{
                               width: '100%',
                               background: 'white',
-                              border: 'none',
+                              border: '1px solid #e2e8f0',
+                              borderRadius: '6px',
+                              padding: '4px 6px',
                               color: 'var(--text-main)',
                               outline: 'none',
-                              cursor: 'pointer'
+                              cursor: 'pointer',
+                              fontSize: '0.85rem',
+                              fontWeight: '600'
                             }}
                           >
-                            <option value="윈드포일">윈드포일</option>
-                            <option value="윙포일">윙포일</option>
-                            <option value="혼합오픈">혼합오픈</option>
-                            <option value="펀엔포뮬러">펀엔포뮬러</option>
+                            {!DIVISION_OPTIONS.includes(row.division) && row.division && (
+                              <option value={row.division}>{row.division}</option>
+                            )}
+                            {DIVISION_OPTIONS.map((opt) => (
+                              <option key={opt} value={opt}>{opt}</option>
+                            ))}
                           </select>
                         </td>
 
@@ -1287,19 +1340,22 @@ export default function HostDashboardPage({
                             style={{
                               width: '100%',
                               background: 'white',
-                              border: 'none',
+                              border: '1px solid #e2e8f0',
+                              borderRadius: '6px',
+                              padding: '4px 6px',
                               color: 'var(--text-main)',
                               outline: 'none',
-                              cursor: 'pointer'
+                              cursor: 'pointer',
+                              fontSize: '0.85rem',
+                              fontWeight: '600'
                             }}
                           >
-                            <option value="85">85</option>
-                            <option value="90">90</option>
-                            <option value="95">95</option>
-                            <option value="100">100</option>
-                            <option value="105">105</option>
-                            <option value="110">110</option>
-                            <option value="115">115</option>
+                            {!TSHIRT_OPTIONS.includes(row.tshirtSize) && row.tshirtSize && (
+                              <option value={row.tshirtSize}>{row.tshirtSize}</option>
+                            )}
+                            {TSHIRT_OPTIONS.map((size) => (
+                              <option key={size} value={size}>{size}</option>
+                            ))}
                           </select>
                         </td>
 

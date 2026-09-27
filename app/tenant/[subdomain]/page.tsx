@@ -168,8 +168,8 @@ export default function TenantPortalPage({
   const [formFields, setFormFields] = useState<any[]>(DEFAULT_FORM_FIELDS);
   const [formResponses, setFormResponses] = useState<Record<string, any>>({
     gender: '남자',
-    division: '윈드포일',
-    tshirtSize: '100'
+    division: '윈드포일 (남자부)',
+    tshirtSize: 'M (100)'
   });
 
   const [regSuccess, setRegSuccess] = useState('');
@@ -223,8 +223,8 @@ export default function TenantPortalPage({
           
           // 필수 기본값 보완
           if (initialResponses.gender === undefined) initialResponses.gender = '남자';
-          if (initialResponses.division === undefined) initialResponses.division = '윈드포일';
-          if (initialResponses.tshirtSize === undefined) initialResponses.tshirtSize = '100';
+          if (initialResponses.division === undefined) initialResponses.division = '윈드포일 (남자부)';
+          if (initialResponses.tshirtSize === undefined) initialResponses.tshirtSize = 'M (100)';
 
           setFormResponses(initialResponses);
         }
@@ -504,8 +504,8 @@ export default function TenantPortalPage({
       });
       // 필수 기본값 복구
       resetResponses.gender = '남자';
-      resetResponses.division = '윈드포일';
-      resetResponses.tshirtSize = '100';
+      resetResponses.division = '윈드포일 (남자부)';
+      resetResponses.tshirtSize = 'M (100)';
 
       setFormResponses(resetResponses);
     } catch (err: any) {
@@ -1039,11 +1039,12 @@ export default function TenantPortalPage({
                                 const val = e.target.value;
                                 handleInputChange(field.id, val);
                                 if (field.id === 'gender') {
-                                  if (val === '남자') {
-                                    handleInputChange('division', '윈드포일 (남자부)');
-                                  } else {
-                                    handleInputChange('division', '윈드포일 (여자부)');
-                                  }
+                                  const curDiv = formResponses.division || '';
+                                  let baseDiv = '윈드포일';
+                                  if (curDiv.includes('윙포일')) baseDiv = '윙포일';
+                                  else if (curDiv.includes('혼합오픈')) baseDiv = '혼합오픈';
+                                  else if (curDiv.includes('펀엔포뮬러') || curDiv.includes('펀&포뮬러')) baseDiv = '펀엔포뮬러';
+                                  handleInputChange('division', `${baseDiv} (${val === '여자' ? '여자부' : '남자부'})`);
                                 }
                               }}
                               style={{ width: '18px', height: '18px' }}
