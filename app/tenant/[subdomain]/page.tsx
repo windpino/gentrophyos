@@ -1412,10 +1412,10 @@ export default function TenantPortalPage({
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
                 <img src="/images/logo_new.png" alt="로고" style={{ height: '36px', width: 'auto', objectFit: 'contain', mixBlendMode: 'multiply' }} />
                 <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
-                  <span style={{ fontSize: '0.82rem', fontWeight: '900', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <span style={{ fontSize: '0.92rem', fontWeight: '900', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     제20회 이순신장군배
                   </span>
-                  <span style={{ fontSize: '0.72rem', color: 'var(--theme-primary)', fontWeight: '800' }}>
+                  <span style={{ fontSize: '0.82rem', color: 'var(--theme-primary)', fontWeight: '800' }}>
                     전체 메뉴
                   </span>
                 </div>
@@ -1473,14 +1473,14 @@ export default function TenantPortalPage({
                       background: isActive ? 'rgba(31, 111, 139, 0.08)' : 'transparent',
                       color: item.disabled ? '#cbd5e1' : (isActive ? 'var(--theme-primary)' : 'var(--text-main)'),
                       fontWeight: isActive ? '800' : '600',
-                      fontSize: '0.92rem',
+                      fontSize: '1rem',
                       textAlign: 'left',
                       cursor: item.disabled ? 'not-allowed' : 'pointer',
                       transition: 'all 0.15s ease',
                       width: '100%',
                     }}
                   >
-                    <span style={{ fontSize: '1.15rem' }}>{item.icon}</span>
+                    <span style={{ fontSize: '1.2rem' }}>{item.icon}</span>
                     <span style={{ flex: 1 }}>{item.label}</span>
                     {isActive && (
                       <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--theme-primary)' }}></span>
@@ -1503,12 +1503,12 @@ export default function TenantPortalPage({
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '8px',
-                  padding: '12px',
+                  padding: '13px',
                   borderRadius: '10px',
                   background: 'linear-gradient(135deg, var(--theme-gold) 0%, #b39366 100%)',
                   color: '#1b263b',
                   fontWeight: '800',
-                  fontSize: '0.9rem',
+                  fontSize: '0.96rem',
                   border: 'none',
                   cursor: 'pointer',
                   boxShadow: '0 4px 10px rgba(197, 168, 128, 0.35)',
@@ -1525,11 +1525,11 @@ export default function TenantPortalPage({
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '4px',
-                    padding: '9px 6px',
+                    padding: '10px 6px',
                     borderRadius: '8px',
                     background: '#f1f5f9',
                     color: '#334155',
-                    fontSize: '0.78rem',
+                    fontSize: '0.86rem',
                     fontWeight: '700',
                     textDecoration: 'none',
                     border: '1px solid #e2e8f0',
@@ -1544,11 +1544,11 @@ export default function TenantPortalPage({
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '4px',
-                    padding: '9px 6px',
+                    padding: '10px 6px',
                     borderRadius: '8px',
                     background: '#f1f5f9',
                     color: '#334155',
-                    fontSize: '0.78rem',
+                    fontSize: '0.86rem',
                     fontWeight: '700',
                     textDecoration: 'none',
                     border: '1px solid #e2e8f0',
@@ -2463,7 +2463,7 @@ export default function TenantPortalPage({
                       <h4 style={{ fontWeight: '800', color: 'var(--theme-primary)', borderBottom: '2px solid var(--theme-primary)', paddingBottom: '8px', marginBottom: '12px', margin: 0 }}>
                         1일차 경기 일정
                       </h4>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.8rem' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.94rem' }}>
                         {overview.itineraryDay1.split('\n').map((line: string, idx: number) => {
                           const splitIdx = line.indexOf(':');
                           if (splitIdx > -1) {
@@ -2478,9 +2478,9 @@ export default function TenantPortalPage({
                     {/* 2일차 */}
                     <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
                       <h4 style={{ fontWeight: '800', color: 'var(--theme-primary)', borderBottom: '2px solid var(--theme-primary)', paddingBottom: '8px', marginBottom: '12px', margin: 0 }}>
-                        2일차 경기 일정
+                         2일차 경기 일정
                       </h4>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.8rem' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.94rem' }}>
                         {overview.itineraryDay2.split('\n').map((line: string, idx: number) => {
                           const splitIdx = line.indexOf(':');
                           if (splitIdx > -1) {
@@ -2501,7 +2501,7 @@ export default function TenantPortalPage({
                     <Layers style={{ color: 'var(--theme-primary)' }} size={22} /> 경기 종목 및 세부 클래스
                   </h2>
                   <div className="premium-table-container">
-                    <table className="premium-table" style={{ fontSize: '0.85rem', width: '100%' }}>
+                    <table className="premium-table" style={{ fontSize: '0.92rem', width: '100%' }}>
                       <thead>
                         <tr>
                           <th>경기 종목</th>
@@ -2534,7 +2534,7 @@ export default function TenantPortalPage({
                     <Award style={{ color: 'var(--theme-gold)' }} size={22} /> 공식 시상 내역 명세
                   </h2>
                   <div className="premium-table-container">
-                    <table className="premium-table" style={{ fontSize: '0.85rem', width: '100%' }}>
+                    <table className="premium-table" style={{ fontSize: '0.92rem', width: '100%' }}>
                       <thead>
                         <tr>
                           <th>구분</th>

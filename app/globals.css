@@ -642,22 +642,32 @@ button, input, select, textarea {
 }
 
 /* ──────────────────────────────────────────
-   모바일 반응형 (768px 이하)
+   모바일 반응형 (768px 이하) - 가독성 향상을 위한 폰트 스케일업
 ────────────────────────────────────────── */
 @media (max-width: 768px) {
+  /* 모바일 루트 폰트 크기 상향 (모든 rem 단위 요소 자동 스케일업) */
+  html {
+    font-size: 17px !important;
+  }
+
+  body {
+    font-size: 1rem;
+    line-height: 1.65;
+    -webkit-text-size-adjust: 100%;
+  }
 
   /* 헤더: 높이 줄이고 패딩 축소 및 넘침 방지 */
   .site-header {
-    height: 56px;
-    padding: 0 10px;
-    gap: 6px;
+    height: 58px;
+    padding: 0 12px;
+    gap: 8px;
     max-width: 100vw !important;
     width: 100% !important;
     box-sizing: border-box !important;
   }
 
-  /* 헤더 로고 및 브랜드 텍스트 최적화 */
-  .site-header img { height: 38px !important; }
+  /* 헤더 로고 및 브랜드 텍스트 최적화 (글씨 확대) */
+  .site-header img { height: 40px !important; }
   .portal-header-brand {
     max-width: calc(100vw - 130px) !important;
     min-width: 0 !important;
@@ -670,8 +680,8 @@ button, input, select, textarea {
     overflow: hidden !important;
   }
   .site-header .brand-text span {
-    font-size: 0.72rem !important;
-    line-height: 1.15 !important;
+    font-size: 0.82rem !important;
+    line-height: 1.25 !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
@@ -681,11 +691,13 @@ button, input, select, textarea {
   .mobile-header-actions {
     display: flex !important;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     flex-shrink: 0;
   }
   .mobile-header-apply {
     display: flex !important;
+    font-size: 0.88rem !important;
+    padding: 7px 12px !important;
   }
   .mobile-hamburger-btn {
     display: flex !important;
@@ -695,26 +707,27 @@ button, input, select, textarea {
   .header-nav { display: none !important; }
   .header-actions { display: none !important; }
 
-  /* 모바일 하단 탭바 표시 */
+  /* 모바일 하단 탭바 - 폰트 크기 및 터치 영역 확대 */
   .mobile-tabbar {
     display: block;
-    padding: 6px 0 calc(env(safe-area-inset-bottom, 8px) + 2px);
+    padding: 7px 0 calc(env(safe-area-inset-bottom, 8px) + 2px);
     max-width: 100vw !important;
     box-sizing: border-box !important;
     overflow: hidden !important;
   }
 
   .mobile-tabbar-btn {
-    padding: 5px 1px !important;
-    font-size: 0.62rem !important;
-    letter-spacing: -0.03em !important;
+    padding: 5px 2px !important;
+    font-size: 0.72rem !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.02em !important;
   }
   .mobile-tabbar-btn svg {
-    width: 18px !important;
-    height: 18px !important;
+    width: 20px !important;
+    height: 20px !important;
   }
 
-  /* 히어로 섹션: 가로 넘침 방지 및 패딩 축소 */
+  /* 히어로 섹션: 가로 넘침 방지 및 폰트 가독성 상향 */
   .hero-section {
     height: auto;
     min-height: 360px;
@@ -724,21 +737,22 @@ button, input, select, textarea {
     overflow: hidden !important;
   }
   .hero-title {
-    font-size: 1.85rem !important;
+    font-size: 1.95rem !important;
     line-height: 1.25 !important;
     margin-bottom: 12px !important;
     word-break: keep-all;
     overflow-wrap: break-word;
   }
   .hero-subtitle {
-    font-size: 0.85rem !important;
+    font-size: 0.95rem !important;
+    line-height: 1.6 !important;
     max-width: 100% !important;
     margin-bottom: 18px !important;
     word-break: keep-all;
     overflow-wrap: break-word;
   }
   .hero-hero-badge {
-    font-size: 0.72rem !important;
+    font-size: 0.78rem !important;
     letter-spacing: 0.1em !important;
     margin-bottom: 8px !important;
   }
@@ -751,8 +765,9 @@ button, input, select, textarea {
   }
   .hero-buttons button {
     width: 100% !important;
-    padding: 13px 18px !important;
-    font-size: 0.92rem !important;
+    padding: 14px 20px !important;
+    font-size: 1rem !important;
+    font-weight: 800 !important;
     text-align: center;
     justify-content: center;
   }
@@ -772,7 +787,7 @@ button, input, select, textarea {
     box-sizing: border-box !important;
   }
 
-  /* 서브탭 바 스크롤 (부모 너비 넘지 않음) */
+  /* 서브탭 바 스크롤 (폰트 크기 상향) */
   .subtab-bar {
     gap: 6px !important;
     padding: 8px 10px !important;
@@ -785,23 +800,38 @@ button, input, select, textarea {
     -webkit-overflow-scrolling: touch;
   }
   .subtab-bar button {
-    padding: 6px 12px !important;
-    font-size: 0.78rem !important;
+    padding: 7px 14px !important;
+    font-size: 0.86rem !important;
+    font-weight: 700 !important;
     white-space: nowrap;
   }
 
   /* 카드/패널 패딩 축소 및 너비 고정 */
   .glass-panel {
-    padding: 16px 12px !important;
-    border-radius: 12px !important;
+    padding: 18px 14px !important;
+    border-radius: 14px !important;
     max-width: 100% !important;
     min-width: 0 !important;
     box-sizing: border-box !important;
   }
+  .glass-panel p,
+  .glass-panel li {
+    font-size: 0.94rem !important;
+    line-height: 1.65 !important;
+  }
+  .glass-panel h2 {
+    font-size: 1.35rem !important;
+  }
+  .glass-panel h3 {
+    font-size: 1.2rem !important;
+  }
+  .glass-panel h4 {
+    font-size: 1.05rem !important;
+  }
 
-  /* 프리미엄 테이블 모바일 터치 스크롤 및 넘침 방지 */
+  /* 프리미엄 테이블 모바일 터치 스크롤 및 폰트 크기 상향 */
   .premium-table-container {
-    border-radius: 8px !important;
+    border-radius: 10px !important;
     width: 100% !important;
     max-width: 100% !important;
     overflow-x: auto !important;
@@ -815,16 +845,18 @@ button, input, select, textarea {
   }
   .premium-table th,
   .premium-table td {
-    padding: 8px 8px !important;
-    font-size: 0.78rem !important;
+    padding: 10px 8px !important;
+    font-size: 0.86rem !important;
+    line-height: 1.45 !important;
   }
 
-  /* 푸터 영역 가로 넘침 방지 */
+  /* 푸터 영역 가로 넘침 방지 및 폰트 정리 */
   footer {
     max-width: 100vw !important;
     width: 100% !important;
     box-sizing: border-box !important;
     overflow-x: hidden !important;
+    font-size: 0.88rem !important;
   }
 
   /* 모바일 입력창 줌 방지 (최소 16px) */
@@ -835,11 +867,13 @@ button, input, select, textarea {
 
 /* 아주 작은 화면 (380px 이하) */
 @media (max-width: 380px) {
-  .hero-title { font-size: 1.6rem !important; }
-  .hero-section { min-height: 340px; padding: 20px 10px 16px 10px !important; }
-  .mobile-tabbar-btn { font-size: 0.58rem !important; }
-  .mobile-tabbar-btn svg { width: 16px !important; height: 16px !important; }
+  html { font-size: 16.5px !important; }
+  .hero-title { font-size: 1.7rem !important; }
+  .hero-subtitle { font-size: 0.9rem !important; }
+  .mobile-tabbar-btn { font-size: 0.68rem !important; }
+  .mobile-tabbar-btn svg { width: 18px !important; height: 18px !important; }
   .site-header { padding: 0 8px !important; }
+  .site-header .brand-text span { font-size: 0.78rem !important; }
   .portal-header-brand { max-width: calc(100vw - 110px) !important; }
 }
 
