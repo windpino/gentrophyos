@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, use } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Award, Calendar, Layers, FileText, CheckCircle2, UserPlus, RefreshCw, Archive, Search, Compass, MapPin, Phone, Sparkles, Trophy, Smartphone, ShieldCheck, X, AlertTriangle, Menu } from 'lucide-react';
+import { Award, Calendar, Layers, FileText, CheckCircle2, UserPlus, RefreshCw, Archive, Search, Compass, MapPin, Phone, Sparkles, Trophy, Smartphone, ShieldCheck, X, AlertTriangle, Menu, Printer } from 'lucide-react';
 
 interface TenantData {
   id: string;
@@ -1550,11 +1550,35 @@ export default function TenantPortalPage({
           {activeTab === 'live' && activeSubTab === 'live-leaderboard' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               {/* 리더보드 헤더 */}
-              <div className="glass-panel" style={{ background: 'white', padding: '28px 32px', borderTop: '4px solid var(--theme-primary)' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: '900', textAlign: 'center', color: 'var(--text-main)', marginBottom: '4px' }}>
-                  {overview.title} 실시간 리더보드
-                </h2>
-                <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>Notice of Race (NOR) / 공식 실시간 순위 및 라운드별 경기 결과</p>
+              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px', borderTop: '4px solid var(--theme-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+                <div>
+                  <h2 style={{ fontSize: '1.45rem', fontWeight: '900', color: 'var(--text-main)', margin: '0 0 4px 0' }}>
+                    {overview.title} 공식 순위표
+                  </h2>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: 0 }}>Notice of Race (NOR) / 공식 실시간 순위 및 라운드별 경기 결과</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '10px 18px',
+                    borderRadius: '10px',
+                    background: '#0f172a',
+                    color: 'white',
+                    border: 'none',
+                    fontWeight: '800',
+                    fontSize: '0.88rem',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 8px rgba(15, 23, 42, 0.25)',
+                    transition: 'all 0.2s',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  <Printer size={16} /> 🖨️ 공식 순위표 인쇄
+                </button>
               </div>
 
               {/* 종목 카테고리 필터바 */}
@@ -2792,6 +2816,165 @@ export default function TenantPortalPage({
               <span>{tab.label}</span>
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* ── 공식 순위표 인쇄 전용 템플릿 (화면에서는 숨김, 인쇄 시에만 A4 규격 출력) ── */}
+      <div className="official-print-document">
+        <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: '16px', marginBottom: '20px' }}>
+          <h1 style={{ fontSize: '22pt', fontWeight: '900', margin: '0 0 6px 0', letterSpacing: '-0.02em', color: '#000' }}>
+            {overview.title}
+          </h1>
+          <h2 style={{ fontSize: '16pt', fontWeight: '800', margin: '0 0 8px 0', color: '#111' }}>
+            [ {selectedLeaderboardCategory === '전체' ? '전체 부문' : `${selectedLeaderboardCategory} 부문`} ] 공식 경기 결과 및 순위표
+          </h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9.5pt', color: '#333', marginTop: '10px' }}>
+            <span>• 대회 기간: {overview.duration}</span>
+            <span>• 장소: {overview.location}</span>
+            <span>• 출력일시: {new Date().toLocaleString('ko-KR')}</span>
+          </div>
+        </div>
+
+        {(() => {
+          const getExactDivisionName = (root: string, gender: '남자부' | '여자부') => {
+            const allTabs = getDivisionTabs();
+            const exact = allTabs.find((tab: string) => {
+              const cleanTab = tab.replace(/\s+/g, '');
+              const cleanTarget = `${root}(${gender})`.replace(/\s+/g, '');
+              return cleanTab.includes(cleanTarget) || cleanTab === cleanTarget;
+            });
+            if (exact) return exact;
+
+            const fuzzy = allTabs.find((tab: string) => {
+              const hasRoot = tab.includes(root) || (root === '펀엔포뮬러' && (tab.includes('펀엔') || tab.includes('펀&')));
+              const hasGender = tab.includes(gender.replace('부', ''));
+              return hasRoot && hasGender;
+            });
+            return fuzzy || `${root} (${gender})`;
+          };
+
+          const activeRoot = selectedLeaderboardCategory;
+          const rootsToRender = activeRoot === '전체'
+            ? ['윈드포일', '윙포일', '혼합오픈', '펀엔포뮬러']
+            : [activeRoot];
+
+          return rootsToRender.map((root: string) => {
+            const maleDivName = getExactDivisionName(root, '남자부');
+            const femaleDivName = getExactDivisionName(root, '여자부');
+
+            const maleList = leaderboards[maleDivName] || [];
+            const femaleList = leaderboards[femaleDivName] || [];
+
+            if (maleList.length === 0 && femaleList.length === 0) return null;
+
+            return (
+              <div key={root} style={{ marginBottom: '24px', pageBreakInside: 'avoid' }}>
+                <h3 style={{ fontSize: '13pt', fontWeight: '900', margin: '0 0 8px 0', borderLeft: '4px solid #000', paddingLeft: '8px' }}>
+                  {root} 부문
+                </h3>
+
+                {maleList.length > 0 && (
+                  <div style={{ marginBottom: '14px' }}>
+                    <h4 style={{ fontSize: '10.5pt', fontWeight: '800', margin: '0 0 6px 0', color: '#1e293b' }}>
+                      • {maleDivName}
+                    </h4>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9pt', textAlign: 'center' }}>
+                      <thead>
+                        <tr style={{ background: '#f1f5f9', borderTop: '1px solid #000', borderBottom: '1px solid #000' }}>
+                          <th style={{ padding: '6px 4px', width: '45px', border: '1px solid #94a3b8' }}>순위</th>
+                          <th style={{ padding: '6px 6px', width: '55px', border: '1px solid #94a3b8' }}>배번</th>
+                          <th style={{ padding: '6px 10px', border: '1px solid #94a3b8' }}>성명</th>
+                          <th style={{ padding: '6px 6px', width: '80px', border: '1px solid #94a3b8' }}>생년월일</th>
+                          <th style={{ padding: '6px 4px', width: '40px', border: '1px solid #94a3b8' }}>1R</th>
+                          <th style={{ padding: '6px 4px', width: '40px', border: '1px solid #94a3b8' }}>2R</th>
+                          <th style={{ padding: '6px 4px', width: '40px', border: '1px solid #94a3b8' }}>3R</th>
+                          <th style={{ padding: '6px 4px', width: '40px', border: '1px solid #94a3b8' }}>4R</th>
+                          <th style={{ padding: '6px 4px', width: '40px', border: '1px solid #94a3b8' }}>5R</th>
+                          <th style={{ padding: '6px 4px', width: '40px', border: '1px solid #94a3b8' }}>6R</th>
+                          <th style={{ padding: '6px 6px', width: '55px', border: '1px solid #94a3b8', fontWeight: '900' }}>총점</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {maleList.map((row: any, rIdx: number) => (
+                          <tr key={rIdx}>
+                            <td style={{ padding: '5px 4px', fontWeight: '900', border: '1px solid #94a3b8' }}>{row.rank}</td>
+                            <td style={{ padding: '5px 6px', border: '1px solid #94a3b8' }}>{row.bibNumber || '-'}</td>
+                            <td style={{ padding: '5px 10px', fontWeight: '800', border: '1px solid #94a3b8' }}>{row.name}</td>
+                            <td style={{ padding: '5px 6px', border: '1px solid #94a3b8' }}>{row.birth || '-'}</td>
+                            <td style={{ padding: '5px 4px', border: '1px solid #94a3b8' }}>{row.r1 ?? '-'}</td>
+                            <td style={{ padding: '5px 4px', border: '1px solid #94a3b8' }}>{row.r2 ?? '-'}</td>
+                            <td style={{ padding: '5px 4px', border: '1px solid #94a3b8' }}>{row.r3 ?? '-'}</td>
+                            <td style={{ padding: '5px 4px', border: '1px solid #94a3b8' }}>{row.r4 ?? '-'}</td>
+                            <td style={{ padding: '5px 4px', border: '1px solid #94a3b8' }}>{row.r5 ?? '-'}</td>
+                            <td style={{ padding: '5px 4px', border: '1px solid #94a3b8' }}>{row.r6 ?? '-'}</td>
+                            <td style={{ padding: '5px 6px', fontWeight: '900', border: '1px solid #94a3b8' }}>{row.total}점</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {femaleList.length > 0 && (
+                  <div>
+                    <h4 style={{ fontSize: '10.5pt', fontWeight: '800', margin: '0 0 6px 0', color: '#1e293b' }}>
+                      • {femaleDivName}
+                    </h4>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9pt', textAlign: 'center' }}>
+                      <thead>
+                        <tr style={{ background: '#f1f5f9', borderTop: '1px solid #000', borderBottom: '1px solid #000' }}>
+                          <th style={{ padding: '6px 4px', width: '45px', border: '1px solid #94a3b8' }}>순위</th>
+                          <th style={{ padding: '6px 6px', width: '55px', border: '1px solid #94a3b8' }}>배번</th>
+                          <th style={{ padding: '6px 10px', border: '1px solid #94a3b8' }}>성명</th>
+                          <th style={{ padding: '6px 6px', width: '80px', border: '1px solid #94a3b8' }}>생년월일</th>
+                          <th style={{ padding: '6px 4px', width: '40px', border: '1px solid #94a3b8' }}>1R</th>
+                          <th style={{ padding: '6px 4px', width: '40px', border: '1px solid #94a3b8' }}>2R</th>
+                          <th style={{ padding: '6px 4px', width: '40px', border: '1px solid #94a3b8' }}>3R</th>
+                          <th style={{ padding: '6px 4px', width: '40px', border: '1px solid #94a3b8' }}>4R</th>
+                          <th style={{ padding: '6px 4px', width: '40px', border: '1px solid #94a3b8' }}>5R</th>
+                          <th style={{ padding: '6px 4px', width: '40px', border: '1px solid #94a3b8' }}>6R</th>
+                          <th style={{ padding: '6px 6px', width: '55px', border: '1px solid #94a3b8', fontWeight: '900' }}>총점</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {femaleList.map((row: any, rIdx: number) => (
+                          <tr key={rIdx}>
+                            <td style={{ padding: '5px 4px', fontWeight: '900', border: '1px solid #94a3b8' }}>{row.rank}</td>
+                            <td style={{ padding: '5px 6px', border: '1px solid #94a3b8' }}>{row.bibNumber || '-'}</td>
+                            <td style={{ padding: '5px 10px', fontWeight: '800', border: '1px solid #94a3b8' }}>{row.name}</td>
+                            <td style={{ padding: '5px 6px', border: '1px solid #94a3b8' }}>{row.birth || '-'}</td>
+                            <td style={{ padding: '5px 4px', border: '1px solid #94a3b8' }}>{row.r1 ?? '-'}</td>
+                            <td style={{ padding: '5px 4px', border: '1px solid #94a3b8' }}>{row.r2 ?? '-'}</td>
+                            <td style={{ padding: '5px 4px', border: '1px solid #94a3b8' }}>{row.r3 ?? '-'}</td>
+                            <td style={{ padding: '5px 4px', border: '1px solid #94a3b8' }}>{row.r4 ?? '-'}</td>
+                            <td style={{ padding: '5px 4px', border: '1px solid #94a3b8' }}>{row.r5 ?? '-'}</td>
+                            <td style={{ padding: '5px 4px', border: '1px solid #94a3b8' }}>{row.r6 ?? '-'}</td>
+                            <td style={{ padding: '5px 6px', fontWeight: '900', border: '1px solid #94a3b8' }}>{row.total}점</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            );
+          });
+        })()}
+
+        {/* 심판단 서명란 */}
+        <div style={{ marginTop: '40px', paddingTop: '20px', borderTop: '1px solid #000', display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
+          <div style={{ textAlign: 'center', fontSize: '10pt' }}>
+            <p style={{ margin: '0 0 30px 0', fontWeight: '700' }}>기록원 (Scorer)</p>
+            <p style={{ margin: 0, color: '#334155' }}>성명: ________________ (인)</p>
+          </div>
+          <div style={{ textAlign: 'center', fontSize: '10pt' }}>
+            <p style={{ margin: '0 0 30px 0', fontWeight: '700' }}>심판위원장 (Chief Referee)</p>
+            <p style={{ margin: 0, color: '#334155' }}>성명: ________________ (인)</p>
+          </div>
+          <div style={{ textAlign: 'center', fontSize: '10pt' }}>
+            <p style={{ margin: '0 0 30px 0', fontWeight: '700' }}>경기위원장 (Race Committee)</p>
+            <p style={{ margin: 0, color: '#334155' }}>성명: ________________ (인)</p>
+          </div>
         </div>
       </div>
 

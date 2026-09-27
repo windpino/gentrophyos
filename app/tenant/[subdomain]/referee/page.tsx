@@ -24,7 +24,8 @@ import {
   Flag,
   Plus,
   Trash2,
-  AlertCircle
+  AlertCircle,
+  Printer
 } from 'lucide-react';
 
 export interface RoundItem {
@@ -81,6 +82,8 @@ export default function RefereeMobilePage({
   const [passwordInput, setPasswordInput] = useState('');
   const [authError, setAuthError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [isRankConfirmed, setIsRankConfirmed] = useState(false);
+  const [confirmedTime, setConfirmedTime] = useState<string | null>(null);
 
   // 세션 확인 (이미 로그인된 경우 자동 인증)
   useEffect(() => {
@@ -571,7 +574,9 @@ export default function RefereeMobilePage({
         })
       });
       if (res.ok) {
-        alert('순위가 공식 확정되었으며 홈페이지 실시간 리더보드에 즉시 반영되었습니다!');
+        setIsRankConfirmed(true);
+        setConfirmedTime(new Date().toLocaleString('ko-KR'));
+        alert('순위가 공식 확정되었으며 홈페이지 실시간 리더보드에 즉시 반영되었습니다!\n\n[공식 순위표 인쇄] 버튼을 눌러 A4 규격 공식 결과표로 인쇄하거나 PDF로 저장하실 수 있습니다.');
       } else {
         const err = await res.json();
         alert(err.error || '저장 실패');
@@ -581,6 +586,11 @@ export default function RefereeMobilePage({
     } finally {
       setSubmitting(false);
     }
+  };
+
+  // 공식 순위표 인쇄
+  const handlePrintRankings = () => {
+    window.print();
   };
 
   // 인증 게이트 UI
@@ -1545,14 +1555,58 @@ export default function RefereeMobilePage({
               </div>
             </div>
 
+            {/* 순위 확정 완료 상태 알림 및 빠른 인쇄 배너 */}
+            {isRankConfirmed && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '10px',
+                background: '#ecfdf5',
+                border: '1px solid #a7f3d0',
+                padding: '12px 18px',
+                borderRadius: '12px',
+                color: '#065f46',
+                fontSize: '0.9rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <CheckCircle2 size={20} color="#10b981" />
+                  <span>
+                    <strong>[{activeDivisionTab}]</strong> 순위가 공식 확정되었습니다! (확정일시: {confirmedTime})
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handlePrintRankings}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    background: '#047857',
+                    color: 'white',
+                    border: 'none',
+                    fontWeight: '800',
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 6px rgba(4, 120, 87, 0.3)'
+                  }}
+                >
+                  <Printer size={16} /> 🖨️ 바로 인쇄하기
+                </button>
+              </div>
+            )}
+
             {/* 액션 버튼 */}
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
               <button
                 type="button"
                 onClick={handleSortRankings}
                 className="btn-secondary"
                 style={{
-                  flex: 1,
+                  flex: '1 1 140px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -1572,7 +1626,7 @@ export default function RefereeMobilePage({
                 disabled={submitting}
                 className="btn-primary"
                 style={{
-                  flex: 1,
+                  flex: '1 1 180px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -1586,7 +1640,30 @@ export default function RefereeMobilePage({
                   boxShadow: '0 2px 8px rgba(16,185,129,0.3)'
                 }}
               >
-                <CheckCircle2 size={18} /> 순위 최종 확정 (공개)
+                <CheckCircle2 size={18} /> {isRankConfirmed ? '순위 확정 완료 (재확정)' : '순위 최종 확정 (공개)'}
+              </button>
+              <button
+                type="button"
+                onClick={handlePrintRankings}
+                style={{
+                  flex: '1 1 160px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  padding: '13px',
+                  fontSize: '0.92rem',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  borderRadius: '10px',
+                  border: '1px solid #0f172a',
+                  background: isRankConfirmed ? '#0f172a' : '#1e293b',
+                  color: '#ffffff',
+                  boxShadow: '0 2px 8px rgba(15, 23, 42, 0.25)',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <Printer size={18} /> 🖨️ 공식 순위표 인쇄
               </button>
             </div>
 
@@ -1798,6 +1875,85 @@ export default function RefereeMobilePage({
           </button>
         </div>
       )}
+
+      {/* ── 인쇄 전용 공식 결과 보고서 (화면에서는 숨김, 인쇄 시에만 A4 규격으로 노출) ── */}
+      <div className="official-print-document">
+        <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: '16px', marginBottom: '20px' }}>
+          <h1 style={{ fontSize: '22pt', fontWeight: '900', margin: '0 0 6px 0', letterSpacing: '-0.02em', color: '#000' }}>
+            {activeTournament?.title || '제20회 이순신장군배 전국윈드서핑대회'}
+          </h1>
+          <h2 style={{ fontSize: '16pt', fontWeight: '800', margin: '0 0 8px 0', color: '#111' }}>
+            [ {activeDivisionTab} ] 공식 경기 결과 및 순위표
+          </h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9.5pt', color: '#333', marginTop: '10px' }}>
+            <span>• 대회 기간: {activeTournament?.startDate || '2026. 10. 31'} ~ {activeTournament?.endDate || '11. 01'}</span>
+            <span>• 장소: 경상남도 통영시 도남동 수륙해수욕장 일원</span>
+            <span>• 확정/출력일시: {confirmedTime || new Date().toLocaleString('ko-KR')}</span>
+          </div>
+        </div>
+
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9.5pt', textAlign: 'center', color: '#000' }}>
+          <thead>
+            <tr style={{ background: '#f1f5f9', borderTop: '2px solid #000', borderBottom: '2px solid #000' }}>
+              <th style={{ padding: '8px 4px', width: '45px', border: '1px solid #cbd5e1' }}>순위</th>
+              <th style={{ padding: '8px 6px', width: '55px', border: '1px solid #cbd5e1' }}>배번</th>
+              <th style={{ padding: '8px 10px', minWidth: '85px', border: '1px solid #cbd5e1' }}>선수명</th>
+              <th style={{ padding: '8px 6px', width: '85px', border: '1px solid #cbd5e1' }}>생년월일</th>
+              <th style={{ padding: '8px 8px', minWidth: '95px', border: '1px solid #cbd5e1' }}>소속협회/클럽</th>
+              {rounds.map(r => (
+                <th key={r.key} style={{ padding: '8px 4px', width: '40px', border: '1px solid #cbd5e1' }}>
+                  {r.short}
+                </th>
+              ))}
+              <th style={{ padding: '8px 6px', width: '55px', border: '1px solid #cbd5e1', fontWeight: '900' }}>총점</th>
+              <th style={{ padding: '8px 10px', minWidth: '80px', border: '1px solid #cbd5e1' }}>비고</th>
+            </tr>
+          </thead>
+          <tbody>
+            {participants.map((p, idx) => {
+              const rankVal = p.rank || idx + 1;
+              return (
+                <tr key={p.id} style={{ borderBottom: '1px solid #cbd5e1' }}>
+                  <td style={{ padding: '7px 4px', fontWeight: '900', fontSize: '10.5pt', border: '1px solid #cbd5e1' }}>
+                    {rankVal}
+                  </td>
+                  <td style={{ padding: '7px 6px', border: '1px solid #cbd5e1' }}>{p.bibNumber || '-'}</td>
+                  <td style={{ padding: '7px 10px', fontWeight: '800', border: '1px solid #cbd5e1' }}>{p.name}</td>
+                  <td style={{ padding: '7px 6px', border: '1px solid #cbd5e1' }}>{p.birth || '-'}</td>
+                  <td style={{ padding: '7px 8px', border: '1px solid #cbd5e1' }}>{p.club || '-'}</td>
+                  {rounds.map(r => (
+                    <td key={r.key} style={{ padding: '7px 4px', border: '1px solid #cbd5e1' }}>
+                      {p[r.key] !== null && p[r.key] !== undefined && p[r.key] !== '' ? p[r.key] : '-'}
+                    </td>
+                  ))}
+                  <td style={{ padding: '7px 6px', fontWeight: '900', border: '1px solid #cbd5e1' }}>
+                    {p.total ?? 0}
+                  </td>
+                  <td style={{ padding: '7px 10px', fontSize: '9pt', border: '1px solid #cbd5e1' }}>
+                    {rankVal === 1 ? '🥇 1위 (우승)' : rankVal === 2 ? '🥈 2위 (준우승)' : rankVal === 3 ? '🥉 3위' : ''}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+
+        {/* 심판단 서명란 */}
+        <div style={{ marginTop: '50px', paddingTop: '20px', borderTop: '1px solid #cbd5e1', display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
+          <div style={{ textAlign: 'center', fontSize: '10.5pt' }}>
+            <p style={{ margin: '0 0 35px 0', fontWeight: '700' }}>기록원 (Scorer)</p>
+            <p style={{ margin: 0, color: '#334155' }}>성명: ________________ (인)</p>
+          </div>
+          <div style={{ textAlign: 'center', fontSize: '10.5pt' }}>
+            <p style={{ margin: '0 0 35px 0', fontWeight: '700' }}>심판위원장 (Chief Referee)</p>
+            <p style={{ margin: 0, color: '#334155' }}>성명: ________________ (인)</p>
+          </div>
+          <div style={{ textAlign: 'center', fontSize: '10.5pt' }}>
+            <p style={{ margin: '0 0 35px 0', fontWeight: '700' }}>경기위원장 (Race Committee)</p>
+            <p style={{ margin: 0, color: '#334155' }}>성명: ________________ (인)</p>
+          </div>
+        </div>
+      </div>
 
     </div>
   );

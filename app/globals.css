@@ -842,3 +842,70 @@ button, input, select, textarea {
   .site-header { padding: 0 8px !important; }
   .portal-header-brand { max-width: calc(100vw - 110px) !important; }
 }
+
+/* ──────────────────────────────────────────
+   공식 경기 결과 및 순위표 인쇄 스타일 (@media print)
+────────────────────────────────────────── */
+.official-print-document {
+  display: none;
+}
+
+@media print {
+  /* 배경 그래픽 및 테두리 인쇄 강제 허용 */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 10pt;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* 화면 전용 UI 요소들 일체 숨김 */
+  header, footer, nav, .site-header, .mobile-tabbar, .mobile-menu-overlay,
+  .btn-primary, .btn-secondary, button, input, select, textarea,
+  .hero-section, .subtab-bar, .mobile-header-actions, .mobile-hamburger-btn,
+  .no-print {
+    display: none !important;
+  }
+
+  /* 인쇄 전용 공식 문서만 완벽하게 노출 */
+  .official-print-document {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    padding: 10mm 15mm !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    box-sizing: border-box !important;
+  }
+
+  .official-print-document table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  .official-print-document th,
+  .official-print-document td {
+    border: 1px solid #94a3b8 !important;
+  }
+
+  .official-print-document thead {
+    display: table-header-group !important;
+  }
+
+  .official-print-document tr {
+    page-break-inside: avoid !important;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 10mm 12mm;
+  }
+}
+
