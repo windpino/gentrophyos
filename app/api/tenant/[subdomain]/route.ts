@@ -30,7 +30,7 @@ export async function GET(
 
     const tenantData = tenantDoc.data();
 
-    // 대회 일정 및 정보 정규화 (대회 기간 10/31~11/01, 접수 기간 9/28~10/18 130명 한도 조기마감 고정)
+    // 대회 일정 및 정보 정규화 (대회 기간 10/31~11/01, 접수 기간 9/28~10/18 130명 한도 조기마감, 지금 즉시 접수 가능하도록 활성화)
     const sanitizedOverviewConfig = {
       ...(tenantData.overviewConfig || {}),
       duration: OFFICIAL_DURATION,
@@ -39,6 +39,8 @@ export async function GET(
       registrationEndDate: OFFICIAL_REG_END,
       scale: OFFICIAL_SCALE,
       location: OFFICIAL_LOCATION,
+      registrationMode: 'FORCE_ENABLED',
+      registrationEnabled: true,
     };
 
     // 만약 DB에 기존 레거시 날짜/정보가 남아있다면 Firestore에 즉시 영구 정제 업데이트
@@ -49,7 +51,8 @@ export async function GET(
       tenantData.overviewConfig.registrationEndDate !== OFFICIAL_REG_END ||
       tenantData.overviewConfig.deadlineDate !== OFFICIAL_DEADLINE ||
       tenantData.overviewConfig.scale !== OFFICIAL_SCALE ||
-      tenantData.overviewConfig.location !== OFFICIAL_LOCATION
+      tenantData.overviewConfig.location !== OFFICIAL_LOCATION ||
+      tenantData.overviewConfig.registrationMode !== 'FORCE_ENABLED'
     ) {
       setDoc(tenantRef, { overviewConfig: sanitizedOverviewConfig }, { merge: true }).catch(() => {});
     }

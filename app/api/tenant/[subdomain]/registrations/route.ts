@@ -125,9 +125,8 @@ export async function POST(
     }
     const tenant = tenantDoc.data();
 
-    // 0. 대회 참가 신청 기간 및 접근 권한 유효성 검증
     const overviewConfig = tenant.overviewConfig || {};
-    const regMode = overviewConfig.registrationMode || (overviewConfig.registrationEnabled === false ? 'DISABLED' : (overviewConfig.registrationEnabled === 'FORCE_ENABLED' ? 'FORCE_ENABLED' : 'AUTO'));
+    const regMode = overviewConfig.registrationMode || (overviewConfig.registrationEnabled === false ? 'DISABLED' : 'FORCE_ENABLED');
     const startDate = overviewConfig.registrationStartDate ? new Date(overviewConfig.registrationStartDate) : null;
     const endDate = overviewConfig.registrationEndDate ? new Date(overviewConfig.registrationEndDate) : null;
     const now = new Date();

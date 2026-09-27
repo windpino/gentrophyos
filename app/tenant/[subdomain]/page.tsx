@@ -90,6 +90,7 @@ const getDefaultTenantData = (subdomain: string): TenantData => ({
     entryFeeGroup: '단체전 팀당 50,000원',
     deadlineDate: '2026년 10월 18일(일) 18:00 (130명 한도 조기마감)',
     registrationEnabled: true,
+    registrationMode: 'FORCE_ENABLED',
     registrationStartDate: '2026-09-28T09:00',
     registrationEndDate: '2026-10-18T18:00',
     registrationNotice: '',
@@ -541,8 +542,10 @@ export default function TenantPortalPage({
     registrationEndDate: '2026-10-18T18:00',
     scale: '130명 한도 (선착순 조기마감)',
     location: '경상남도 통영시 도남동 수륙해수욕장 일원',
+    registrationMode: 'FORCE_ENABLED',
+    registrationEnabled: true,
   };
-  const regMode = regConfig.registrationMode || (regConfig.registrationEnabled === false ? 'DISABLED' : (regConfig.registrationEnabled === 'FORCE_ENABLED' ? 'FORCE_ENABLED' : 'AUTO'));
+  const regMode = regConfig.registrationMode || 'FORCE_ENABLED';
   const regStartDateStr = '2026-09-28T09:00';
   const regEndDateStr = '2026-10-18T18:00';
   const regNotice = regConfig.registrationNotice || '';
@@ -557,8 +560,8 @@ export default function TenantPortalPage({
 
   if (regMode === 'FORCE_ENABLED') {
     regStatusType = 'OPEN';
-    regStatusMessage = '온라인 참가 신청 접수가 강제 활성화(오픈)되었습니다.';
-    regStatusBadge = { text: '접수 진행 중 (강제 활성화)', icon: '🟢' };
+    regStatusMessage = '온라인 참가 신청 접수가 정상 진행 중입니다. (130명 한도 선착순 조기마감)';
+    regStatusBadge = { text: '접수 진행 중', icon: '🟢' };
   } else if (regMode === 'DISABLED' || regConfig.registrationEnabled === false) {
     regStatusType = 'DISABLED';
     regStatusMessage = regNotice || '현재는 대회 주최 측에 의해 참가 신청 접수가 일시 중단되었습니다.';
@@ -1136,11 +1139,7 @@ export default function TenantPortalPage({
             <button
               onClick={() => {
                 if (!ongoingTournament) return;
-                if (isRegistrationOpen) {
-                  window.open(window.location.pathname + '?mode=apply', '_blank');
-                } else {
-                  alert(regStatusMessage);
-                }
+                window.open(window.location.pathname + '?mode=apply', '_blank');
               }}
               className="btn-primary"
               style={{
@@ -1148,17 +1147,15 @@ export default function TenantPortalPage({
                 fontSize: '1rem',
                 textTransform: 'uppercase',
                 fontWeight: '800',
-                background: isRegistrationOpen
-                  ? 'linear-gradient(135deg, var(--theme-gold) 0%, #b39366 100%)'
-                  : 'linear-gradient(135deg, #64748b 0%, #475569 100%)',
-                color: isRegistrationOpen ? '#1b263b' : '#ffffff',
+                background: 'linear-gradient(135deg, var(--theme-gold) 0%, #b39366 100%)',
+                color: '#1b263b',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '8px',
-                boxShadow: isRegistrationOpen ? '0 4px 15px rgba(197, 168, 128, 0.4)' : 'none',
+                boxShadow: '0 4px 15px rgba(197, 168, 128, 0.4)',
               }}
             >
-              <span>{isRegistrationOpen ? '참가 신청서 제출' : `참가 신청 (${regStatusBadge.text})`}</span>
+              <span>참가 신청서 작성 및 제출 (접수 중)</span>
             </button>
             <button
               onClick={() => {
@@ -2082,6 +2079,26 @@ export default function TenantPortalPage({
                       </p>
                       <p style={{ fontSize: '0.8rem', color: '#EF4444', marginTop: '2px', margin: 0 }}>* 130명 한도 선착순 조기마감</p>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        window.open(window.location.pathname + '?mode=apply', '_blank');
+                      }}
+                      className="btn-primary"
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        fontSize: '0.95rem',
+                        fontWeight: '800',
+                        justifyContent: 'center',
+                        marginTop: '8px',
+                        background: 'linear-gradient(135deg, var(--theme-gold) 0%, #b39366 100%)',
+                        color: '#1b263b',
+                        boxShadow: '0 4px 12px rgba(197, 168, 128, 0.4)',
+                      }}
+                    >
+                      참가 신청서 작성하기 ✍️
+                    </button>
                   </div>
                 </div>
 
