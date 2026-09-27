@@ -61,7 +61,7 @@ const DEFAULT_FORM_FIELDS = [
   { id: 'division', label: '6. 참가종목', type: 'radio', required: true, options: ['윈드포일 (남자부)', '윈드포일 (여자부)', '윙포일 (남자부)', '윙포일 (여자부)', '혼합오픈 (남자부)', '혼합오픈 (여자부)', '펀엔포뮬러 (남자부)', '펀엔포뮬러 (여자부)'] },
   { id: 'tshirtSize', label: '7. 티셔츠(기념품)사이즈', type: 'radio', required: true, options: ['S (95)', 'M (100)', 'L (105)', 'XL (110)'] },
   { id: 'vestAgreement', label: '8. 당일 대회본부에 조끼(배번티)를 반드시 수령하셔야 합니다.', type: 'checkbox', required: true, notice: '대회운영본부 수령 필수 (사용 후 반드시 반납바랍니다)', agreeLabel: '네. 확인했습니다.' },
-  { id: 'paymentNoticeAgreement', label: '9. 참가비 입금 안내 확인 동의', type: 'checkbox', required: true, notice: '• 입금계좌: 농협 351-1334-8643-33 (예금주: 통영시요트협회)\n• 참가 신청서에 작성하신 성명(이름)으로 반드시 입금해 주시기 바랍니다.\n• 입금 완료 순서(입금순)로 선착순 130명 참가 확정 처리됩니다.\n• 참가 확정 및 선수등록 승인 안내는 대회 공식 홈페이지에서 확인하실 수 있습니다.', agreeLabel: '네. 확인했습니다.' },
+  { id: 'paymentNoticeAgreement', label: '9. 참가비 입금 안내 확인 동의', type: 'checkbox', required: true, notice: '• 참가비: 30,000원 (클래스 구분 없이 일괄 3만원)\n• 입금계좌: 농협 351-1334-8643-33 (예금주: 통영시요트협회)\n• 참가 신청서에 작성하신 성명(이름)으로 반드시 입금해 주시기 바랍니다.\n• 입금 완료 순서(입금순)로 선착순 130명 참가 확정 처리됩니다.\n• 참가 확정 및 선수등록 승인 안내는 대회 공식 홈페이지에서 확인하실 수 있습니다.', agreeLabel: '네. 확인했습니다.' },
   { id: 'liabilityWaiver', label: '10. 면책 동의서 서약에 동의합니다.', type: 'textarea', required: true, textareaContent: '본인은 제20회 이순신장군배 전국윈드서핑대회 참가 활동 중 본인의 부주의로 인해 발생할 수 있는 사고, 즉 개인적 부상, 재산상 피해, 의학적인 사고 등 대회기간 중 발생한 사고에 대한 책임은 본인의 자의적인 참가에 의한 본인의 책임이며, 본 대회를 주관하는 관계자 및 기관에 대한 면책은 물론 책임전가를 하지 않을 것을 서약합니다.', agreeLabel: '네. 동의합니다.' },
   { id: 'privacyConsent', label: '11. 개인정보 수집에 동의합니다.', type: 'textarea', required: true, textareaContent: '• 정보수집 및 이용기관 : 통영시요트협회\n• 수집 정보 : 성명, 생년월일, 전화번호, 이메일, 소속 단체\n• 수집 목적 : 참가자 관리 및 보험가입, 대회 공지 전송 등\n• 보존 기간 : 대회 정산 이후 즉시 폐기합니다.', agreeLabel: '네. 동의합니다.' },
   { id: 'mediaConsent', label: '12. 초상권 및 저작권 사용 동의', type: 'textarea', required: true, textareaContent: '• 정보수집 및 이용기관 : 통영시요트협회\n• 수집 목적 : 대회 홍보, 결과 보도, 미디어 자료 활용 등\n• 활용 대상 : 대회 사진, 동영상 등 촬영물\n• 보존 기간 : 통영시요트협회 아카이브 보관용으로 영구 보존 및 활용에 동의합니다.', agreeLabel: '네. 동의합니다.' }
@@ -86,7 +86,7 @@ const getDefaultTenantData = (subdomain: string): TenantData => ({
     bankName: '농협 (NH농협)',
     accountNo: '351-1334-8643-33',
     accountHolder: '통영시요트협회',
-    entryFeeIndividual: '개인전 1종목당 30,000원',
+    entryFeeIndividual: '30,000원 (클래스 구분 없이 일괄 3만원)',
     entryFeeGroup: '단체전 팀당 50,000원',
     deadlineDate: '2026년 10월 18일(일) 18:00 (130명 한도 조기마감)',
     registrationEnabled: true,
@@ -94,7 +94,7 @@ const getDefaultTenantData = (subdomain: string): TenantData => ({
     registrationStartDate: '2026-09-28T09:00',
     registrationEndDate: '2026-10-18T18:00',
     registrationNotice: '',
-    rulesNote: '※ 참가 신청 시 소속 클럽 명확히 작성 필수.\n※ 모든 나이는 2026년 10월 31일을 기준으로 합니다.\n※ 참가인원은 선착순으로 130명이 충족되면 참가접수 기한이 조기에 마감될 수 있습니다.\n※ 참가비 입금계좌: 농협 351-1334-8643-33 (예금주: 통영시요트협회)\n※ 참가 신청서에 입력한 이름으로 반드시 입금해 주시기 바랍니다.\n※ 입금 완료 순서(입금순)로 선착순 130명 참가 확정 처리되며, 참가 확정 안내는 대회 공식 홈페이지에서 확인하실 수 있습니다.\n※ 신청기간 이후에는 취소 및 참가비 환불이 불가합니다.',
+    rulesNote: '※ 참가 신청 시 소속 클럽 명확히 작성 필수.\n※ 모든 나이는 2026년 10월 31일을 기준으로 합니다.\n※ 참가인원은 선착순으로 130명이 충족되면 참가접수 기한이 조기에 마감될 수 있습니다.\n※ 참가비: 30,000원 (클래스 구분 없이 일괄 3만원)\n※ 참가비 입금계좌: 농협 351-1334-8643-33 (예금주: 통영시요트협회)\n※ 참가 신청서에 입력한 이름으로 반드시 입금해 주시기 바랍니다.\n※ 입금 완료 순서(입금순)로 선착순 130명 참가 확정 처리되며, 참가 확정 안내는 대회 공식 홈페이지에서 확인하실 수 있습니다.\n※ 신청기간 이후에는 취소 및 참가비 환불이 불가합니다.',
     itineraryDay1: '10:00 - 12:00 : 선수단 현장등록 및 웜업\n12:00 - 13:00 : 중식\n13:00 - 13:30 : 개회식\n13:30 - 18:00 : 1일차 경기',
     itineraryDay2: '09:00 - 12:00 : 2일차 경기\n12:00 - 13:00 : 중식\n13:00 - 18:00 : 2일차 경기 및 시상식\n18:00 - : 폐회식 및 해산',
     itineraryDay3: '',
@@ -178,6 +178,14 @@ export default function TenantPortalPage({
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [submittedApplicantName, setSubmittedApplicantName] = useState('');
   const [accountCopied, setAccountCopied] = useState(false);
+
+  const handleCopyAccount = () => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText('농협 351-1334-8643-33');
+      setAccountCopied(true);
+      setTimeout(() => setAccountCopied(false), 2000);
+    }
+  };
 
 
 
@@ -325,6 +333,7 @@ export default function TenantPortalPage({
           data.tenant.overviewConfig.registrationEndDate = '2026-10-18T18:00';
           data.tenant.overviewConfig.scale = '130명 한도 (선착순 조기마감)';
           data.tenant.overviewConfig.location = '경상남도 통영시 도남동 수륙해수욕장 일원';
+          data.tenant.overviewConfig.entryFeeIndividual = '30,000원 (클래스 구분 없이 일괄 3만원)';
         }
         if (data.tenant.tournaments) {
           data.tenant.tournaments = data.tenant.tournaments.map((t: any) => (
@@ -611,14 +620,6 @@ export default function TenantPortalPage({
       }
     };
 
-    const handleCopyAccount = () => {
-      if (typeof navigator !== 'undefined' && navigator.clipboard) {
-        navigator.clipboard.writeText('351-1334-8643-33');
-        setAccountCopied(true);
-        setTimeout(() => setAccountCopied(false), 2000);
-      }
-    };
-
     return (
       <div 
         style={{
@@ -759,7 +760,7 @@ export default function TenantPortalPage({
                 }}
               >
                 {accountCopied ? <Check size={13} /> : <Copy size={13} />}
-                <span>{accountCopied ? '복사됨!' : '계좌 복사'}</span>
+                <span>{accountCopied ? '농협 계좌 복사됨!' : '계좌 복사'}</span>
               </button>
             </div>
 
@@ -780,7 +781,7 @@ export default function TenantPortalPage({
               </div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px dashed #e2e8f0', paddingTop: '6px', marginTop: '2px' }}>
                 <span style={{ color: '#64748b', fontSize: '0.85rem' }}>참가비</span>
-                <span style={{ fontWeight: '800', color: '#0284c7' }}>일반 70,000원 / 학생 50,000원</span>
+                <span style={{ fontWeight: '800', color: '#0284c7' }}>30,000원 (클래스 구분 없이 일괄 3만원)</span>
               </div>
             </div>
           </div>
@@ -979,19 +980,46 @@ export default function TenantPortalPage({
                 </p>
               </div>
 
-              <div>
-                <strong style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '6px' }}>▣ 접수방법 & 참가비 입금 안내</strong>
-                <p style={{ margin: 0, paddingLeft: '8px' }}>• {formatKoreanDateTime(regEndDateStr)} 까지 참가신청서를 작성하여 선수등록을 하여야 합니다. (130명 한도 선착순 조기마감)</p>
-                <p style={{ margin: 0, paddingLeft: '8px' }}>• 단체전은 2026년 11월 1일(일) 경기개시 1시간 전 선수등록하여 시행합니다.</p>
-                <p style={{ margin: 0, paddingLeft: '8px' }}>• 참가인원은 선착순 130명이 충족되면 참가접수 기한이 조기에 마감될 수 있습니다. (윙포일 부문은 남녀 각 10명으로 제한)</p>
-                <p style={{ margin: '4px 0 0 0', paddingLeft: '8px', color: 'var(--theme-primary)', fontWeight: '700' }}>
-                  • 참가비 입금계좌: 농협 351-1334-8643-33 (예금주: 통영시요트협회)
+              <div style={{ background: '#eff6ff', border: '1.5px solid #bfdbfe', borderRadius: '10px', padding: '14px 16px', marginTop: '6px' }}>
+                <strong style={{ display: 'block', fontSize: '0.95rem', color: '#1e40af', marginBottom: '8px' }}>▣ 접수방법 & 참가비 입금 안내 (필독)</strong>
+                <p style={{ margin: 0, paddingLeft: '8px', fontSize: '0.9rem' }}>• {formatKoreanDateTime(regEndDateStr)} 까지 참가신청서를 작성하여 선수등록을 하여야 합니다. (130명 한도 선착순 조기마감)</p>
+                <p style={{ margin: '6px 0 0 0', paddingLeft: '8px', fontSize: '0.95rem', color: '#0369a1', fontWeight: '800' }}>
+                  • 참가비: 30,000원 (클래스 구분 없이 일괄 3만원)
                 </p>
-                <p style={{ margin: 0, paddingLeft: '8px', color: '#b91c1c', fontWeight: '700' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', margin: '6px 0 0 0', paddingLeft: '8px' }}>
+                  <span style={{ color: 'var(--theme-primary)', fontWeight: '800', fontSize: '0.95rem' }}>
+                    • 참가비 입금계좌: 농협 351-1334-8643-33 (예금주: 통영시요트협회)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleCopyAccount}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      background: accountCopied ? '#10b981' : '#ffffff',
+                      color: accountCopied ? '#ffffff' : '#0284c7',
+                      border: accountCopied ? '1px solid #10b981' : '1px solid #bae6fd',
+                      borderRadius: '6px',
+                      padding: '4px 10px',
+                      fontSize: '0.8rem',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
+                    }}
+                  >
+                    {accountCopied ? <Check size={13} /> : <Copy size={13} />}
+                    <span>{accountCopied ? '농협 계좌 복사됨!' : '계좌 복사'}</span>
+                  </button>
+                </div>
+                <p style={{ margin: '6px 0 0 0', paddingLeft: '8px', color: '#b91c1c', fontWeight: '800', fontSize: '0.92rem' }}>
                   • 참가 신청서에 작성하신 성명(이름)과 반드시 동일하게 입금해 주시기 바랍니다.
                 </p>
-                <p style={{ margin: 0, paddingLeft: '8px', color: '#0f766e', fontWeight: '700' }}>
+                <p style={{ margin: '6px 0 0 0', paddingLeft: '8px', color: '#0f766e', fontWeight: '800', fontSize: '0.92rem' }}>
                   • 입금 완료 순서(입금순)로 선착순 130명 참가 확정 처리되며, 확정 안내는 대회 공식 홈페이지에서 확인하실 수 있습니다.
+                </p>
+                <p style={{ margin: '6px 0 0 0', paddingLeft: '8px', color: '#64748b', fontSize: '0.85rem' }}>
+                  • 단체전은 2026년 11월 1일(일) 경기개시 1시간 전 선수등록하여 시행합니다. (윙포일 부문은 남녀 각 10명으로 제한)
                 </p>
               </div>
 
@@ -1075,24 +1103,70 @@ export default function TenantPortalPage({
                 );
               }
               if (field.type === 'checkbox') {
+                const isPaymentNotice = field.id === 'paymentNoticeAgreement';
                 return (
-                  <div className="form-group" key={field.id} style={{ background: 'rgba(255,255,255,0.01)', padding: '16px', borderRadius: '10px', border: '1px solid var(--border-color)', marginTop: '16px' }}>
-                    <label className="form-label" style={{ fontWeight: '600', color: 'var(--text-main)' }}>
+                  <div 
+                    className="form-group" 
+                    key={field.id} 
+                    style={{ 
+                      background: isPaymentNotice ? '#f0f9ff' : 'rgba(255,255,255,0.01)', 
+                      padding: '18px', 
+                      borderRadius: '12px', 
+                      border: isPaymentNotice ? '2px solid #0284c7' : '1px solid var(--border-color)', 
+                      marginTop: '16px' 
+                    }}
+                  >
+                    <label className="form-label" style={{ fontWeight: '800', color: isPaymentNotice ? '#0369a1' : 'var(--text-main)', fontSize: isPaymentNotice ? '1.05rem' : 'inherit' }}>
                       {field.label} {field.required && <span style={{ color: '#EF4444' }}>*</span>}
                     </label>
-                    {field.notice && (
+
+                    {isPaymentNotice ? (
+                      <div style={{ background: '#ffffff', border: '1px solid #bae6fd', borderRadius: '10px', padding: '14px 16px', marginBottom: '14px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
+                          <span style={{ fontWeight: '900', color: '#0284c7', fontSize: '1.02rem' }}>
+                            참가비: 30,000원 (클래스 구분 없이 일괄 3만원)
+                          </span>
+                          <button
+                            type="button"
+                            onClick={handleCopyAccount}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              background: accountCopied ? '#10b981' : '#f0f9ff',
+                              color: accountCopied ? '#ffffff' : '#0284c7',
+                              border: accountCopied ? '1px solid #10b981' : '1px solid #bae6fd',
+                              borderRadius: '6px',
+                              padding: '4px 10px',
+                              fontSize: '0.8rem',
+                              fontWeight: '700',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            {accountCopied ? <Check size={13} /> : <Copy size={13} />}
+                            <span>{accountCopied ? '농협 계좌 복사됨!' : '계좌 복사'}</span>
+                          </button>
+                        </div>
+                        <p style={{ fontSize: '0.88rem', color: '#334155', margin: 0, whiteSpace: 'pre-line', lineHeight: '1.65', fontWeight: '500' }}>
+                          {field.notice || '• 참가비: 30,000원 (클래스 구분 없이 일괄 3만원)\n• 입금계좌: 농협 351-1334-8643-33 (예금주: 통영시요트협회)\n• 참가 신청서에 작성하신 성명(이름)으로 반드시 입금해 주시기 바랍니다.\n• 입금 완료 순서(입금순)로 선착순 130명 참가 확정 처리됩니다.\n• 참가 확정 및 선수등록 승인 안내는 대회 공식 홈페이지에서 확인하실 수 있습니다.'}
+                        </p>
+                      </div>
+                    ) : field.notice && (
                       <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '12px', whiteSpace: 'pre-line', lineHeight: '1.6' }}>
                         {field.notice}
                       </p>
                     )}
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', marginTop: '6px' }}>
                       <input
                         type="checkbox"
                         checked={!!formResponses[field.id]}
                         onChange={(e) => handleInputChange(field.id, e.target.checked ? (field.agreeLabel || '확인함') : '')}
-                        style={{ width: '18px', height: '18px' }}
+                        style={{ width: '20px', height: '20px', cursor: 'pointer' }}
                       />
-                      <span style={{ fontWeight: '600' }}>{field.agreeLabel || '네. 확인했습니다.'}</span>
+                      <span style={{ fontWeight: '700', fontSize: '0.95rem', color: isPaymentNotice ? '#0f172a' : 'inherit' }}>
+                        {field.agreeLabel || '네. 확인했습니다.'}
+                      </span>
                     </label>
                   </div>
                 );
@@ -2597,6 +2671,40 @@ export default function TenantPortalPage({
                       <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem', fontWeight: '700' }}>접수 기간</span>
                       <p style={{ fontWeight: '700', color: 'var(--text-main)', marginTop: '4px', fontSize: '0.92rem', margin: 0 }}>
                         2026. 09. 28(월) 09:00 ~ 10. 18(일) 18:00
+                      </p>
+                    </div>
+                    <div>
+                      <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem', fontWeight: '700' }}>참가비</span>
+                      <p style={{ fontWeight: '800', color: '#0284c7', marginTop: '4px', fontSize: '1.02rem', margin: 0 }}>
+                        30,000원 <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#64748b' }}>(클래스 구분 없이 일괄 3만원)</span>
+                      </p>
+                    </div>
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: '700' }}>입금 계좌</span>
+                        <button
+                          type="button"
+                          onClick={handleCopyAccount}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px',
+                            background: accountCopied ? '#10b981' : '#f0f9ff',
+                            color: accountCopied ? '#ffffff' : '#0284c7',
+                            border: accountCopied ? '1px solid #10b981' : '1px solid #bae6fd',
+                            borderRadius: '4px',
+                            padding: '2px 8px',
+                            fontSize: '0.75rem',
+                            fontWeight: '700',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {accountCopied ? <Check size={11} /> : <Copy size={11} />}
+                          <span>{accountCopied ? '농협 계좌 복사됨!' : '계좌 복사'}</span>
+                        </button>
+                      </div>
+                      <p style={{ fontWeight: '700', color: 'var(--text-main)', fontSize: '0.92rem', margin: 0 }}>
+                        농협 351-1334-8643-33 <span style={{ fontSize: '0.82rem', color: '#64748b' }}>(통영시요트협회)</span>
                       </p>
                     </div>
                     <div>
