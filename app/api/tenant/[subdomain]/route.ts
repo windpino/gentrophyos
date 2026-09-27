@@ -11,7 +11,7 @@ const OFFICIAL_DEADLINE = '2026년 10월 18일(일) 18:00 (130명 한도 조기�
 const OFFICIAL_REG_START = '2026-09-28T09:00';
 const OFFICIAL_REG_END = '2026-10-18T18:00';
 const OFFICIAL_SCALE = '130명 한도 (선착순 조기마감)';
-const OFFICIAL_LOCATION = '경상남도 통영시 도남항 특설경기장 및 트라이애슬론 광장 일원';
+const OFFICIAL_LOCATION = '경상남도 통영시 도남동 수륙해수욕장 일원';
 const OFFICIAL_START_DATE = '2026-10-31';
 const OFFICIAL_END_DATE = '2026-11-01';
 
@@ -38,7 +38,7 @@ export async function GET(
       registrationStartDate: OFFICIAL_REG_START,
       registrationEndDate: OFFICIAL_REG_END,
       scale: OFFICIAL_SCALE,
-      location: tenantData.overviewConfig?.location || OFFICIAL_LOCATION,
+      location: OFFICIAL_LOCATION,
     };
 
     // 만약 DB에 기존 레거시 날짜/정보가 남아있다면 Firestore에 즉시 영구 정제 업데이트
@@ -48,7 +48,8 @@ export async function GET(
       tenantData.overviewConfig.registrationStartDate !== OFFICIAL_REG_START ||
       tenantData.overviewConfig.registrationEndDate !== OFFICIAL_REG_END ||
       tenantData.overviewConfig.deadlineDate !== OFFICIAL_DEADLINE ||
-      tenantData.overviewConfig.scale !== OFFICIAL_SCALE
+      tenantData.overviewConfig.scale !== OFFICIAL_SCALE ||
+      tenantData.overviewConfig.location !== OFFICIAL_LOCATION
     ) {
       setDoc(tenantRef, { overviewConfig: sanitizedOverviewConfig }, { merge: true }).catch(() => {});
     }

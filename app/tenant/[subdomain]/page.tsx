@@ -77,7 +77,7 @@ const getDefaultTenantData = (subdomain: string): TenantData => ({
   overviewConfig: {
     title: '제20회 이순신장군배 전국윈드서핑대회',
     duration: '2026. 10. 31(토) ~ 11. 01(일) (1박 2일)',
-    location: '경상남도 통영시 도남항 특설경기장 및 트라이애슬론 광장 일원',
+    location: '경상남도 통영시 도남동 수륙해수욕장 일원',
     scale: '130명 한도 (선착순 조기마감)',
     host: '통영시, 통영시요트협회',
     sponsor: '경상남도, 경상남도체육회, 통영시체육회',
@@ -135,7 +135,7 @@ export default function TenantPortalPage({
     registrationStartDate: '2026-09-28T09:00',
     registrationEndDate: '2026-10-18T18:00',
     scale: '130명 한도 (선착순 조기마감)',
-    location: tenant?.overviewConfig?.location || defaultData.overviewConfig?.location || '경상남도 통영시 도남항 특설경기장 및 트라이애슬론 광장 일원',
+    location: '경상남도 통영시 도남동 수륙해수욕장 일원',
   };
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'notice' | 'intro' | 'live' | 'gallery' | 'archive'>('overview');
@@ -302,7 +302,7 @@ export default function TenantPortalPage({
           data.tenant.overviewConfig.registrationStartDate = '2026-09-28T09:00';
           data.tenant.overviewConfig.registrationEndDate = '2026-10-18T18:00';
           data.tenant.overviewConfig.scale = '130명 한도 (선착순 조기마감)';
-          data.tenant.overviewConfig.location = data.tenant.overviewConfig.location || '경상남도 통영시 도남항 특설경기장 및 트라이애슬론 광장 일원';
+          data.tenant.overviewConfig.location = '경상남도 통영시 도남동 수륙해수욕장 일원';
         }
         if (data.tenant.tournaments) {
           data.tenant.tournaments = data.tenant.tournaments.map((t: any) => (
@@ -540,7 +540,7 @@ export default function TenantPortalPage({
     registrationStartDate: '2026-09-28T09:00',
     registrationEndDate: '2026-10-18T18:00',
     scale: '130명 한도 (선착순 조기마감)',
-    location: tenant.overviewConfig?.location || '경상남도 통영시 도남항 특설경기장 및 트라이애슬론 광장 일원',
+    location: '경상남도 통영시 도남동 수륙해수욕장 일원',
   };
   const regMode = regConfig.registrationMode || (regConfig.registrationEnabled === false ? 'DISABLED' : (regConfig.registrationEnabled === 'FORCE_ENABLED' ? 'FORCE_ENABLED' : 'AUTO'));
   const regStartDateStr = '2026-09-28T09:00';
@@ -718,7 +718,7 @@ export default function TenantPortalPage({
                 <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>주 관 :</strong> {regConfig.sponsor || '경상남도, 경상남도체육회, 통영시체육회'}</p>
                 <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>후 원 :</strong> {regConfig.supporter || '대한윈드서핑카이트보딩협회'}</p>
                 <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>대회일정 :</strong> {regConfig.duration || '2026. 10. 31(토) ~ 11. 01(일) (1박 2일)'}</p>
-                <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>장 소 :</strong> {regConfig.location || '경상남도 통영시 도남항 특설경기장 및 트라이애슬론 광장 일원'}</p>
+                <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>장 소 :</strong> {regConfig.location || '경상남도 통영시 도남동 수륙해수욕장 일원'}</p>
                 <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>참가인원 :</strong> {regConfig.scale || '130명 한도 (선착순 조기마감)'}</p>
               </div>
 

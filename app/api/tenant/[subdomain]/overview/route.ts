@@ -43,7 +43,7 @@ export async function POST(
       registrationStartDate: '2026-09-28T09:00',
       registrationEndDate: '2026-10-18T18:00',
       scale: '130명 한도 (선착순 조기마감)',
-      location: overviewConfig.location || existingConfig.location || '경상남도 통영시 도남항 특설경기장 및 트라이애슬론 광장 일원',
+      location: overviewConfig.location || existingConfig.location || '경상남도 통영시 도남동 수륙해수욕장 일원',
     };
 
     await setDoc(tenantRef, {

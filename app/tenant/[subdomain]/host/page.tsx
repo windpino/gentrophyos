@@ -247,7 +247,7 @@ export default function HostDashboardPage({
         registrationEndDate: '2026-10-18T18:00',
         deadlineDate: '2026년 10월 18일(일) 18:00 (130명 한도 조기마감)',
         scale: '130명 한도 (선착순 조기마감)',
-        location: currentConfig.location || '경상남도 통영시 도남항 특설경기장 및 트라이애슬론 광장 일원',
+        location: '경상남도 통영시 도남동 수륙해수욕장 일원',
         registrationMode: regMode,
         registrationEnabled: regMode !== 'DISABLED',
         registrationNotice: regNotice,
