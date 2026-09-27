@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, use } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Award, Calendar, Layers, FileText, CheckCircle2, UserPlus, RefreshCw, Archive, Search, Compass, MapPin, Phone, Sparkles, Trophy, Smartphone, ShieldCheck, X, AlertTriangle } from 'lucide-react';
+import { Award, Calendar, Layers, FileText, CheckCircle2, UserPlus, RefreshCw, Archive, Search, Compass, MapPin, Phone, Sparkles, Trophy, Smartphone, ShieldCheck, X, AlertTriangle, Menu } from 'lucide-react';
 
 interface TenantData {
   id: string;
@@ -142,6 +142,7 @@ export default function TenantPortalPage({
   const [activeTab, setActiveTab] = useState<'overview' | 'notice' | 'intro' | 'live' | 'gallery' | 'archive'>('overview');
   const [activeSubTab, setActiveSubTab] = useState<string>('');
   const [activeDivisionTab, setActiveDivisionTab] = useState<string>('윈드포일 (남자부)');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // 대회 선택 (진행중인 대회)
   const [activeTournamentId, setActiveTournamentId] = useState<string>('tour-active');
@@ -943,17 +944,21 @@ export default function TenantPortalPage({
 
       {/* 1. 상단 화이트 브랜드 헤더 */}
       <header className="site-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div 
+          className="portal-header-brand"
+          style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: '1 1 auto', cursor: 'pointer' }}
+          onClick={() => setActiveTab('overview')}
+        >
           <img
             src="/images/logo_new.png"
             alt="제20회 이순신장군배 전국윈드서핑대회 로고"
-            style={{ height: '52px', width: 'auto', objectFit: 'contain', mixBlendMode: 'multiply' }}
+            style={{ height: '48px', width: 'auto', objectFit: 'contain', mixBlendMode: 'multiply', flexShrink: 0 }}
           />
-          <div className="brand-text" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: '800', color: 'var(--text-main)', lineHeight: '1.25', fontFamily: 'var(--font-title)' }}>
+          <div className="brand-text" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 0, overflow: 'hidden' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: '800', color: 'var(--text-main)', lineHeight: '1.25', fontFamily: 'var(--font-title)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               제20회 이순신장군배
             </span>
-            <span style={{ fontSize: '0.85rem', fontWeight: '800', color: 'var(--theme-primary)', lineHeight: '1.25', fontFamily: 'var(--font-title)' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: '800', color: 'var(--theme-primary)', lineHeight: '1.25', fontFamily: 'var(--font-title)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               전국윈드서핑대회
             </span>
           </div>
@@ -1080,34 +1085,247 @@ export default function TenantPortalPage({
           })}
         </nav>
 
+        {/* 모바일 우측 액션: 참가신청 버튼 + 햄버거 메뉴 버튼 */}
+        <div className="mobile-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+          <div className="mobile-header-apply">
+            <button
+              type="button"
+              onClick={() => {
+                window.open(window.location.pathname + '?mode=apply', '_blank');
+              }}
+              style={{
+                padding: '6px 12px',
+                fontSize: '0.78rem',
+                fontWeight: '800',
+                background: 'linear-gradient(135deg, var(--theme-gold) 0%, #b39366 100%)',
+                color: '#1b263b',
+                border: 'none',
+                borderRadius: '18px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                boxShadow: '0 2px 8px rgba(197, 168, 128, 0.3)',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              ✍️ 참가신청
+            </button>
+          </div>
 
-        {/* 모바일 전용 빠른 참가신청 버튼 */}
-        <div className="mobile-header-apply">
           <button
             type="button"
-            onClick={() => {
-              window.open(window.location.pathname + '?mode=apply', '_blank');
-            }}
+            className="mobile-hamburger-btn"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            aria-label="전체 메뉴 열기"
             style={{
-              padding: '6px 14px',
-              fontSize: '0.8rem',
-              fontWeight: '800',
-              background: 'linear-gradient(135deg, var(--theme-gold) 0%, #b39366 100%)',
-              color: '#1b263b',
-              border: 'none',
-              borderRadius: '20px',
+              padding: '6px',
+              borderRadius: '8px',
+              border: '1px solid var(--border-color)',
+              background: '#f8fafc',
+              color: 'var(--text-main)',
               cursor: 'pointer',
-              display: 'flex',
+              display: 'none',
               alignItems: 'center',
-              gap: '4px',
-              boxShadow: '0 2px 8px rgba(197, 168, 128, 0.3)',
-              whiteSpace: 'nowrap',
+              justifyContent: 'center',
+              width: '38px',
+              height: '38px',
+              flexShrink: 0,
             }}
           >
-            ✍️ 참가신청
+            {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
       </header>
+
+      {/* 모바일 햄버거 드로어 슬라이드 메뉴 */}
+      {isMobileMenuOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(10, 17, 40, 0.6)',
+            backdropFilter: 'blur(4px)',
+            WebkitBackdropFilter: 'blur(4px)',
+            zIndex: 9999,
+            display: 'flex',
+            justifyContent: 'flex-end',
+            animation: 'fadeIn 0.2s ease',
+          }}
+          onClick={() => setIsMobileMenuOpen(false)}
+        >
+          <div
+            style={{
+              width: '84%',
+              maxWidth: '320px',
+              height: '100%',
+              background: '#ffffff',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '-8px 0 25px rgba(0,0,0,0.2)',
+              overflowY: 'auto',
+              padding: '20px 18px',
+              boxSizing: 'border-box',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 드로어 상단 헤더 */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '16px', borderBottom: '1px solid var(--border-color)', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                <img src="/images/logo_new.png" alt="로고" style={{ height: '36px', width: 'auto', objectFit: 'contain', mixBlendMode: 'multiply' }} />
+                <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
+                  <span style={{ fontSize: '0.82rem', fontWeight: '900', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    제20회 이순신장군배
+                  </span>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--theme-primary)', fontWeight: '800' }}>
+                    전체 메뉴
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(false)}
+                style={{
+                  background: '#f1f5f9',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: 'var(--text-muted)'
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* 메인 메뉴 네비게이션 */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+              {[
+                { id: 'overview', label: '대회 요강', icon: '📋', defaultSubTab: '' },
+                { id: 'intro', label: '대회소개 및 일정', icon: '⛵', defaultSubTab: 'intro-greeting' },
+                { id: 'live', label: '실시간 경기운영 / 순위', icon: '⏱️', defaultSubTab: 'live-leaderboard', disabled: !ongoingTournament },
+                { id: 'gallery', label: '미디어 & 갤러리', icon: '📸', defaultSubTab: 'gallery-photos' },
+                { id: 'archive', label: '역대 기록관', icon: '🏆', defaultSubTab: 'archive-home' },
+                { id: 'notice', label: '개최공시서', icon: '📄', defaultSubTab: '' },
+              ].map((item) => {
+                const isActive = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    disabled={item.disabled}
+                    onClick={() => {
+                      if (!item.disabled) {
+                        setActiveTab(item.id as any);
+                        setActiveSubTab(item.defaultSubTab);
+                        setIsMobileMenuOpen(false);
+                      }
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '12px 14px',
+                      borderRadius: '10px',
+                      border: 'none',
+                      background: isActive ? 'rgba(31, 111, 139, 0.08)' : 'transparent',
+                      color: item.disabled ? '#cbd5e1' : (isActive ? 'var(--theme-primary)' : 'var(--text-main)'),
+                      fontWeight: isActive ? '800' : '600',
+                      fontSize: '0.92rem',
+                      textAlign: 'left',
+                      cursor: item.disabled ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.15s ease',
+                      width: '100%',
+                    }}
+                  >
+                    <span style={{ fontSize: '1.15rem' }}>{item.icon}</span>
+                    <span style={{ flex: 1 }}>{item.label}</span>
+                    {isActive && (
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--theme-primary)' }}></span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* 드로어 하단 바로가기 버튼 */}
+            <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  window.open(window.location.pathname + '?mode=apply', '_blank');
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  padding: '12px',
+                  borderRadius: '10px',
+                  background: 'linear-gradient(135deg, var(--theme-gold) 0%, #b39366 100%)',
+                  color: '#1b263b',
+                  fontWeight: '800',
+                  fontSize: '0.9rem',
+                  border: 'none',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 10px rgba(197, 168, 128, 0.35)',
+                }}
+              >
+                ✍️ 참가 신청서 작성
+              </button>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
+                <a
+                  href={typeof window !== 'undefined' && window.location.pathname.startsWith('/tenant/') ? `/tenant/${subdomain}/host` : '/host'}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px',
+                    padding: '9px 6px',
+                    borderRadius: '8px',
+                    background: '#f1f5f9',
+                    color: '#334155',
+                    fontSize: '0.78rem',
+                    fontWeight: '700',
+                    textDecoration: 'none',
+                    border: '1px solid #e2e8f0',
+                  }}
+                >
+                  🔐 주최자 ERP
+                </a>
+                <a
+                  href={typeof window !== 'undefined' && window.location.pathname.startsWith('/tenant/') ? `/tenant/${subdomain}/referee` : '/referee'}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px',
+                    padding: '9px 6px',
+                    borderRadius: '8px',
+                    background: '#f1f5f9',
+                    color: '#334155',
+                    fontSize: '0.78rem',
+                    fontWeight: '700',
+                    textDecoration: 'none',
+                    border: '1px solid #e2e8f0',
+                  }}
+                >
+                  ⚖️ 심판 입력기
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 2. 히어로 배너 */}
       <section className="hero-section animate-fade-in">
@@ -2063,7 +2281,7 @@ export default function TenantPortalPage({
                               </strong>
                             </td>
                             {i === 0 && (
-                              <td rowSpan={arr.length} style={{ verticalAlign: 'middle', background: '#f8fafc', fontSize: '0.85rem', color: 'var(--text-muted)', padding: '16px', minWidth: '220px' }}>
+                              <td rowSpan={arr.length} style={{ verticalAlign: 'middle', background: '#f8fafc', fontSize: '0.85rem', color: 'var(--text-muted)', padding: '16px', minWidth: '180px', maxWidth: '300px', wordBreak: 'keep-all' }}>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                   {arr
                                     .map(r => r.note)
