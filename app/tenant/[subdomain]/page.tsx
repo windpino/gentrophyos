@@ -78,7 +78,7 @@ const getDefaultTenantData = (subdomain: string): TenantData => ({
     title: '제20회 이순신장군배 전국윈드서핑대회',
     duration: '2026. 10. 31(토) ~ 11. 01(일) (1박 2일)',
     location: '경상남도 통영시 도남항 특설경기장 및 트라이애슬론 광장 일원',
-    scale: '130명 (선착순 마감)',
+    scale: '130명 한도 (선착순 조기마감)',
     host: '통영시, 통영시요트협회',
     sponsor: '경상남도, 경상남도체육회, 통영시체육회',
     supporter: '대한윈드서핑카이트보딩협회',
@@ -88,10 +88,10 @@ const getDefaultTenantData = (subdomain: string): TenantData => ({
     accountHolder: '통영시요트협회',
     entryFeeIndividual: '개인전 1종목당 30,000원',
     entryFeeGroup: '단체전 팀당 50,000원',
-    deadlineDate: '2026년 10월 23일(금) 18:00',
+    deadlineDate: '2026년 10월 18일(일) 18:00 (130명 한도 조기마감)',
     registrationEnabled: true,
-    registrationStartDate: '2026-08-10T09:00',
-    registrationEndDate: '2026-10-23T18:00',
+    registrationStartDate: '2026-09-28T09:00',
+    registrationEndDate: '2026-10-18T18:00',
     registrationNotice: '',
     rulesNote: '※ 참가 신청 시 소속 클럽 명확히 작성 필수.\n※ 모든 나이는 2026년 10월 31일을 기준으로 합니다.\n※ 참가인원은 선착순으로 130명이 충족되면 참가접수 기한이 조기에 마감될 수 있습니다.\n※ 참가비 입금계좌: 농협 351-1334-8643-33 (예금주: 통영시요트협회)\n※ 참가 신청서에 입력한 이름으로 반드시 입금해 주시기 바랍니다.\n※ 입금 완료 순서(입금순)로 선착순 130명 참가 확정 처리되며, 참가 확정 안내는 대회 공식 홈페이지에서 확인하실 수 있습니다.\n※ 신청기간 이후에는 취소 및 참가비 환불이 불가합니다.',
     itineraryDay1: '10:00 - 12:00 : 선수단 현장등록 및 웜업\n12:00 - 13:00 : 중식\n13:00 - 13:30 : 개회식\n13:30 - 18:00 : 1일차 경기',
@@ -129,11 +129,12 @@ export default function TenantPortalPage({
   const overview = {
     ...defaultData.overviewConfig,
     ...(tenant?.overviewConfig || {}),
-    // 공식 대회 일정 불변 고정
+    // 공식 대회 일정 및 접수 기간 불변 고정
     duration: '2026. 10. 31(토) ~ 11. 01(일) (1박 2일)',
-    deadlineDate: tenant?.overviewConfig?.deadlineDate || defaultData.overviewConfig?.deadlineDate || '2026년 10월 23일(금) 18:00',
-    registrationStartDate: tenant?.overviewConfig?.registrationStartDate || '2026-08-10T09:00',
-    registrationEndDate: tenant?.overviewConfig?.registrationEndDate || '2026-10-23T18:00',
+    deadlineDate: '2026년 10월 18일(일) 18:00 (130명 한도 조기마감)',
+    registrationStartDate: '2026-09-28T09:00',
+    registrationEndDate: '2026-10-18T18:00',
+    scale: '130명 한도 (선착순 조기마감)',
     location: tenant?.overviewConfig?.location || defaultData.overviewConfig?.location || '경상남도 통영시 도남항 특설경기장 및 트라이애슬론 광장 일원',
   };
   const [loading, setLoading] = useState(true);
@@ -297,9 +298,10 @@ export default function TenantPortalPage({
       if (data.tenant) {
         if (data.tenant.overviewConfig) {
           data.tenant.overviewConfig.duration = '2026. 10. 31(토) ~ 11. 01(일) (1박 2일)';
-          data.tenant.overviewConfig.deadlineDate = data.tenant.overviewConfig.deadlineDate || '2026년 10월 23일(금) 18:00';
-          data.tenant.overviewConfig.registrationStartDate = data.tenant.overviewConfig.registrationStartDate || '2026-08-10T09:00';
-          data.tenant.overviewConfig.registrationEndDate = data.tenant.overviewConfig.registrationEndDate || '2026-10-23T18:00';
+          data.tenant.overviewConfig.deadlineDate = '2026년 10월 18일(일) 18:00 (130명 한도 조기마감)';
+          data.tenant.overviewConfig.registrationStartDate = '2026-09-28T09:00';
+          data.tenant.overviewConfig.registrationEndDate = '2026-10-18T18:00';
+          data.tenant.overviewConfig.scale = '130명 한도 (선착순 조기마감)';
           data.tenant.overviewConfig.location = data.tenant.overviewConfig.location || '경상남도 통영시 도남항 특설경기장 및 트라이애슬론 광장 일원';
         }
         if (data.tenant.tournaments) {
@@ -534,14 +536,15 @@ export default function TenantPortalPage({
   const regConfig = {
     ...(tenant.overviewConfig || {}),
     duration: '2026. 10. 31(토) ~ 11. 01(일) (1박 2일)',
-    deadlineDate: tenant.overviewConfig?.deadlineDate || '2026년 10월 23일(금) 18:00',
-    registrationStartDate: tenant.overviewConfig?.registrationStartDate || '2026-08-10T09:00',
-    registrationEndDate: tenant.overviewConfig?.registrationEndDate || '2026-10-23T18:00',
+    deadlineDate: '2026년 10월 18일(일) 18:00 (130명 한도 조기마감)',
+    registrationStartDate: '2026-09-28T09:00',
+    registrationEndDate: '2026-10-18T18:00',
+    scale: '130명 한도 (선착순 조기마감)',
     location: tenant.overviewConfig?.location || '경상남도 통영시 도남항 특설경기장 및 트라이애슬론 광장 일원',
   };
   const regMode = regConfig.registrationMode || (regConfig.registrationEnabled === false ? 'DISABLED' : (regConfig.registrationEnabled === 'FORCE_ENABLED' ? 'FORCE_ENABLED' : 'AUTO'));
-  const regStartDateStr = regConfig.registrationStartDate || '2026-08-10T09:00';
-  const regEndDateStr = regConfig.registrationEndDate || '2026-10-23T18:00';
+  const regStartDateStr = '2026-09-28T09:00';
+  const regEndDateStr = '2026-10-18T18:00';
   const regNotice = regConfig.registrationNotice || '';
 
   const now = new Date();
@@ -629,7 +632,7 @@ export default function TenantPortalPage({
                 • <strong>공식 접수 시작 :</strong> {formatKoreanDateTime(regStartDateStr)}
               </p>
               <p style={{ margin: 0 }}>
-                • <strong>공식 접수 마감 :</strong> {formatKoreanDateTime(regEndDateStr)}
+                • <strong>공식 접수 마감 :</strong> {formatKoreanDateTime(regEndDateStr)} (130명 한도 선착순 조기마감)
               </p>
               <p style={{ margin: 0 }}>
                 • <strong>문의처 :</strong> {overview.contactPhone || '대회 사무국 (010-3648-9838)'}
@@ -716,7 +719,7 @@ export default function TenantPortalPage({
                 <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>후 원 :</strong> {regConfig.supporter || '대한윈드서핑카이트보딩협회'}</p>
                 <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>대회일정 :</strong> {regConfig.duration || '2026. 10. 31(토) ~ 11. 01(일) (1박 2일)'}</p>
                 <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>장 소 :</strong> {regConfig.location || '경상남도 통영시 도남항 특설경기장 및 트라이애슬론 광장 일원'}</p>
-                <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>참가인원 :</strong> {regConfig.scale || '130명 (선착순 마감)'}</p>
+                <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>참가인원 :</strong> {regConfig.scale || '130명 한도 (선착순 조기마감)'}</p>
               </div>
 
               <div>
@@ -735,7 +738,7 @@ export default function TenantPortalPage({
 
               <div>
                 <strong style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '6px' }}>▣ 접수방법 & 참가비 입금 안내</strong>
-                <p style={{ margin: 0, paddingLeft: '8px' }}>• {formatKoreanDateTime(regEndDateStr)} 까지 참가신청서를 작성하여 선수등록을 하여야 합니다.</p>
+                <p style={{ margin: 0, paddingLeft: '8px' }}>• {formatKoreanDateTime(regEndDateStr)} 까지 참가신청서를 작성하여 선수등록을 하여야 합니다. (130명 한도 선착순 조기마감)</p>
                 <p style={{ margin: 0, paddingLeft: '8px' }}>• 단체전은 2026년 11월 1일(일) 경기개시 1시간 전 선수등록하여 시행합니다.</p>
                 <p style={{ margin: 0, paddingLeft: '8px' }}>• 참가인원은 선착순 130명이 충족되면 참가접수 기한이 조기에 마감될 수 있습니다. (윙포일 부문은 남녀 각 10명으로 제한)</p>
                 <p style={{ margin: '4px 0 0 0', paddingLeft: '8px', color: 'var(--theme-primary)', fontWeight: '700' }}>
@@ -752,7 +755,7 @@ export default function TenantPortalPage({
               <div>
                 <strong style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '6px' }}>▣ 기타 & 문의사항</strong>
                 <p style={{ margin: 0, paddingLeft: '8px' }}>• 통영윈드서핑협회 전무이사 임병훈 (010-3648-9838)</p>
-                <p style={{ margin: 0, paddingLeft: '8px' }}>• 접수 기간: {formatKoreanDateTime(regStartDateStr)} ~ {formatKoreanDateTime(regEndDateStr)}</p>
+                <p style={{ margin: 0, paddingLeft: '8px' }}>• 접수 기간: {formatKoreanDateTime(regStartDateStr)} ~ {formatKoreanDateTime(regEndDateStr)} (130명 한도 선착순 조기마감)</p>
               </div>
             </div>
           </div>
@@ -2067,11 +2070,17 @@ export default function TenantPortalPage({
                   </h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', fontSize: '0.9rem', marginTop: '12px' }}>
                     <div>
-                      <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem', fontWeight: '700' }}>접수 마감일</span>
-                      <p style={{ fontWeight: '800', color: 'var(--text-main)', marginTop: '4px', fontSize: '1.05rem', margin: 0 }}>
+                      <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem', fontWeight: '700' }}>접수 기간</span>
+                      <p style={{ fontWeight: '700', color: 'var(--text-main)', marginTop: '4px', fontSize: '0.92rem', margin: 0 }}>
+                        2026. 09. 28(월) 09:00 ~ 10. 18(일) 18:00
+                      </p>
+                    </div>
+                    <div>
+                      <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem', fontWeight: '700' }}>접수 마감</span>
+                      <p style={{ fontWeight: '800', color: 'var(--text-main)', marginTop: '4px', fontSize: '1.02rem', margin: 0 }}>
                         {overview.deadlineDate}
                       </p>
-                      <p style={{ fontSize: '0.8rem', color: '#EF4444', marginTop: '2px', margin: 0 }}>* 130명 도달시 조기 마감될 수 있습니다.</p>
+                      <p style={{ fontSize: '0.8rem', color: '#EF4444', marginTop: '2px', margin: 0 }}>* 130명 한도 선착순 조기마감</p>
                     </div>
                   </div>
                 </div>

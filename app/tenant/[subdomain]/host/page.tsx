@@ -82,8 +82,8 @@ export default function HostDashboardPage({
   const [isSaving, setIsSaving] = useState(false);
 
   // 온라인 참가 신청 접수 기간 및 권한 설정 상태
-  const [regStartDate, setRegStartDate] = useState('2026-08-10T09:00');
-  const [regEndDate, setRegEndDate] = useState('2026-10-23T18:00');
+  const [regStartDate, setRegStartDate] = useState('2026-09-28T09:00');
+  const [regEndDate, setRegEndDate] = useState('2026-10-18T18:00');
   const [regMode, setRegMode] = useState<'AUTO' | 'FORCE_ENABLED' | 'DISABLED'>('AUTO');
   const [regEnabled, setRegEnabled] = useState(true);
   const [regNotice, setRegNotice] = useState('');
@@ -218,9 +218,10 @@ export default function HostDashboardPage({
       const updatedConfig = {
         ...currentConfig,
         duration: '2026. 10. 31(토) ~ 11. 01(일) (1박 2일)',
-        registrationStartDate: '2026-08-10T09:00',
-        registrationEndDate: '2026-10-23T18:00',
-        deadlineDate: currentConfig.deadlineDate || '2026년 10월 23일(금) 18:00',
+        registrationStartDate: '2026-09-28T09:00',
+        registrationEndDate: '2026-10-18T18:00',
+        deadlineDate: '2026년 10월 18일(일) 18:00 (130명 한도 조기마감)',
+        scale: '130명 한도 (선착순 조기마감)',
         location: currentConfig.location || '경상남도 통영시 도남항 특설경기장 및 트라이애슬론 광장 일원',
         registrationMode: regMode,
         registrationEnabled: regMode !== 'DISABLED',

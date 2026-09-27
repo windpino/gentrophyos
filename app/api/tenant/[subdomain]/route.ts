@@ -7,9 +7,10 @@ export const revalidate = 0;
 
 // 공식 불변 대회 일정 및 정보
 const OFFICIAL_DURATION = '2026. 10. 31(토) ~ 11. 01(일) (1박 2일)';
-const OFFICIAL_DEADLINE = '2026년 10월 23일(금) 18:00';
-const OFFICIAL_REG_START = '2026-08-10T09:00';
-const OFFICIAL_REG_END = '2026-10-23T18:00';
+const OFFICIAL_DEADLINE = '2026년 10월 18일(일) 18:00 (130명 한도 조기마감)';
+const OFFICIAL_REG_START = '2026-09-28T09:00';
+const OFFICIAL_REG_END = '2026-10-18T18:00';
+const OFFICIAL_SCALE = '130명 한도 (선착순 조기마감)';
 const OFFICIAL_LOCATION = '경상남도 통영시 도남항 특설경기장 및 트라이애슬론 광장 일원';
 const OFFICIAL_START_DATE = '2026-10-31';
 const OFFICIAL_END_DATE = '2026-11-01';
@@ -29,22 +30,25 @@ export async function GET(
 
     const tenantData = tenantDoc.data();
 
-    // 대회 일정 및 정보 정규화 (대회 기간 10/31~11/01 유지, 그 외 ERP에서 수정한 장소/마감일/상세내용 완벽 보존)
+    // 대회 일정 및 정보 정규화 (대회 기간 10/31~11/01, 접수 기간 9/28~10/18 130명 한도 조기마감 고정)
     const sanitizedOverviewConfig = {
       ...(tenantData.overviewConfig || {}),
       duration: OFFICIAL_DURATION,
-      deadlineDate: tenantData.overviewConfig?.deadlineDate || OFFICIAL_DEADLINE,
-      registrationStartDate: tenantData.overviewConfig?.registrationStartDate || OFFICIAL_REG_START,
-      registrationEndDate: tenantData.overviewConfig?.registrationEndDate || OFFICIAL_REG_END,
+      deadlineDate: OFFICIAL_DEADLINE,
+      registrationStartDate: OFFICIAL_REG_START,
+      registrationEndDate: OFFICIAL_REG_END,
+      scale: OFFICIAL_SCALE,
       location: tenantData.overviewConfig?.location || OFFICIAL_LOCATION,
     };
 
-    // 만약 DB에 기존 레거시 날짜가 남아있다면 Firestore에 즉시 영구 정제 업데이트
+    // 만약 DB에 기존 레거시 날짜/정보가 남아있다면 Firestore에 즉시 영구 정제 업데이트
     if (
       !tenantData.overviewConfig ||
       tenantData.overviewConfig.duration !== OFFICIAL_DURATION ||
       tenantData.overviewConfig.registrationStartDate !== OFFICIAL_REG_START ||
-      tenantData.overviewConfig.registrationEndDate !== OFFICIAL_REG_END
+      tenantData.overviewConfig.registrationEndDate !== OFFICIAL_REG_END ||
+      tenantData.overviewConfig.deadlineDate !== OFFICIAL_DEADLINE ||
+      tenantData.overviewConfig.scale !== OFFICIAL_SCALE
     ) {
       setDoc(tenantRef, { overviewConfig: sanitizedOverviewConfig }, { merge: true }).catch(() => {});
     }

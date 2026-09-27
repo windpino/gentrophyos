@@ -39,9 +39,10 @@ export async function POST(
       ...existingConfig,
       ...overviewConfig,
       duration: '2026. 10. 31(토) ~ 11. 01(일) (1박 2일)',
-      deadlineDate: overviewConfig.deadlineDate || existingConfig.deadlineDate || '2026년 10월 23일(금) 18:00',
-      registrationStartDate: overviewConfig.registrationStartDate || existingConfig.registrationStartDate || '2026-08-10T09:00',
-      registrationEndDate: overviewConfig.registrationEndDate || existingConfig.registrationEndDate || '2026-10-23T18:00',
+      deadlineDate: '2026년 10월 18일(일) 18:00 (130명 한도 조기마감)',
+      registrationStartDate: '2026-09-28T09:00',
+      registrationEndDate: '2026-10-18T18:00',
+      scale: '130명 한도 (선착순 조기마감)',
       location: overviewConfig.location || existingConfig.location || '경상남도 통영시 도남항 특설경기장 및 트라이애슬론 광장 일원',
     };
 
