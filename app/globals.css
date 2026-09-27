@@ -578,6 +578,37 @@ button, input, select, textarea {
 .mobile-tabbar-btn.active { color: var(--theme-primary); }
 .mobile-tabbar-btn svg { flex-shrink: 0; }
 
+/* 모바일 헤더 빠른 참가신청 버튼 (기본 숨김) */
+.mobile-header-apply {
+  display: none;
+}
+
+/* 대회 요강 레이아웃 (반응형) */
+.overview-layout {
+  display: grid;
+  grid-template-columns: 3fr 1fr;
+  gap: 30px;
+}
+.overview-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 960px) {
+  .overview-layout {
+    grid-template-columns: 1fr !important;
+    gap: 24px !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .overview-details-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+}
+
 /* ──────────────────────────────────────────
    모바일 반응형 (768px 이하)
 ────────────────────────────────────────── */
@@ -586,49 +617,91 @@ button, input, select, textarea {
   /* 헤더: 높이 줄이고 패딩 축소 */
   .site-header {
     height: 58px;
-    padding: 0 16px;
+    padding: 0 14px;
   }
 
-  /* 헤더 로고 작게 */
-  .site-header img { height: 42px !important; }
-  .site-header .brand-text { display: none; }
+  /* 헤더 로고 및 브랜드 텍스트 최적화 */
+  .site-header img { height: 38px !important; }
+  .site-header .brand-text {
+    display: flex !important;
+  }
+  .site-header .brand-text span {
+    font-size: 0.72rem !important;
+    line-height: 1.15 !important;
+  }
 
-  /* 상단 네비 & 우측 버튼 숨기기 */
+  /* 모바일 헤더 빠른 참가신청 버튼 표시 */
+  .mobile-header-apply {
+    display: flex !important;
+    align-items: center;
+  }
+
+  /* 상단 네비 & 우측 PC 전용 버튼 숨기기 */
   .header-nav { display: none !important; }
   .header-actions { display: none !important; }
 
   /* 모바일 하단 탭바 표시 */
-  .mobile-tabbar { display: block; }
+  .mobile-tabbar {
+    display: block;
+    padding: 6px 0 calc(env(safe-area-inset-bottom, 8px) + 2px);
+  }
+
+  .mobile-tabbar-btn {
+    padding: 5px 1px !important;
+    font-size: 0.62rem !important;
+    letter-spacing: -0.03em !important;
+  }
+  .mobile-tabbar-btn svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
 
   /* 히어로 섹션: 높이 줄이고 패딩 축소 */
   .hero-section {
-    height: 400px;
-    padding: 32px 20px 24px 20px;
+    height: auto;
+    min-height: 380px;
+    padding: 28px 16px 24px 16px;
   }
-  .hero-title { font-size: 2rem !important; }
-  .hero-subtitle { font-size: 0.95rem !important; max-width: 100% !important; }
-  .hero-hero-badge { font-size: 0.75rem !important; letter-spacing: 0.1em !important; }
+  .hero-title {
+    font-size: 1.95rem !important;
+    line-height: 1.2 !important;
+    margin-bottom: 14px !important;
+  }
+  .hero-subtitle {
+    font-size: 0.88rem !important;
+    max-width: 100% !important;
+    margin-bottom: 20px !important;
+  }
+  .hero-hero-badge {
+    font-size: 0.72rem !important;
+    letter-spacing: 0.1em !important;
+    margin-bottom: 8px !important;
+  }
 
-  /* 히어로 버튼 세로 배치 */
+  /* 히어로 버튼 세로 배치 및 너비 100% */
   .hero-buttons {
     flex-direction: column !important;
     gap: 10px !important;
+    width: 100%;
   }
   .hero-buttons button {
-    padding: 12px 20px !important;
-    font-size: 0.9rem !important;
+    width: 100% !important;
+    padding: 14px 20px !important;
+    font-size: 0.95rem !important;
     text-align: center;
     justify-content: center;
   }
 
   /* 본문 패딩 축소, 하단 탭바 공간 확보 */
-  .content-wrapper { padding: 16px 0 80px 0; }
-  .content-inner { padding: 0 12px; }
+  .content-wrapper { padding: 16px 0 calc(70px + env(safe-area-inset-bottom, 8px)); }
+  .content-inner { padding: 0 10px; }
 
   /* 서브탭 바 스크롤 */
   .subtab-bar {
     gap: 6px !important;
-    padding: 10px 12px !important;
+    padding: 8px 10px !important;
+    margin-bottom: 16px !important;
+    border-radius: 10px !important;
   }
   .subtab-bar button {
     padding: 6px 12px !important;
@@ -637,20 +710,33 @@ button, input, select, textarea {
   }
 
   /* 카드/패널 패딩 축소 */
-  .glass-panel { padding: 16px !important; }
-
-  /* 대회 요강 인포 카드 그리드 */
-  .overview-grid {
-    grid-template-columns: 1fr !important;
+  .glass-panel {
+    padding: 16px !important;
+    border-radius: 12px !important;
   }
 
-  /* 테이블 오버플로우 */
-  table { font-size: 0.8rem !important; }
+  /* 프리미엄 테이블 모바일 컴팩트 패딩 */
+  .premium-table-container {
+    border-radius: 8px !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .premium-table th,
+  .premium-table td {
+    padding: 8px 10px !important;
+    font-size: 0.8rem !important;
+  }
+
+  /* 모바일 입력창 줌 방지 (최소 16px) */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
 }
 
-/* 아주 작은 화면 (375px) */
-@media (max-width: 400px) {
-  .hero-title { font-size: 1.7rem !important; }
-  .hero-section { height: 380px; }
-  .mobile-tabbar-btn { font-size: 0.55rem; }
+/* 아주 작은 화면 (380px 이하) */
+@media (max-width: 380px) {
+  .hero-title { font-size: 1.65rem !important; }
+  .hero-section { min-height: 350px; }
+  .mobile-tabbar-btn { font-size: 0.58rem !important; }
+  .mobile-tabbar-btn svg { width: 16px !important; height: 16px !important; }
+  .site-header { padding: 0 10px; }
 }

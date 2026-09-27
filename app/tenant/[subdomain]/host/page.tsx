@@ -906,15 +906,15 @@ export default function HostDashboardPage({
               </span>
             </button>
             <div>
-              <h1 style={{ fontSize: '1.9rem', fontWeight: '800', margin: 0, marginBottom: '4px' }}>
+              <h1 style={{ fontSize: 'clamp(1.3rem, 3.5vw, 1.9rem)', fontWeight: '800', margin: 0, marginBottom: '4px' }}>
                 {activeSection === 'applicants' ? '참가자관리' : 
                  activeSection === 'tie-breaker' ? 'Tie-breaker 가중치 제어기' : '개최공시서 업로드'}
               </h1>
-              <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.9rem' }}>{activeTournament.title}</p>
+              <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.85rem' }}>{activeTournament.title}</p>
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
             <button
               onClick={handleLogout}
               style={{

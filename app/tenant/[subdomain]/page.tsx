@@ -668,25 +668,33 @@ export default function TenantPortalPage({
         <meta name="description" content="제20회 이순신장군배 전국윈드서핑대회 참가 신청서 접수 페이지" />
         <meta property="og:image" content="https://gentrophyos.vercel.app/images/logo_new.png" />
         {/* 상단 단독 폼 타이틀 및 브랜딩 */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
           <img
             src="/images/logo_new.png"
             alt="대회 로고"
-            style={{ height: '220px', width: 'auto', objectFit: 'contain' }}
+            style={{ height: 'clamp(90px, 20vw, 170px)', width: 'auto', objectFit: 'contain' }}
           />
         </div>
 
         {/* 단독 폼 카드 */}
-        <div style={{ width: '100%', maxWidth: '650px', background: '#ffffff', borderRadius: '16px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05)', border: '1px solid var(--border-color)', padding: 'clamp(16px, 4vw, 32px) clamp(12px, 4vw, 32px)' }}>
+        <div style={{ width: '100%', maxWidth: '650px', background: '#ffffff', borderRadius: '16px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05)', border: '1px solid var(--border-color)', padding: 'clamp(16px, 4vw, 32px) clamp(12px, 3.5vw, 28px)', boxSizing: 'border-box' }}>
           
           {/* 헤더 버튼 영역 (홈페이지 바로가기 및 링크 복사) */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '16px', marginBottom: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '16px', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
             <div>
-              <h2 style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--text-main)' }}>대회 참가 신청서 작성</h2>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '4px' }}>* 표시가 있는 항목은 필수 작성 항목입니다.</p>
+              <h2 style={{ fontSize: '1.35rem', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>대회 참가 신청서 작성</h2>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '4px', margin: 0 }}>* 표시가 있는 항목은 필수 작성 항목입니다.</p>
             </div>
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <a
+                href={typeof window !== 'undefined' && window.location.pathname.startsWith('/tenant/') ? `/tenant/${subdomain}` : '/'}
+                className="btn-secondary"
+                style={{ padding: '8px 12px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', background: '#f8fafc', border: '1px solid var(--border-color)', cursor: 'pointer', borderRadius: '6px', textDecoration: 'none', color: 'var(--text-main)' }}
+              >
+                🏠 대회 홈
+              </a>
               <button
+                type="button"
                 onClick={() => {
                   navigator.clipboard.writeText(window.location.origin + window.location.pathname + '?mode=apply');
                   alert('참가 신청서 단독 링크가 클립보드에 복사되었습니다! 다른 분들께 링크를 공유해 보세요.');
@@ -840,8 +848,8 @@ export default function TenantPortalPage({
                       {field.label} {field.required && <span style={{ color: '#EF4444' }}>*</span>}
                     </label>
                     {field.notice && (
-                      <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
-                        • {field.notice}
+                      <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '12px', whiteSpace: 'pre-line', lineHeight: '1.6' }}>
+                        {field.notice}
                       </p>
                     )}
                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
@@ -1079,6 +1087,33 @@ export default function TenantPortalPage({
           <a href="/referee" className="btn-primary" style={{ padding: '8px 16px', fontSize: '0.85rem', background: 'var(--theme-primary)', color: 'white', boxShadow: 'none' }}>
             심판 입력기
           </a>
+        </div>
+
+        {/* 모바일 전용 빠른 참가신청 버튼 */}
+        <div className="mobile-header-apply">
+          <button
+            type="button"
+            onClick={() => {
+              window.open(window.location.pathname + '?mode=apply', '_blank');
+            }}
+            style={{
+              padding: '6px 14px',
+              fontSize: '0.8rem',
+              fontWeight: '800',
+              background: 'linear-gradient(135deg, var(--theme-gold) 0%, #b39366 100%)',
+              color: '#1b263b',
+              border: 'none',
+              borderRadius: '20px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              boxShadow: '0 2px 8px rgba(197, 168, 128, 0.3)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            ✍️ 참가신청
+          </button>
         </div>
       </header>
 
@@ -1900,7 +1935,7 @@ export default function TenantPortalPage({
 
           {/* A. 대회 요강 대메뉴 (Notice of Race 통합 및 세련된 연동) */}
           {activeTab === 'overview' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: '30px' }}>
+            <div className="overview-layout">
               <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
                 
                 {/* 대회 개요 카드 */}
@@ -1908,7 +1943,7 @@ export default function TenantPortalPage({
                   <h2 style={{ fontSize: '1.4rem', fontWeight: '800', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)' }}>
                     <Compass style={{ color: 'var(--theme-primary)' }} size={22} /> 대회 개요 명세
                   </h2>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', fontSize: '0.95rem' }}>
+                  <div className="overview-details-grid" style={{ fontSize: '0.95rem' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <p style={{ margin: 0 }}><strong>대회명 :</strong> {overview.title}</p>
                       <p style={{ margin: 0 }}><strong>기간 :</strong> {overview.duration}</p>
