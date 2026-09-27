@@ -69,8 +69,33 @@ export default function HostDashboardPage({
   const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState<'applicants' | 'tie-breaker' | 'notice'>('applicants');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [filterSortCategory, setFilterSortCategory] = useState<string>('all');
   const [subFilterValue, setSubFilterValue] = useState<string>('all');
+
+  // 로컬 스토리지에서 사이드바 열림/닫힘 상태 복원
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('gentrophy_host_sidebar');
+      if (saved !== null) {
+        setIsSidebarOpen(saved === 'true');
+      }
+    }
+  }, []);
+
+  const toggleSidebar = () => {
+    if (typeof window !== 'undefined' && window.innerWidth <= 960) {
+      setIsMobileMenuOpen((prev) => !prev);
+    } else {
+      setIsSidebarOpen((prev) => {
+        const next = !prev;
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('gentrophy_host_sidebar', String(next));
+        }
+        return next;
+      });
+    }
+  };
 
   // 스프레드시트 그리드 상태 관리
   const [gridData, setGridData] = useState<GridRow[]>([]);
@@ -670,7 +695,7 @@ export default function HostDashboardPage({
   }
 
   return (
-    <div style={themeStyles} className="grid-dashboard">
+    <div style={themeStyles} className={`grid-dashboard ${!isSidebarOpen ? 'sidebar-collapsed' : ''}`}>
       
       {/* 0. 모바일 전용 헤더 & 드로어 메뉴 */}
       <div className="mobile-dashboard-header">
@@ -762,18 +787,42 @@ export default function HostDashboardPage({
       <aside
         style={{
           background: 'rgba(2, 6, 23, 0.95)',
-          borderRight: '1px solid var(--border-color)',
+          borderRight: isSidebarOpen ? '1px solid var(--border-color)' : 'none',
           padding: '30px 20px',
           display: 'flex',
           flexDirection: 'column',
           gap: '40px',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Settings size={22} style={{ color: 'var(--theme-gold)' }} />
-          <h2 style={{ fontSize: '1.2rem', fontWeight: '800', color: 'white', fontFamily: 'var(--font-title)' }}>
-            Wind <span style={{ color: 'var(--theme-gold)' }}>ERP</span>
-          </h2>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Settings size={22} style={{ color: 'var(--theme-gold)' }} />
+            <h2 style={{ fontSize: '1.2rem', fontWeight: '800', color: 'white', fontFamily: 'var(--font-title)', margin: 0 }}>
+              Wind <span style={{ color: 'var(--theme-gold)' }}>ERP</span>
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={toggleSidebar}
+            title="사이드바 메뉴 닫기"
+            aria-label="사이드바 메뉴 닫기"
+            style={{
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '6px',
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+              padding: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = 'white')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+          >
+            <Menu size={18} />
+          </button>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -821,13 +870,48 @@ export default function HostDashboardPage({
       {/* 2. 대시보드 메인 */}
       <main style={{ padding: '40px', overflowY: 'auto' }}>
         
-        <header style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h1 style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '8px' }}>
-              {activeSection === 'applicants' ? '참가자관리' : 
-               activeSection === 'tie-breaker' ? 'Tie-breaker 가중치 제어기' : '개최공시서 업로드'}
-            </h1>
-            <p style={{ color: 'var(--text-muted)' }}>{activeTournament.title}</p>
+        <header style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <button
+              type="button"
+              onClick={toggleSidebar}
+              title={isSidebarOpen ? "사이드바 메뉴 닫기" : "사이드바 메뉴 열기"}
+              aria-label={isSidebarOpen ? "사이드바 메뉴 닫기" : "사이드바 메뉴 열기"}
+              style={{
+                background: 'rgba(255, 255, 255, 0.06)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '8px',
+                padding: '9px 12px',
+                color: 'white',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '0.88rem',
+                fontWeight: '600',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
+                e.currentTarget.style.borderColor = 'var(--theme-primary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)';
+                e.currentTarget.style.borderColor = 'var(--border-color)';
+              }}
+            >
+              <Menu size={20} style={{ color: 'var(--theme-gold)' }} />
+              <span className="hide-on-mobile" style={{ color: 'var(--text-main)' }}>
+                {isSidebarOpen ? '메뉴 닫기' : '메뉴 열기'}
+              </span>
+            </button>
+            <div>
+              <h1 style={{ fontSize: '1.9rem', fontWeight: '800', margin: 0, marginBottom: '4px' }}>
+                {activeSection === 'applicants' ? '참가자관리' : 
+                 activeSection === 'tie-breaker' ? 'Tie-breaker 가중치 제어기' : '개최공시서 업로드'}
+              </h1>
+              <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.9rem' }}>{activeTournament.title}</p>
+            </div>
           </div>
 
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
