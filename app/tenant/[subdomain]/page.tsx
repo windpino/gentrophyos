@@ -51,13 +51,72 @@ interface Match {
   }>;
 }
 
+// 한글 초성 추출 및 초성 검색 유틸리티
+const CHOSEONG_LIST = [
+  'ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ', 'ㅅ', 
+  'ㅆ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ'
+];
+
+function getKoreanChoseong(str: string): string {
+  let result = '';
+  for (let i = 0; i < str.length; i++) {
+    const code = str.charCodeAt(i) - 0xAC00;
+    if (code >= 0 && code <= 11171) {
+      const idx = Math.floor(code / 588);
+      result += CHOSEONG_LIST[idx];
+    } else {
+      result += str.charAt(i);
+    }
+  }
+  return result;
+}
+
+function matchKoreanChoseong(target: string, query: string): boolean {
+  if (!query || !target) return false;
+  const t = target.trim().toLowerCase();
+  const q = query.trim().toLowerCase();
+  if (!q) return false;
+
+  const tNoSpace = t.replace(/\s+/g, '');
+  const qNoSpace = q.replace(/\s+/g, '');
+
+  if (t.includes(q) || tNoSpace.includes(qNoSpace)) return true;
+
+  const tChoseong = getKoreanChoseong(t);
+  const qChoseong = getKoreanChoseong(q);
+  const tChoseongNoSpace = getKoreanChoseong(tNoSpace);
+  const qChoseongNoSpace = getKoreanChoseong(qNoSpace);
+
+  return (
+    tChoseong.includes(q) ||
+    tChoseongNoSpace.includes(qNoSpace) ||
+    tChoseong.includes(qChoseong) ||
+    tChoseongNoSpace.includes(qChoseongNoSpace)
+  );
+}
+
+const DEFAULT_PRESET_CLUBS = [
+  '통영윈드서핑협회',
+  '통영윈드서핑클럽',
+  '경남윈드서핑카이트보딩협회',
+  '대한윈드서핑카이트보딩협회',
+  '부산윈드서핑클럽',
+  '거제윈드서핑클럽',
+  '창원마산윈드서핑클럽',
+  '서울뚝섬윈드서핑클럽',
+  '여수윈드서핑클럽',
+  '울산윈드서핑클럽',
+  '포항윈드서핑클럽',
+  '제주윈드서핑클럽'
+];
+
 // 기본 12단계 참가신청서 폼 양식 기본 데이터
 const DEFAULT_FORM_FIELDS = [
   { id: 'name', label: '1. 성명', type: 'text', required: true, placeholder: '실명을 입력해 주세요.' },
   { id: 'birth', label: '2. 생년월일 (8자리) 예) 19450815', type: 'text', required: true, placeholder: '예) 19901024' },
   { id: 'gender', label: '3. 성별', type: 'radio', required: true, options: ['남자', '여자'] },
   { id: 'phone', label: '4. 전화번호 (휴대폰번호)', type: 'text', required: true, placeholder: '예) 01012345678' },
-  { id: 'club', label: '5. 소속협회 또는 클럽', type: 'text', required: true, placeholder: '소속 단체명을 입력해 주세요.' },
+  { id: 'club', label: '5. 소속협회 또는 클럽', type: 'text', required: true, placeholder: '소속 단체명을 입력해 주세요 (초성 검색 가능: 예) ㅌㅇ)' },
   { id: 'division', label: '6. 참가종목', type: 'radio', required: true, options: ['윈드포일 (남자부)', '윈드포일 (여자부)', '윙포일 (남자부)', '윙포일 (여자부)', '혼합오픈 (남자부)', '혼합오픈 (여자부)', '펀엔포뮬러 (남자부)', '펀엔포뮬러 (여자부)'] },
   { id: 'tshirtSize', label: '7. 티셔츠(기념품)사이즈', type: 'radio', required: true, options: ['S (95)', 'M (100)', 'L (105)', 'XL (110)'] },
   { id: 'vestAgreement', label: '8. 당일 대회본부에 조끼(배번티)를 반드시 수령하셔야 합니다.', type: 'checkbox', required: true, notice: '대회운영본부 수령 필수 (사용 후 반드시 반납바랍니다)', agreeLabel: '네. 확인했습니다.' },
@@ -178,6 +237,8 @@ export default function TenantPortalPage({
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [submittedApplicantName, setSubmittedApplicantName] = useState('');
   const [accountCopied, setAccountCopied] = useState(false);
+  const [availableClubs, setAvailableClubs] = useState<string[]>(DEFAULT_PRESET_CLUBS);
+  const [showClubDropdown, setShowClubDropdown] = useState(false);
 
   const handleCopyAccount = () => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
@@ -356,7 +417,15 @@ export default function TenantPortalPage({
           setSelectedArchiveId(archived[0].id);
         }
 
-
+        // 소속 협회/클럽 초성 추천용 기등록 클럽 목록 로드
+        fetch(`/api/tenant/${subdomain}/registrations?_t=${Date.now()}`)
+          .then(r => r.json())
+          .then(regData => {
+            if (regData.registeredClubs && Array.isArray(regData.registeredClubs)) {
+              setAvailableClubs(prev => Array.from(new Set([...regData.registeredClubs, ...prev])));
+            }
+          })
+          .catch(err => console.error('소속클럽 로드 오류:', err));
       }
     } catch (e) {
       console.error(e);
@@ -420,6 +489,9 @@ export default function TenantPortalPage({
       if (data.registrations) {
         const approved = data.registrations.filter((r: any) => r.status === 'APPROVED');
         setRegistrations(approved);
+      }
+      if (data.registeredClubs && Array.isArray(data.registeredClubs)) {
+        setAvailableClubs(prev => Array.from(new Set([...data.registeredClubs, ...prev])));
       }
     } catch (e) {
       console.error(e);
@@ -518,6 +590,13 @@ export default function TenantPortalPage({
       setSubmittedApplicantName(name);
       setShowSuccessModal(true);
       setRegSuccess('참가 신청서가 성공적으로 접수되었습니다. 입금 안내창을 확인해 주세요.');
+
+      if (formResponses.club) {
+        const submittedClub = String(formResponses.club).trim();
+        if (submittedClub && submittedClub !== '미소속' && submittedClub !== '-') {
+          setAvailableClubs(prev => Array.from(new Set([submittedClub, ...prev])));
+        }
+      }
       
       // 폼 초기화
       const resetResponses: Record<string, any> = {};
@@ -1033,6 +1112,112 @@ export default function TenantPortalPage({
 
           <form onSubmit={handleRegisterSubmit}>
             {formFields.map((field) => {
+              if (field.id === 'club') {
+                const query = (formResponses['club'] || '').trim();
+                const filteredClubs = query
+                  ? availableClubs.filter(c => matchKoreanChoseong(c, query))
+                  : availableClubs;
+
+                return (
+                  <div className="form-group" key={field.id} style={{ position: 'relative' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', flexWrap: 'wrap', gap: '6px' }}>
+                      <label className="form-label" style={{ margin: 0, fontWeight: '700' }}>
+                        {field.label} {field.required && <span style={{ color: '#EF4444' }}>*</span>}
+                      </label>
+                      <span style={{ fontSize: '0.74rem', color: '#0284c7', background: '#eff6ff', padding: '2px 8px', borderRadius: '4px', border: '1px solid #bfdbfe', fontWeight: '700' }}>
+                        💡 초성 검색 추천 지원 (예: ㅌㅇ)
+                      </span>
+                    </div>
+
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder={field.placeholder || '소속 단체명을 입력하세요 (초성 입력 시 추천)'}
+                      value={formResponses[field.id] || ''}
+                      onChange={(e) => {
+                        handleInputChange(field.id, e.target.value);
+                        setShowClubDropdown(true);
+                      }}
+                      onFocus={() => setShowClubDropdown(true)}
+                      onBlur={() => {
+                        setTimeout(() => setShowClubDropdown(false), 250);
+                      }}
+                      required={field.required}
+                      autoComplete="off"
+                    />
+
+                    {/* 초성/검색어 기반 추천 드롭다운 */}
+                    {showClubDropdown && filteredClubs.length > 0 && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: 'calc(100% + 4px)',
+                          left: 0,
+                          right: 0,
+                          background: '#ffffff',
+                          border: '2px solid #0284c7',
+                          borderRadius: '12px',
+                          boxShadow: '0 12px 28px -4px rgba(0, 0, 0, 0.2)',
+                          zIndex: 1000,
+                          maxHeight: '260px',
+                          overflowY: 'auto',
+                          padding: '6px'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px', borderBottom: '1px solid #f1f5f9', marginBottom: '4px' }}>
+                          <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#0369a1' }}>
+                            💡 {query ? `'${query}' 관련 추천 협회/클럽` : '등록된 협회/클럽 목록 (초성 검색 가능)'}
+                          </span>
+                          <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                            클릭 시 자동 입력
+                          </span>
+                        </div>
+
+                        {filteredClubs.slice(0, 10).map((c) => (
+                          <button
+                            key={c}
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleInputChange(field.id, c);
+                              setShowClubDropdown(false);
+                            }}
+                            style={{
+                              width: '100%',
+                              textAlign: 'left',
+                              padding: '8px 12px',
+                              borderRadius: '8px',
+                              border: 'none',
+                              background: formResponses[field.id] === c ? '#eff6ff' : 'transparent',
+                              color: '#0f172a',
+                              fontSize: '0.92rem',
+                              fontWeight: formResponses[field.id] === c ? '800' : '600',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              transition: 'all 0.12s ease'
+                            }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = '#f0f9ff')}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = formResponses[field.id] === c ? '#eff6ff' : 'transparent')}
+                          >
+                            <span>{c}</span>
+                            <span style={{ fontSize: '0.72rem', color: '#64748b', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', border: '1px solid #e2e8f0', fontWeight: '700' }}>
+                              {getKoreanChoseong(c)}
+                            </span>
+                          </button>
+                        ))}
+
+                        {query && !filteredClubs.includes(query) && (
+                          <div style={{ padding: '8px 10px', fontSize: '0.78rem', color: '#64748b', borderTop: '1px dashed #e2e8f0', marginTop: '4px' }}>
+                            ✍️ 목록에 없는 클럽은 직접 입력하신 내용 그대로 등록됩니다.
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
               if (field.type === 'text') {
                 return (
                   <div className="form-group" key={field.id}>

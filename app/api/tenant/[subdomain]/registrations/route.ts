@@ -100,7 +100,58 @@ export async function GET(
       formFields = formConfig.fields ? JSON.parse(formConfig.fields) : [];
     }
 
-    return NextResponse.json({ registrations, formFields });
+    // 3. 기등록된 소속 협회/클럽명 추출 (초성 추천용)
+    const clubSet = new Set<string>();
+    regsSnap.docs.forEach(docSnap => {
+      const data = docSnap.data();
+      try {
+        if (data.formResponses) {
+          const extra = typeof data.formResponses === 'string' ? JSON.parse(data.formResponses) : data.formResponses;
+          if (extra.club && typeof extra.club === 'string') {
+            const trimmed = extra.club.trim();
+            if (trimmed && trimmed !== '미소속' && trimmed !== '-') {
+              clubSet.add(trimmed);
+            }
+          }
+        }
+      } catch (e) {}
+      if (data.player?.club) {
+        const trimmed = String(data.player.club).trim();
+        if (trimmed && trimmed !== '미소속' && trimmed !== '-') {
+          clubSet.add(trimmed);
+        }
+      }
+    });
+
+    playersSnap.docs.forEach(docSnap => {
+      const pData = docSnap.data();
+      if (pData.club) {
+        const trimmed = String(pData.club).trim();
+        if (trimmed && trimmed !== '미소속' && trimmed !== '-') {
+          clubSet.add(trimmed);
+        }
+      }
+    });
+
+    const defaultClubs = [
+      '통영윈드서핑협회',
+      '통영윈드서핑클럽',
+      '경남윈드서핑카이트보딩협회',
+      '대한윈드서핑카이트보딩협회',
+      '부산윈드서핑클럽',
+      '거제윈드서핑클럽',
+      '창원마산윈드서핑클럽',
+      '서울뚝섬윈드서핑클럽',
+      '여수윈드서핑클럽',
+      '울산윈드서핑클럽',
+      '포항윈드서핑클럽',
+      '제주윈드서핑클럽'
+    ];
+    defaultClubs.forEach(c => clubSet.add(c));
+
+    const registeredClubs = Array.from(clubSet);
+
+    return NextResponse.json({ registrations, formFields, registeredClubs });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
