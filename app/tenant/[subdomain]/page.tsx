@@ -199,6 +199,23 @@ export default function TenantPortalPage({
     }
   };
 
+  // 생년월만 표시하고 일은 **표로 마스킹하는 헬퍼 함수
+  const formatMaskedBirthDate = (birthStr?: string): string => {
+    if (!birthStr) return '-';
+    const clean = String(birthStr).trim().replace(/[^0-9]/g, '');
+    if (clean.length === 8) {
+      return `${clean.substring(0, 4)}.${clean.substring(4, 6)}.**`;
+    }
+    if (clean.length === 6) {
+      return `${clean.substring(0, 2)}.${clean.substring(2, 4)}.**`;
+    }
+    const parts = String(birthStr).trim().split(/[-./]/);
+    if (parts.length >= 2) {
+      return `${parts[0]}.${parts[1].padStart(2, '0')}.**`;
+    }
+    return birthStr;
+  };
+
   // 동적 신청서 폼 설정 로드 및 입력 데이터 핸들러
   useEffect(() => {
     if (!subdomain) return;
@@ -1909,7 +1926,7 @@ export default function TenantPortalPage({
                                     </td>
                                     <td style={{ fontWeight: '800' }}>{row.name}</td>
                                     <td>{row.bibNumber || '-'}</td>
-                                    <td>{row.birth || '-'}</td>
+                                    <td>{formatMaskedBirthDate(row.birth)}</td>
                                     {rounds.map((val, idx) => {
                                       const isDiscarded = idx === discardIdx;
                                       const displayVal = val !== null && val !== undefined && val !== '' ? val : '-';
@@ -2022,18 +2039,21 @@ export default function TenantPortalPage({
                       let birth = '';
                       let division = '';
                       let gender = '';
+                      let club = '';
                       let subclass = '통합부';
                       
                       try {
                         if (r.formResponses) {
-                          const extra = JSON.parse(r.formResponses);
+                          const extra = typeof r.formResponses === 'string' ? JSON.parse(r.formResponses) : r.formResponses;
                           birth = extra.birthDate || extra.birth || '';
                           division = extra.division || '';
                           gender = extra.gender || '';
+                          club = extra.club || '';
                           subclass = extra.subclass || extra.class || extra.category || extra.subDivision || '통합부';
                         }
                       } catch (e) {}
 
+                      if (!club) club = r.player?.club || '미소속';
                       if (!division) division = '미분류 종목';
                       if (!gender) {
                         if (division.includes('남자')) gender = '남자부';
@@ -2051,8 +2071,9 @@ export default function TenantPortalPage({
 
                       return {
                         id: r.id,
-                        name: r.player.name,
+                        name: r.player?.name || '',
                         bibNumber: r.bibNumber || '-',
+                        club,
                         birth,
                         division: rootDivision,
                         gender,
@@ -2110,7 +2131,7 @@ export default function TenantPortalPage({
                                             <span>🏷️ {subclass}</span>
                                             <span style={{ fontSize: '0.75rem', background: 'var(--theme-primary)', color: 'white', padding: '2px 8px', borderRadius: '10px', fontWeight: '700' }}>{list.length}명</span>
                                           </h5>
-                                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                             {list.map((player: any, pIdx: number) => (
                                               <div
                                                 key={player.id}
@@ -2118,20 +2139,63 @@ export default function TenantPortalPage({
                                                   display: 'flex',
                                                   alignItems: 'center',
                                                   justifyContent: 'space-between',
-                                                  padding: '10px 12px',
-                                                  background: '#f8fafc',
-                                                  borderRadius: '8px',
-                                                  fontSize: '0.85rem',
-                                                  border: '1px solid #f1f5f9'
+                                                  flexWrap: 'wrap',
+                                                  gap: '8px 12px',
+                                                  padding: '11px 14px',
+                                                  background: '#ffffff',
+                                                  borderRadius: '10px',
+                                                  fontSize: '0.88rem',
+                                                  border: '1px solid #e2e8f0',
+                                                  boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
                                                 }}
                                               >
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                  <span style={{ color: 'var(--text-muted)', fontWeight: '700', fontSize: '0.8rem', minWidth: '16px' }}>{pIdx + 1}</span>
-                                                  <span style={{ fontWeight: '800', color: 'var(--text-main)' }}>{player.name}</span>
+                                                {/* 좌측: 순번, 선수명, 소속클럽명, 생년월 (일은 ** 처리) */}
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', minWidth: 0 }}>
+                                                  <span style={{ color: '#94a3b8', fontWeight: '800', fontSize: '0.82rem', minWidth: '18px' }}>
+                                                    {pIdx + 1}
+                                                  </span>
+                                                  <span style={{ fontWeight: '900', color: '#0f172a', fontSize: '0.98rem' }}>
+                                                    {player.name}
+                                                  </span>
+                                                  <span style={{
+                                                    fontSize: '0.78rem',
+                                                    color: '#334155',
+                                                    background: '#f1f5f9',
+                                                    padding: '2px 8px',
+                                                    borderRadius: '6px',
+                                                    fontWeight: '700',
+                                                    border: '1px solid #e2e8f0'
+                                                  }}>
+                                                    {player.club || '미소속'}
+                                                  </span>
+                                                  <span style={{
+                                                    fontSize: '0.78rem',
+                                                    color: '#64748b',
+                                                    fontWeight: '600',
+                                                    background: '#f8fafc',
+                                                    padding: '2px 6px',
+                                                    borderRadius: '4px',
+                                                    border: '1px solid #f1f5f9'
+                                                  }}>
+                                                    {formatMaskedBirthDate(player.birth)}
+                                                  </span>
                                                 </div>
-                                                <span style={{ fontWeight: '800', color: 'var(--theme-primary)', background: 'rgba(197, 168, 128, 0.1)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem' }}>
-                                                  배번 {player.bibNumber}
-                                                </span>
+
+                                                {/* 우측: 배번티 번호 강조 */}
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                  <span style={{
+                                                    fontWeight: '900',
+                                                    color: '#0284c7',
+                                                    background: '#f0f9ff',
+                                                    border: '1px solid #bae6fd',
+                                                    padding: '3px 10px',
+                                                    borderRadius: '6px',
+                                                    fontSize: '0.84rem',
+                                                    whiteSpace: 'nowrap'
+                                                  }}>
+                                                    배번티 {player.bibNumber || '-'}
+                                                  </span>
+                                                </div>
                                               </div>
                                             ))}
                                           </div>
