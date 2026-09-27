@@ -181,7 +181,7 @@ export default function TenantPortalPage({
 
   const handleCopyAccount = () => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText('농협 351-1334-8643-33');
+      navigator.clipboard.writeText('농협 351-1334-8643-33 30,000원');
       setAccountCopied(true);
       setTimeout(() => setAccountCopied(false), 2000);
     }
@@ -760,7 +760,7 @@ export default function TenantPortalPage({
                 }}
               >
                 {accountCopied ? <Check size={13} /> : <Copy size={13} />}
-                <span>{accountCopied ? '농협 계좌 복사됨!' : '계좌 복사'}</span>
+                <span>{accountCopied ? '계좌·금액(3만원) 복사됨!' : '계좌·금액 복사'}</span>
               </button>
             </div>
 
@@ -1009,7 +1009,7 @@ export default function TenantPortalPage({
                     }}
                   >
                     {accountCopied ? <Check size={13} /> : <Copy size={13} />}
-                    <span>{accountCopied ? '농협 계좌 복사됨!' : '계좌 복사'}</span>
+                    <span>{accountCopied ? '계좌·금액(3만원) 복사됨!' : '계좌·금액 복사'}</span>
                   </button>
                 </div>
                 <p style={{ margin: '6px 0 0 0', paddingLeft: '8px', color: '#b91c1c', fontWeight: '800', fontSize: '0.92rem' }}>
@@ -1144,7 +1144,7 @@ export default function TenantPortalPage({
                             }}
                           >
                             {accountCopied ? <Check size={13} /> : <Copy size={13} />}
-                            <span>{accountCopied ? '농협 계좌 복사됨!' : '계좌 복사'}</span>
+                            <span>{accountCopied ? '계좌·금액(3만원) 복사됨!' : '계좌·금액 복사'}</span>
                           </button>
                         </div>
                         <p style={{ fontSize: '0.88rem', color: '#334155', margin: 0, whiteSpace: 'pre-line', lineHeight: '1.65', fontWeight: '500' }}>
@@ -2700,7 +2700,7 @@ export default function TenantPortalPage({
                           }}
                         >
                           {accountCopied ? <Check size={11} /> : <Copy size={11} />}
-                          <span>{accountCopied ? '농협 계좌 복사됨!' : '계좌 복사'}</span>
+                          <span>{accountCopied ? '복사됨(3만원 포함)!' : '계좌·금액 복사'}</span>
                         </button>
                       </div>
                       <p style={{ fontWeight: '700', color: 'var(--text-main)', fontSize: '0.92rem', margin: 0 }}>
