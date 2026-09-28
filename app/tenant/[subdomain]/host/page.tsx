@@ -42,18 +42,17 @@ const DEFAULT_FORM_FIELDS = [
   { id: 'gender', label: '3. 성별', type: 'radio', required: true, options: ['남자', '여자'] },
   { id: 'phone', label: '4. 전화번호 (휴대폰번호)', type: 'text', required: true, placeholder: '예) 01012345678' },
   { id: 'club', label: '5. 소속협회 또는 클럽', type: 'text', required: true, placeholder: '소속 단체명을 입력해 주세요.' },
-  { id: 'division', label: '6. 참가종목', type: 'radio', required: true, options: ['윈드포일 (남자부)', '윈드포일 (여자부)', '윙포일 (남자부)', '윙포일 (여자부)', '혼합오픈 (남자부)', '혼합오픈 (여자부)', '펀엔포뮬러 (남자부)', '펀엔포뮬러 (여자부)'] },
+  { id: 'division', label: '6. 참가종목', type: 'radio', required: true, options: ['윈드포일', '윙포일 (남자부)', '윙포일 (여자부)', '혼합오픈 (남자부)', '혼합오픈 (여자부)', '펀엔포뮬러 (남자부)', '펀엔포뮬러 (여자부)'] },
   { id: 'tshirtSize', label: '7. 티셔츠(기념품)사이즈', type: 'radio', required: true, options: ['S (95)', 'M (100)', 'L (105)', 'XL (110)'] },
   { id: 'vestAgreement', label: '8. 당일 대회본부에 조끼(배번티)를 반드시 수령하셔야 합니다.', type: 'checkbox', required: true, notice: '대회운영본부 수령 필수 (사용 후 반드시 반납바랍니다)', agreeLabel: '네. 확인했습니다.' },
-  { id: 'paymentNoticeAgreement', label: '9. 참가비 입금 안내 확인 동의', type: 'checkbox', required: true, notice: '• 참가비: 30,000원 (클래스 구분 없이 일괄 3만원)\n• 입금계좌: 농협 351-1334-8643-33 (예금주: 통영시요트협회)\n• 참가 신청서에 작성하신 성명(이름)으로 반드시 입금해 주시기 바랍니다.\n• 입금 완료 순서(입금순)로 선착순 130명 참가 확정 처리됩니다.\n• 참가 확정 및 선수등록 승인 안내는 대회 공식 홈페이지에서 확인하실 수 있습니다.', agreeLabel: '네. 확인했습니다.' },
+  { id: 'paymentNoticeAgreement', label: '9. 참가비 입금 안내 확인 동의', type: 'checkbox', required: true, notice: '• 참가비: 30,000원\n• 입금계좌: 농협 351-1334-8643-33 (예금주: 통영시요트협회)\n• 참가 신청서에 작성하신 성명(이름)으로 반드시 입금해 주시기 바랍니다.\n• 입금 완료 순서(입금순)로 선착순 130명 참가 확정 처리됩니다.\n• 참가 확정 및 선수등록 승인 안내는 대회 공식 홈페이지에서 확인하실 수 있습니다.', agreeLabel: '네. 확인했습니다.' },
   { id: 'liabilityWaiver', label: '10. 면책 동의서 서약에 동의합니다.', type: 'textarea', required: true, textareaContent: '본인은 제20회 이순신장군배 전국윈드서핑대회 참가 활동 중 본인의 부주의로 인해 발생할 수 있는 사고, 즉 개인적 부상, 재산상 피해, 의학적인 사고 등 대회기간 중 발생한 사고에 대한 책임은 본인의 자의적인 참가에 의한 본인의 책임이며, 본 대회를 주관하는 관계자 및 기관에 대한 면책은 물론 책임전가를 하지 않을 것을 서약합니다.', agreeLabel: '네. 동의합니다.' },
   { id: 'privacyConsent', label: '11. 개인정보 수집에 동의합니다.', type: 'textarea', required: true, textareaContent: '• 정보수집 및 이용기관 : 통영시요트협회\n• 수집 정보 : 성명, 생년월일, 전화번호, 이메일, 소속 단체\n• 수집 목적 : 참가자 관리 및 보험가입, 대회 공지 전송 등\n• 보존 기간 : 대회 정산 이후 즉시 폐기합니다.', agreeLabel: '네. 동의합니다.' },
   { id: 'mediaConsent', label: '12. 초상권 및 저작권 사용 동의', type: 'textarea', required: true, textareaContent: '• 정보수집 및 이용기관 : 통영시요트협회\n• 수집 목적 : 대회 홍보, 결과 보도, 미디어 자료 활용 등\n• 활용 대상 : 대회 사진, 동영상 등 촬영물\n• 보존 기간 : 통영시요트협회 아카이브 보관용으로 영구 보존 및 활용에 동의합니다.', agreeLabel: '네. 동의합니다.' }
 ];
 
 const DIVISION_OPTIONS = [
-  '윈드포일 (남자부)',
-  '윈드포일 (여자부)',
+  '윈드포일',
   '윙포일 (남자부)',
   '윙포일 (여자부)',
   '혼합오픈 (남자부)',
@@ -81,8 +80,9 @@ const normalizeTshirtSize = (size?: string): string => {
 };
 
 const normalizeDivision = (div?: string, gender?: string): string => {
-  if (!div) return gender === '여자' ? '윈드포일 (여자부)' : '윈드포일 (남자부)';
+  if (!div) return '윈드포일';
   const d = String(div).trim();
+  if (d.includes('윈드포일')) return '윈드포일';
   if (DIVISION_OPTIONS.includes(d)) return d;
   
   const isFemale = d.includes('여자') || gender === '여자';
@@ -90,7 +90,6 @@ const normalizeDivision = (div?: string, gender?: string): string => {
   if (d.includes('윙포일')) return `윙포일${suffix}`;
   if (d.includes('혼합오픈')) return `혼합오픈${suffix}`;
   if (d.includes('펀엔포뮬러') || d.includes('펀&포뮬러')) return `펀엔포뮬러${suffix}`;
-  if (d.includes('윈드포일')) return `윈드포일${suffix}`;
   return d;
 };
 
@@ -150,7 +149,7 @@ export default function HostDashboardPage({
   const [isSaving, setIsSaving] = useState(false);
 
   // 온라인 참가 신청 접수 기간 및 권한 설정 상태
-  const [regStartDate, setRegStartDate] = useState('2026-09-28T09:00');
+  const [regStartDate, setRegStartDate] = useState('2026-09-29T09:00');
   const [regEndDate, setRegEndDate] = useState('2026-10-18T18:00');
   const [regMode, setRegMode] = useState<'AUTO' | 'FORCE_ENABLED' | 'DISABLED'>('AUTO');
   const [regEnabled, setRegEnabled] = useState(true);
@@ -334,7 +333,7 @@ export default function HostDashboardPage({
         let gender = '남자';
         let phone = '';
         let club = '미소속';
-        let division = '윈드포일 (남자부)';
+        let division = '윈드포일';
         let tshirtSize = 'M (100)';
         let vestAgreement = '';
         let paymentNoticeAgreement = '';
@@ -423,7 +422,7 @@ export default function HostDashboardPage({
       gender: '남자',
       phone: '',
       club: '',
-      division: '윈드포일 (남자부)',
+      division: '윈드포일',
       tshirtSize: 'M (100)',
       vestAgreement: '네. 확인했습니다.',
       paymentNoticeAgreement: '네. 확인했습니다.',

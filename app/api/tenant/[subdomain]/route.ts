@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 // 공식 불변 대회 일정 및 정보
 const OFFICIAL_DURATION = '2026. 10. 31(토) ~ 11. 01(일) (1박 2일)';
 const OFFICIAL_DEADLINE = '2026년 10월 18일(일) 18:00 (130명 한도 조기마감)';
-const OFFICIAL_REG_START = '2026-09-28T09:00';
+const OFFICIAL_REG_START = '2026-09-29T09:00';
 const OFFICIAL_REG_END = '2026-10-18T18:00';
 const OFFICIAL_SCALE = '130명 한도 (선착순 조기마감)';
 const OFFICIAL_LOCATION = '경상남도 통영시 도남동 수륙해수욕장 일원';

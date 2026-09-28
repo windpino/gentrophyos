@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, use } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Award, Calendar, Layers, FileText, CheckCircle2, User, UserPlus, RefreshCw, Archive, Search, Compass, MapPin, Phone, Sparkles, Trophy, Smartphone, ShieldCheck, X, AlertTriangle, Menu, Copy, Check } from 'lucide-react';
+import { Award, Calendar, Layers, FileText, CheckCircle2, User, UserPlus, RefreshCw, Archive, Search, Compass, MapPin, Phone, Sparkles, Trophy, Smartphone, ShieldCheck, X, AlertTriangle, Menu, Copy, Check, ExternalLink } from 'lucide-react';
 
 interface TenantData {
   id: string;
@@ -117,10 +117,10 @@ const DEFAULT_FORM_FIELDS = [
   { id: 'gender', label: '3. 성별', type: 'radio', required: true, options: ['남자', '여자'] },
   { id: 'phone', label: '4. 전화번호 (휴대폰번호)', type: 'text', required: true, placeholder: '예) 01012345678' },
   { id: 'club', label: '5. 소속협회 또는 클럽', type: 'text', required: true, placeholder: '소속 단체명을 입력해 주세요 (초성 검색 가능: 예) ㅌㅇ)' },
-  { id: 'division', label: '6. 참가종목', type: 'radio', required: true, options: ['윈드포일 (남자부)', '윈드포일 (여자부)', '윙포일 (남자부)', '윙포일 (여자부)', '혼합오픈 (남자부)', '혼합오픈 (여자부)', '펀엔포뮬러 (남자부)', '펀엔포뮬러 (여자부)'] },
+  { id: 'division', label: '6. 참가종목', type: 'radio', required: true, options: ['윈드포일', '윙포일 (남자부)', '윙포일 (여자부)', '혼합오픈 (남자부)', '혼합오픈 (여자부)', '펀엔포뮬러 (남자부)', '펀엔포뮬러 (여자부)'] },
   { id: 'tshirtSize', label: '7. 티셔츠(기념품)사이즈', type: 'radio', required: true, options: ['S (95)', 'M (100)', 'L (105)', 'XL (110)'] },
   { id: 'vestAgreement', label: '8. 당일 대회본부에 조끼(배번티)를 반드시 수령하셔야 합니다.', type: 'checkbox', required: true, notice: '대회운영본부 수령 필수 (사용 후 반드시 반납바랍니다)', agreeLabel: '네. 확인했습니다.' },
-  { id: 'paymentNoticeAgreement', label: '9. 참가비 입금 안내 확인 동의', type: 'checkbox', required: true, notice: '• 참가비: 30,000원 (클래스 구분 없이 일괄 3만원)\n• 입금계좌: 농협 351-1334-8643-33 (예금주: 통영시요트협회)\n• 참가 신청서에 작성하신 성명(이름)으로 반드시 입금해 주시기 바랍니다.\n• 입금 완료 순서(입금순)로 선착순 130명 참가 확정 처리됩니다.\n• 참가 확정 및 선수등록 승인 안내는 대회 공식 홈페이지에서 확인하실 수 있습니다.', agreeLabel: '네. 확인했습니다.' },
+  { id: 'paymentNoticeAgreement', label: '9. 참가비 입금 안내 확인 동의', type: 'checkbox', required: true, notice: '• 참가비: 30,000원\n• 입금계좌: 농협 351-1334-8643-33 (예금주: 통영시요트협회)\n• 참가 신청서에 작성하신 성명(이름)으로 반드시 입금해 주시기 바랍니다.\n• 입금 완료 순서(입금순)로 선착순 130명 참가 확정 처리됩니다.\n• 참가 확정 및 선수등록 승인 안내는 대회 공식 홈페이지에서 확인하실 수 있습니다.', agreeLabel: '네. 확인했습니다.' },
   { id: 'liabilityWaiver', label: '10. 면책 동의서 서약에 동의합니다.', type: 'textarea', required: true, textareaContent: '본인은 제20회 이순신장군배 전국윈드서핑대회 참가 활동 중 본인의 부주의로 인해 발생할 수 있는 사고, 즉 개인적 부상, 재산상 피해, 의학적인 사고 등 대회기간 중 발생한 사고에 대한 책임은 본인의 자의적인 참가에 의한 본인의 책임이며, 본 대회를 주관하는 관계자 및 기관에 대한 면책은 물론 책임전가를 하지 않을 것을 서약합니다.', agreeLabel: '네. 동의합니다.' },
   { id: 'privacyConsent', label: '11. 개인정보 수집에 동의합니다.', type: 'textarea', required: true, textareaContent: '• 정보수집 및 이용기관 : 통영시요트협회\n• 수집 정보 : 성명, 생년월일, 전화번호, 이메일, 소속 단체\n• 수집 목적 : 참가자 관리 및 보험가입, 대회 공지 전송 등\n• 보존 기간 : 대회 정산 이후 즉시 폐기합니다.', agreeLabel: '네. 동의합니다.' },
   { id: 'mediaConsent', label: '12. 초상권 및 저작권 사용 동의', type: 'textarea', required: true, textareaContent: '• 정보수집 및 이용기관 : 통영시요트협회\n• 수집 목적 : 대회 홍보, 결과 보도, 미디어 자료 활용 등\n• 활용 대상 : 대회 사진, 동영상 등 촬영물\n• 보존 기간 : 통영시요트협회 아카이브 보관용으로 영구 보존 및 활용에 동의합니다.', agreeLabel: '네. 동의합니다.' }
@@ -145,15 +145,15 @@ const getDefaultTenantData = (subdomain: string): TenantData => ({
     bankName: '농협 (NH농협)',
     accountNo: '351-1334-8643-33',
     accountHolder: '통영시요트협회',
-    entryFeeIndividual: '30,000원 (클래스 구분 없이 일괄 3만원)',
+    entryFeeIndividual: '30,000원',
     entryFeeGroup: '단체전 팀당 50,000원',
     deadlineDate: '2026년 10월 18일(일) 18:00 (130명 한도 조기마감)',
     registrationEnabled: true,
     registrationMode: 'FORCE_ENABLED',
-    registrationStartDate: '2026-09-28T09:00',
+    registrationStartDate: '2026-09-29T09:00',
     registrationEndDate: '2026-10-18T18:00',
     registrationNotice: '',
-    rulesNote: '※ 참가 신청 시 소속 클럽 명확히 작성 필수.\n※ 모든 나이는 2026년 10월 31일을 기준으로 합니다.\n※ 참가인원은 선착순으로 130명이 충족되면 참가접수 기한이 조기에 마감될 수 있습니다.\n※ 참가비: 30,000원 (클래스 구분 없이 일괄 3만원)\n※ 참가비 입금계좌: 농협 351-1334-8643-33 (예금주: 통영시요트협회)\n※ 참가 신청서에 입력한 이름으로 반드시 입금해 주시기 바랍니다.\n※ 입금 완료 순서(입금순)로 선착순 130명 참가 확정 처리되며, 참가 확정 안내는 대회 공식 홈페이지에서 확인하실 수 있습니다.\n※ 신청기간 이후에는 취소 및 참가비 환불이 불가합니다.',
+    rulesNote: '※ 참가 신청 시 소속 클럽 명확히 작성 필수.\n※ 모든 나이는 2026년 10월 31일을 기준으로 합니다.\n※ 참가인원은 선착순으로 130명이 충족되면 참가접수 기한이 조기에 마감될 수 있습니다.\n※ 참가비: 30,000원\n※ 참가비 입금계좌: 농협 351-1334-8643-33 (예금주: 통영시요트협회)\n※ 참가 신청서에 입력한 이름으로 반드시 입금해 주시기 바랍니다.\n※ 입금 완료 순서(입금순)로 선착순 130명 참가 확정 처리되며, 참가 확정 안내는 대회 공식 홈페이지에서 확인하실 수 있습니다.\n※ 신청기간 이후에는 취소 및 참가비 환불이 불가합니다.',
     itineraryDay1: '10:00 - 12:00 : 선수단 현장등록 및 웜업\n12:00 - 13:00 : 중식\n13:00 - 13:30 : 개회식\n13:30 - 18:00 : 1일차 경기',
     itineraryDay2: '09:00 - 12:00 : 2일차 경기\n12:00 - 13:00 : 중식\n13:00 - 18:00 : 2일차 경기 및 시상식\n18:00 - : 폐회식 및 해산',
     itineraryDay3: '',
@@ -200,7 +200,7 @@ export default function TenantPortalPage({
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'notice' | 'intro' | 'live' | 'gallery' | 'archive'>('overview');
   const [activeSubTab, setActiveSubTab] = useState<string>('');
-  const [activeDivisionTab, setActiveDivisionTab] = useState<string>('윈드포일 (남자부)');
+  const [activeDivisionTab, setActiveDivisionTab] = useState<string>('윈드포일');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // 대회 선택 (진행중인 대회)
@@ -208,6 +208,7 @@ export default function TenantPortalPage({
   
   // 리더보드 및 참가자 데이터
   const [leaderboards, setLeaderboards] = useState<Record<string, any[]>>({});
+  const [leaderboardRounds, setLeaderboardRounds] = useState<Record<string, any[]>>({});
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [selectedLeaderboardCategory, setSelectedLeaderboardCategory] = useState<string>('전체');
   const [registrations, setRegistrations] = useState<any[]>([]);
@@ -227,7 +228,7 @@ export default function TenantPortalPage({
   const [formFields, setFormFields] = useState<any[]>(DEFAULT_FORM_FIELDS);
   const [formResponses, setFormResponses] = useState<Record<string, any>>({
     gender: '남자',
-    division: '윈드포일 (남자부)',
+    division: '윈드포일',
     tshirtSize: 'M (100)'
   });
 
@@ -309,7 +310,7 @@ export default function TenantPortalPage({
           
           // 필수 기본값 보완
           if (initialResponses.gender === undefined) initialResponses.gender = '남자';
-          if (initialResponses.division === undefined) initialResponses.division = '윈드포일 (남자부)';
+          if (initialResponses.division === undefined) initialResponses.division = '윈드포일';
           if (initialResponses.tshirtSize === undefined) initialResponses.tshirtSize = 'M (100)';
 
           setFormResponses(initialResponses);
@@ -390,11 +391,11 @@ export default function TenantPortalPage({
         if (data.tenant.overviewConfig) {
           data.tenant.overviewConfig.duration = '2026. 10. 31(토) ~ 11. 01(일) (1박 2일)';
           data.tenant.overviewConfig.deadlineDate = '2026년 10월 18일(일) 18:00 (130명 한도 조기마감)';
-          data.tenant.overviewConfig.registrationStartDate = '2026-09-28T09:00';
+          data.tenant.overviewConfig.registrationStartDate = '2026-09-29T09:00';
           data.tenant.overviewConfig.registrationEndDate = '2026-10-18T18:00';
           data.tenant.overviewConfig.scale = '130명 한도 (선착순 조기마감)';
           data.tenant.overviewConfig.location = '경상남도 통영시 도남동 수륙해수욕장 일원';
-          data.tenant.overviewConfig.entryFeeIndividual = '30,000원 (클래스 구분 없이 일괄 3만원)';
+          data.tenant.overviewConfig.entryFeeIndividual = '30,000원';
         }
         if (data.tenant.tournaments) {
           data.tenant.tournaments = data.tenant.tournaments.map((t: any) => (
@@ -431,8 +432,7 @@ export default function TenantPortalPage({
       return configuredDivisions;
     }
     return [
-      '윈드포일 (남자부)',
-      '윈드포일 (여자부)',
+      '윈드포일',
       '윙포일 (남자부)',
       '윙포일 (여자부)',
       '혼합오픈 (남자부)',
@@ -451,19 +451,24 @@ export default function TenantPortalPage({
           try {
             const res = await fetch(`/api/tenant/${subdomain}/leaderboard?tournamentId=${tId}&division=${encodeURIComponent(div)}&_t=${Date.now()}`, { cache: 'no-store' });
             const data = await res.json();
-            return { division: div, list: data.leaderboard || [] };
+            return { division: div, list: data.leaderboard || [], rounds: data.rounds || null };
           } catch (e) {
             console.error(`Failed to fetch leaderboard for ${div}:`, e);
-            return { division: div, list: [] };
+            return { division: div, list: [], rounds: null };
           }
         })
       );
       
       const newLeaderboards: Record<string, any[]> = {};
+      const newRounds: Record<string, any[]> = {};
       results.forEach(r => {
         newLeaderboards[r.division] = r.list;
+        if (r.rounds) {
+          newRounds[r.division] = r.rounds;
+        }
       });
       setLeaderboards(newLeaderboards);
+      setLeaderboardRounds(newRounds);
     } catch (e) {
       console.error(e);
     } finally {
@@ -599,7 +604,7 @@ export default function TenantPortalPage({
       });
       // 필수 기본값 복구
       resetResponses.gender = '남자';
-      resetResponses.division = '윈드포일 (남자부)';
+      resetResponses.division = '윈드포일';
       resetResponses.tshirtSize = 'M (100)';
 
       setFormResponses(resetResponses);
@@ -633,7 +638,7 @@ export default function TenantPortalPage({
     ...(tenant.overviewConfig || {}),
     duration: '2026. 10. 31(토) ~ 11. 01(일) (1박 2일)',
     deadlineDate: '2026년 10월 18일(일) 18:00 (130명 한도 조기마감)',
-    registrationStartDate: '2026-09-28T09:00',
+    registrationStartDate: '2026-09-29T09:00',
     registrationEndDate: '2026-10-18T18:00',
     scale: '130명 한도 (선착순 조기마감)',
     location: '경상남도 통영시 도남동 수륙해수욕장 일원',
@@ -641,7 +646,7 @@ export default function TenantPortalPage({
     registrationEnabled: true,
   };
   const regMode = regConfig.registrationMode || 'FORCE_ENABLED';
-  const regStartDateStr = '2026-09-28T09:00';
+  const regStartDateStr = '2026-09-29T09:00';
   const regEndDateStr = '2026-10-18T18:00';
   const regNotice = regConfig.registrationNotice || '';
 
@@ -850,7 +855,7 @@ export default function TenantPortalPage({
               </div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px dashed #e2e8f0', paddingTop: '6px', marginTop: '2px' }}>
                 <span style={{ color: '#64748b', fontSize: '0.85rem' }}>참가비</span>
-                <span style={{ fontWeight: '800', color: '#0284c7' }}>30,000원 (클래스 구분 없이 일괄 3만원)</span>
+                <span style={{ fontWeight: '800', color: '#0284c7' }}>30,000원</span>
               </div>
             </div>
           </div>
@@ -1032,7 +1037,7 @@ export default function TenantPortalPage({
                 <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>후 원 :</strong> {regConfig.supporter || '대한윈드서핑카이트보딩협회'}</p>
                 <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>대회일정 :</strong> {regConfig.duration || '2026. 10. 31(토) ~ 11. 01(일) (1박 2일)'}</p>
                 <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>장 소 :</strong> {regConfig.location || '경상남도 통영시 도남동 수륙해수욕장 일원'}</p>
-                <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>참가인원 :</strong> {regConfig.scale || '130명 한도 (선착순 조기마감)'}</p>
+                <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>참가인원 :</strong> <span style={{ color: '#2563eb', fontWeight: '800' }}>{regConfig.scale || '130명 한도 (선착순 조기마감)'}</span></p>
               </div>
 
               <div>
@@ -1041,7 +1046,7 @@ export default function TenantPortalPage({
                 <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>윙포일 :</strong> 남자부/여자부</p>
                 <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>혼합오픈 :</strong> 남자청년부/남자중년부/남자장년부/여자부</p>
                 <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>펀앤포뮬러 :</strong> 남자청년부/남자중년부/남자장년부/여자부</p>
-                <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>단체전</strong></p>
+                <p style={{ margin: 0, paddingLeft: '8px' }}>• <strong>단체전 :</strong> 각 협회 및 클럽별 대항전으로 등록선수에 한해 참가가능</p>
                 <p style={{ margin: '8px 0 0 0', paddingLeft: '8px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                   ※ 각 클래스는 생년월일기준으로 편성하며 선수 5명이상 출전 시 시상한다.<br />
                   ※ 단체전을 제외한 종목별 경기의 중복출전은 불가하다.<br />
@@ -1051,9 +1056,9 @@ export default function TenantPortalPage({
 
               <div style={{ background: '#eff6ff', border: '1.5px solid #bfdbfe', borderRadius: '10px', padding: '14px 16px', marginTop: '6px' }}>
                 <strong style={{ display: 'block', fontSize: '0.95rem', color: '#1e40af', marginBottom: '8px' }}>▣ 접수방법 & 참가비 입금 안내 (필독)</strong>
-                <p style={{ margin: 0, paddingLeft: '8px', fontSize: '0.9rem' }}>• {formatKoreanDateTime(regEndDateStr)} 까지 참가신청서를 작성하여 선수등록을 하여야 합니다. (130명 한도 선착순 조기마감)</p>
+                <p style={{ margin: 0, paddingLeft: '8px', fontSize: '0.9rem' }}>• {formatKoreanDateTime(regEndDateStr)} 까지 참가신청서를 작성하여 선수등록을 하여야 합니다. (<span style={{ color: '#2563eb', fontWeight: '800' }}>130명 한도 선착순 조기마감</span>)</p>
                 <p style={{ margin: '6px 0 0 0', paddingLeft: '8px', fontSize: '0.95rem', color: '#0369a1', fontWeight: '800' }}>
-                  • 참가비: 30,000원 (클래스 구분 없이 일괄 3만원)
+                  • 참가비: 30,000원
                 </p>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', margin: '6px 0 0 0', paddingLeft: '8px' }}>
                   <span style={{ color: 'var(--theme-primary)', fontWeight: '800', fontSize: '0.95rem' }}>
@@ -1081,21 +1086,21 @@ export default function TenantPortalPage({
                     <span>{accountCopied ? '계좌·금액(3만원) 복사됨!' : '계좌·금액 복사'}</span>
                   </button>
                 </div>
-                <p style={{ margin: '6px 0 0 0', paddingLeft: '8px', color: '#b91c1c', fontWeight: '800', fontSize: '0.92rem' }}>
+                <p style={{ margin: '6px 0 0 0', paddingLeft: '8px', color: '#dc2626', fontWeight: '800', fontSize: '0.94rem' }}>
                   • 참가 신청서에 작성하신 성명(이름)과 반드시 동일하게 입금해 주시기 바랍니다.
                 </p>
-                <p style={{ margin: '6px 0 0 0', paddingLeft: '8px', color: '#0f766e', fontWeight: '800', fontSize: '0.92rem' }}>
-                  • 입금 완료 순서(입금순)로 선착순 130명 참가 확정 처리되며, 확정 안내는 대회 공식 홈페이지에서 확인하실 수 있습니다.
+                <p style={{ margin: '6px 0 0 0', paddingLeft: '8px', color: '#1d4ed8', fontWeight: '700', fontSize: '0.93rem' }}>
+                  • 입금 완료 순서(입금순)로 <span style={{ color: '#2563eb', fontWeight: '900', textDecoration: 'underline', background: '#dbeafe', padding: '1px 6px', borderRadius: '4px' }}>선착순 130명</span> 참가 확정 처리되며, 확정 안내는 대회 공식 홈페이지에서 확인하실 수 있습니다.
                 </p>
                 <p style={{ margin: '6px 0 0 0', paddingLeft: '8px', color: '#64748b', fontSize: '0.85rem' }}>
-                  • 단체전은 2026년 11월 1일(일) 경기개시 1시간 전 선수등록하여 시행합니다. (윙포일 부문은 남녀 각 10명으로 제한)
+                  • 단체전은 2026년 11월 1일(일) 경기개시 1시간 전 선수등록하여 시행합니다. (윙포일 부문은 남녀 각 10명으로 제한, 각 협회 및 클럽별 대항전으로 등록선수에 한해 참가가능)
                 </p>
               </div>
 
               <div>
                 <strong style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '6px' }}>▣ 기타 & 문의사항</strong>
                 <p style={{ margin: 0, paddingLeft: '8px' }}>• 통영윈드서핑협회 전무이사 임병훈 (010-3648-9838)</p>
-                <p style={{ margin: 0, paddingLeft: '8px' }}>• 접수 기간: {formatKoreanDateTime(regStartDateStr)} ~ {formatKoreanDateTime(regEndDateStr)} (130명 한도 선착순 조기마감)</p>
+                <p style={{ margin: 0, paddingLeft: '8px' }}>• 접수 기간: {formatKoreanDateTime(regStartDateStr)} ~ {formatKoreanDateTime(regEndDateStr)} (<span style={{ color: '#2563eb', fontWeight: '800' }}>130명 한도 선착순 조기마감</span>)</p>
               </div>
             </div>
           </div>
@@ -1230,8 +1235,8 @@ export default function TenantPortalPage({
                     {field.id === 'division' ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '8px' }}>
                         {(formResponses['gender'] === '여자'
-                          ? ['윈드포일 (여자부)', '윙포일 (여자부)', '혼합오픈 (여자부)', '펀엔포뮬러 (여자부)']
-                          : ['윈드포일 (남자부)', '윙포일 (남자부)', '혼합오픈 (남자부)', '펀엔포뮬러 (남자부)']
+                          ? ['윈드포일', '윙포일 (여자부)', '혼합오픈 (여자부)', '펀엔포뮬러 (여자부)']
+                          : ['윈드포일', '윙포일 (남자부)', '혼합오픈 (남자부)', '펀엔포뮬러 (남자부)']
                         ).map((divOption) => (
                           <label key={divOption} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.95rem', fontWeight: '500' }}>
                             <input
@@ -1264,7 +1269,12 @@ export default function TenantPortalPage({
                                   if (curDiv.includes('윙포일')) baseDiv = '윙포일';
                                   else if (curDiv.includes('혼합오픈')) baseDiv = '혼합오픈';
                                   else if (curDiv.includes('펀엔포뮬러') || curDiv.includes('펀&포뮬러')) baseDiv = '펀엔포뮬러';
-                                  handleInputChange('division', `${baseDiv} (${val === '여자' ? '여자부' : '남자부'})`);
+                                  
+                                  if (baseDiv === '윈드포일') {
+                                    handleInputChange('division', '윈드포일');
+                                  } else {
+                                    handleInputChange('division', `${baseDiv} (${val === '여자' ? '여자부' : '남자부'})`);
+                                  }
                                 }
                               }}
                               style={{ width: '18px', height: '18px' }}
@@ -1299,7 +1309,7 @@ export default function TenantPortalPage({
                       <div style={{ background: '#ffffff', border: '1px solid #bae6fd', borderRadius: '10px', padding: '14px 16px', marginBottom: '14px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
                           <span style={{ fontWeight: '900', color: '#0284c7', fontSize: '1.02rem' }}>
-                            참가비: 30,000원 (클래스 구분 없이 일괄 3만원)
+                            참가비: 30,000원
                           </span>
                           <button
                             type="button"
@@ -1322,9 +1332,79 @@ export default function TenantPortalPage({
                             <span>{accountCopied ? '계좌·금액(3만원) 복사됨!' : '계좌·금액 복사'}</span>
                           </button>
                         </div>
-                        <p style={{ fontSize: '0.88rem', color: '#334155', margin: 0, whiteSpace: 'pre-line', lineHeight: '1.65', fontWeight: '500' }}>
-                          {field.notice || '• 참가비: 30,000원 (클래스 구분 없이 일괄 3만원)\n• 입금계좌: 농협 351-1334-8643-33 (예금주: 통영시요트협회)\n• 참가 신청서에 작성하신 성명(이름)으로 반드시 입금해 주시기 바랍니다.\n• 입금 완료 순서(입금순)로 선착순 130명 참가 확정 처리됩니다.\n• 참가 확정 및 선수등록 승인 안내는 대회 공식 홈페이지에서 확인하실 수 있습니다.'}
-                        </p>
+                        <div style={{ fontSize: '0.88rem', color: '#334155', margin: 0, lineHeight: '1.65', fontWeight: '500' }}>
+                          {(field.notice || '• 참가비: 30,000원\n• 입금계좌: 농협 351-1334-8643-33 (예금주: 통영시요트협회)\n• 참가 신청서에 작성하신 성명(이름)으로 반드시 입금해 주시기 바랍니다.\n• 입금 완료 순서(입금순)로 선착순 130명 참가 확정 처리됩니다.\n• 참가 확정 및 선수등록 승인 안내는 대회 공식 홈페이지에서 확인하실 수 있습니다.')
+                            .split('\n')
+                            .map((line: string, idx: number) => {
+                              const isRedHighlight = line.includes('반드시') || line.includes('성명');
+                              const is130Highlight = line.includes('130명');
+
+                              if (isRedHighlight) {
+                                return (
+                                  <p
+                                    key={idx}
+                                    style={{
+                                      margin: idx === 0 ? 0 : '4px 0 0 0',
+                                      color: '#dc2626',
+                                      fontWeight: '800',
+                                      fontSize: '0.93rem'
+                                    }}
+                                  >
+                                    {line}
+                                  </p>
+                                );
+                              }
+
+                              if (is130Highlight) {
+                                const parts = line.split(/(선착순 130명|130명)/g);
+                                return (
+                                  <p
+                                    key={idx}
+                                    style={{
+                                      margin: idx === 0 ? 0 : '4px 0 0 0',
+                                      color: '#1d4ed8',
+                                      fontWeight: '700',
+                                      fontSize: '0.92rem'
+                                    }}
+                                  >
+                                    {parts.map((p: string, pIdx: number) =>
+                                      p.includes('130명') ? (
+                                        <span
+                                          key={pIdx}
+                                          style={{
+                                            color: '#2563eb',
+                                            fontWeight: '900',
+                                            textDecoration: 'underline',
+                                            background: '#dbeafe',
+                                            padding: '1px 6px',
+                                            borderRadius: '4px'
+                                          }}
+                                        >
+                                          {p}
+                                        </span>
+                                      ) : (
+                                        p
+                                      )
+                                    )}
+                                  </p>
+                                );
+                              }
+
+                              return (
+                                <p
+                                  key={idx}
+                                  style={{
+                                    margin: idx === 0 ? 0 : '4px 0 0 0',
+                                    color: '#334155',
+                                    fontWeight: '500',
+                                    fontSize: '0.88rem'
+                                  }}
+                                >
+                                  {line}
+                                </p>
+                              );
+                            })}
+                        </div>
                       </div>
                     ) : field.notice && (
                       <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '12px', whiteSpace: 'pre-line', lineHeight: '1.6' }}>
@@ -2097,22 +2177,31 @@ export default function TenantPortalPage({
                       return fuzzy || `${root} (${gender})`;
                     };
 
-                    const renderTable = (list: any[]) => {
+                    const renderTable = (list: any[], divKey?: string) => {
                       // 리더보드 데이터에서 활성 라운드 키 동적 추출 (r1, r2, ... rN)
-                      const discoveredKeys = new Set<string>();
-                      list.forEach((row: any) => {
-                        Object.keys(row).forEach(k => {
-                          if (/^r\d+$/.test(k) && row[k] !== undefined && row[k] !== null) {
-                            discoveredKeys.add(k);
-                          }
-                        });
-                      });
+                      const customRounds = divKey && leaderboardRounds[divKey] ? leaderboardRounds[divKey] : null;
+                      let activeRoundKeys: string[] = [];
 
-                      const maxRoundNum = Math.max(
-                        ...Array.from(discoveredKeys).map(k => parseInt(k.replace('r', ''), 10)),
-                        6
-                      );
-                      const activeRoundKeys = Array.from({ length: maxRoundNum }, (_, i) => `r${i + 1}`);
+                      if (customRounds && Array.isArray(customRounds) && customRounds.length > 0) {
+                        activeRoundKeys = customRounds.map((r: any) => r.key);
+                      } else {
+                        const discoveredKeys = new Set<string>();
+                        list.forEach((row: any) => {
+                          Object.keys(row).forEach(k => {
+                            if (/^r\d+$/.test(k) && row[k] !== undefined && row[k] !== null) {
+                              discoveredKeys.add(k);
+                            }
+                          });
+                        });
+
+                        if (discoveredKeys.size > 0) {
+                          activeRoundKeys = Array.from(discoveredKeys).sort((a, b) => {
+                            return parseInt(a.replace('r', ''), 10) - parseInt(b.replace('r', ''), 10);
+                          });
+                        } else {
+                          activeRoundKeys = ['r1', 'r2', 'r3', 'r4', 'r5', 'r6'];
+                        }
+                      }
 
                       return (
                         <div className="premium-table-container">
@@ -2207,6 +2296,32 @@ export default function TenantPortalPage({
                       : [activeRoot];
 
                     return rootsToRender.map((root: string) => {
+                      if (root === '윈드포일') {
+                        const openList = leaderboards['윈드포일'] || [];
+                        if (activeRoot === '전체' && openList.length === 0) return null;
+
+                        return (
+                          <div key={root} style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '10px' }}>
+                            <div style={{ margin: '15px 0 0px 0', padding: '4px 12px', borderLeft: '4px solid var(--theme-primary)' }}>
+                              <h3 style={{ fontSize: '1.3rem', fontWeight: '900', color: 'var(--text-main)', margin: 0 }}>
+                                윈드포일 (남녀오픈)
+                              </h3>
+                            </div>
+
+                            <div className="glass-panel" style={{ background: 'white', padding: '24px 30px', borderTop: '4px solid var(--theme-primary)' }}>
+                              <h4 style={{ fontSize: '1.15rem', fontWeight: '900', color: 'var(--text-main)', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ fontSize: '1.2rem' }}>🏆</span> 윈드포일 (남녀오픈)
+                              </h4>
+                              {openList.length === 0 ? (
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '10px 0' }}>
+                                  해당 부서의 등록/확정된 순위표가 없습니다.
+                                </p>
+                              ) : renderTable(openList, '윈드포일')}
+                            </div>
+                          </div>
+                        );
+                      }
+
                       const maleDivName = getExactDivisionName(root, '남자부');
                       const femaleDivName = getExactDivisionName(root, '여자부');
 
@@ -2232,7 +2347,7 @@ export default function TenantPortalPage({
                               <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '10px 0' }}>
                                 해당 부서의 등록/확정된 순위표가 없습니다.
                               </p>
-                            ) : renderTable(maleList)}
+                            ) : renderTable(maleList, maleDivName)}
                           </div>
 
                           {/* 여자부 카드 */}
@@ -2244,7 +2359,7 @@ export default function TenantPortalPage({
                               <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '10px 0' }}>
                                 해당 부서의 등록/확정된 순위표가 없습니다.
                               </p>
-                            ) : renderTable(femaleList)}
+                            ) : renderTable(femaleList, femaleDivName)}
                           </div>
                         </div>
                       );
@@ -2845,13 +2960,13 @@ export default function TenantPortalPage({
                     <div>
                       <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem', fontWeight: '700' }}>접수 기간</span>
                       <p style={{ fontWeight: '700', color: 'var(--text-main)', marginTop: '4px', fontSize: '0.92rem', margin: 0 }}>
-                        2026. 09. 28(월) 09:00 ~ 10. 18(일) 18:00
+                        2026. 09. 29(화) 09:00 ~ 10. 18(일) 18:00
                       </p>
                     </div>
                     <div>
                       <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem', fontWeight: '700' }}>참가비</span>
                       <p style={{ fontWeight: '800', color: '#0284c7', marginTop: '4px', fontSize: '1.02rem', margin: 0 }}>
-                        30,000원 <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#64748b' }}>(클래스 구분 없이 일괄 3만원)</span>
+                        30,000원
                       </p>
                     </div>
                     <div>
@@ -2887,7 +3002,7 @@ export default function TenantPortalPage({
                       <p style={{ fontWeight: '800', color: 'var(--text-main)', marginTop: '4px', fontSize: '1.02rem', margin: 0 }}>
                         {overview.deadlineDate}
                       </p>
-                      <p style={{ fontSize: '0.8rem', color: '#EF4444', marginTop: '2px', margin: 0 }}>* 130명 한도 선착순 조기마감</p>
+                      <p style={{ fontSize: '0.82rem', color: '#2563eb', fontWeight: '800', marginTop: '2px', margin: 0 }}>* 130명 한도 선착순 조기마감</p>
                     </div>
                     <button
                       type="button"
@@ -2961,16 +3076,206 @@ export default function TenantPortalPage({
 
           {/* INTRO. 대회 소개 탭 */}
           {activeTab === 'intro' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '800px', margin: '0 auto', width: '100%' }} className="animate-fade-in">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: activeSubTab === 'intro-greeting' ? '1080px' : '800px', margin: '0 auto', width: '100%' }} className="animate-fade-in">
               
-              {/* 1. 인사말 / 조직위원회 */}
+              {/* 1. 인사말 / 조직위원회 (대회본부 조직도) */}
               {activeSubTab === 'intro-greeting' && (
-                <div className="glass-panel" style={{ background: 'white', padding: '30px', borderTop: '4px solid var(--theme-primary)' }}>
-                  <h3 style={{ fontSize: '1.3rem', fontWeight: '900', marginBottom: '20px', color: 'var(--text-main)' }}>인사말 / 조직위원회</h3>
-                  <p style={{ color: 'var(--text-muted)', lineHeight: '1.7', fontSize: '0.92rem', margin: 0 }}>
-                    제20회 이순신장군배 전국윈드서핑대회에 관심을 가져주셔서 감사합니다.<br />
-                    본 대회 인사말 및 조직위원회 구성 명단은 준비 중입니다.
-                  </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  {/* 상단 타이틀 카드 */}
+                  <div className="glass-panel" style={{ background: 'white', padding: '24px 28px', borderTop: '4px solid var(--theme-primary)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                      <div>
+                        <span style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--theme-primary)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                          TONGYEONG WINDSURFING ASSOCIATION
+                        </span>
+                        <h3 style={{ fontSize: '1.45rem', fontWeight: '900', color: 'var(--text-main)', margin: '4px 0 0 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span>⛵</span> 대회본부 조직도 (ORGANIZATION CHART)
+                        </h3>
+                        <p style={{ margin: '4px 0 0 0', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
+                          바다와 바람, 그리고 우리 — 제20회 이순신장군배 전국윈드서핑대회 조직위원회 구성도입니다.
+                        </p>
+                      </div>
+                      <a
+                        href="/images/organization-chart.jpg"
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          background: '#0284c7',
+                          color: '#ffffff',
+                          padding: '8px 16px',
+                          borderRadius: '8px',
+                          fontSize: '0.85rem',
+                          fontWeight: '800',
+                          textDecoration: 'none',
+                          boxShadow: '0 2px 8px rgba(2,132,199,0.25)'
+                        }}
+                      >
+                        <ExternalLink size={15} />
+                        <span>원본 포스터 확대보기</span>
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* 공식 조직도 포스터 이미지 카드 */}
+                  <div className="glass-panel" style={{ background: 'white', padding: '16px', borderRadius: '16px', textAlign: 'center', overflow: 'hidden' }}>
+                    <a href="/images/organization-chart.jpg" target="_blank" rel="noreferrer" style={{ display: 'block', cursor: 'zoom-in' }}>
+                      <img
+                        src="/images/organization-chart.jpg"
+                        alt="대회본부 조직도"
+                        style={{
+                          width: '100%',
+                          maxHeight: '800px',
+                          objectFit: 'contain',
+                          borderRadius: '10px',
+                          border: '1px solid #e2e8f0',
+                          boxShadow: '0 4px 16px rgba(0,0,0,0.06)'
+                        }}
+                      />
+                    </a>
+                    <span style={{ display: 'inline-block', fontSize: '0.8rem', color: '#64748b', marginTop: '10px' }}>
+                      ※ 이미지를 클릭하시면 원본 고해상도 그래픽으로 크게 확인하실 수 있습니다.
+                    </span>
+                  </div>
+
+                  {/* 텍스트 상세 명단 안내 카드 */}
+                  <div className="glass-panel" style={{ background: 'white', padding: '28px', borderRadius: '16px', borderTop: '4px solid #0284c7' }}>
+                    <h4 style={{ fontSize: '1.15rem', fontWeight: '900', color: 'var(--text-main)', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span>🏛️</span> 대회본부 및 위원회 상세 명단
+                    </h4>
+
+                    {/* 중앙 지도부 카드 */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', marginBottom: '20px' }}>
+                      <div style={{ background: '#f0f9ff', border: '1.5px solid #bae6fd', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#0369a1', background: '#e0f2fe', padding: '2px 8px', borderRadius: '10px' }}>대회장</span>
+                        <h5 style={{ fontSize: '1.25rem', fontWeight: '900', color: '#0f172a', margin: '8px 0 2px 0' }}>강 석 주</h5>
+                        <p style={{ margin: 0, fontSize: '0.82rem', color: '#64748b', fontWeight: '600' }}>통영시장</p>
+                      </div>
+
+                      <div style={{ background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#334155', background: '#e2e8f0', padding: '2px 8px', borderRadius: '10px' }}>대회조직위원장</span>
+                        <h5 style={{ fontSize: '1.25rem', fontWeight: '900', color: '#0f172a', margin: '8px 0 2px 0' }}>서 성 덕</h5>
+                        <p style={{ margin: 0, fontSize: '0.82rem', color: '#64748b', fontWeight: '600' }}>통영시요트협회장</p>
+                      </div>
+
+                      <div style={{ background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#334155', background: '#e2e8f0', padding: '2px 8px', borderRadius: '10px' }}>대회진행위원장</span>
+                        <h5 style={{ fontSize: '1.25rem', fontWeight: '900', color: '#0f172a', margin: '8px 0 2px 0' }}>강 태 훈</h5>
+                        <p style={{ margin: 0, fontSize: '0.82rem', color: '#64748b', fontWeight: '600' }}>통영윈드서핑협회장</p>
+                      </div>
+
+                      <div style={{ background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#334155', background: '#e2e8f0', padding: '2px 8px', borderRadius: '10px' }}>대회운영위원장</span>
+                        <h5 style={{ fontSize: '1.25rem', fontWeight: '900', color: '#0f172a', margin: '8px 0 2px 0' }}>임 병 훈</h5>
+                        <p style={{ margin: 0, fontSize: '0.82rem', color: '#64748b', fontWeight: '600' }}>통영윈드서핑전무이사</p>
+                      </div>
+                    </div>
+
+                    {/* 고문 & 자문단 영역 */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+                      <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px', background: '#fafafa' }}>
+                        <div style={{ fontWeight: '800', color: '#1e293b', fontSize: '0.95rem', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span>🎖️</span> 대회고문
+                        </div>
+                        <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '0.85rem', color: '#475569', lineHeight: '1.7' }}>
+                          <li><strong>국회의원 :</strong> 정점식</li>
+                          <li><strong>의회의장 :</strong> 전병일</li>
+                          <li><strong>체육회장 :</strong> 안휘준</li>
+                        </ul>
+                      </div>
+
+                      <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px', background: '#fafafa' }}>
+                        <div style={{ fontWeight: '800', color: '#1e293b', fontSize: '0.95rem', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span>🌊</span> 통영윈드서핑협회 고문
+                        </div>
+                        <p style={{ margin: 0, fontSize: '0.85rem', color: '#475569', lineHeight: '1.7' }}>
+                          김헌태, 정봉남, 권한용, 김헌수, 강석주, 탁회철
+                        </p>
+                      </div>
+
+                      <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px', background: '#fafafa', gridColumn: '1 / -1' }}>
+                        <div style={{ fontWeight: '800', color: '#1e293b', fontSize: '0.95rem', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span>⛵</span> 통영시요트협회 임원
+                        </div>
+                        <div style={{ fontSize: '0.83rem', color: '#475569', lineHeight: '1.7' }}>
+                          <p style={{ margin: '0 0 4px 0' }}>• <strong>회장 :</strong> 서성덕 &nbsp;|&nbsp; <strong>수석부회장 :</strong> 김기현, 박진환 &nbsp;|&nbsp; <strong>전무이사 :</strong> 손옥진</p>
+                          <p style={{ margin: '0 0 4px 0' }}>• <strong>부회장 :</strong> 강태훈, 김용석, 신성옥, 조정열, 김경진</p>
+                          <p style={{ margin: '0 0 4px 0' }}>• <strong>고문 :</strong> 양재관, 변준섭</p>
+                          <p style={{ margin: 0 }}>• <strong>이사 :</strong> 박영서, 한철규, 권보숙, 최영진, 노승호, 신미경, 서형선, 정운호, 이유성, 이정희, 김광환, 성평만, 김성민, 채해진, 김효준, 권효선, 이영조, 황완옥, 노동국, 강현모, 정예림</p>
+                        </div>
+                      </div>
+
+                      <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px', background: '#fafafa', gridColumn: '1 / -1' }}>
+                        <div style={{ fontWeight: '800', color: '#1e293b', fontSize: '0.95rem', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span>💡</span> 대회자문
+                        </div>
+                        <p style={{ margin: 0, fontSize: '0.83rem', color: '#475569', lineHeight: '1.7' }}>
+                          김철수, 임호아, 정재오, 조흥희, 정상대, 김문태, 김명균, 홍석희, 김규재, 김종수, 김명송, 손문규, 진종휘, 이명헌, 박기홍, 박동식, 강태호, 권희권, 정동화, 정형남
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* 실무 분과 위원회 그리드 */}
+                    <h5 style={{ fontSize: '1rem', fontWeight: '900', color: '#334155', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span>⚙️</span> 실무 분과 위원회
+                    </h5>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+                      <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 14px', background: '#ffffff' }}>
+                        <strong style={{ color: '#0284c7', fontSize: '0.88rem', display: 'block', marginBottom: '4px' }}>⚖️ 심판위원회</strong>
+                        <p style={{ margin: 0, fontSize: '0.82rem', color: '#334155' }}><strong>위원장:</strong> 윤해광</p>
+                        <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>위원: 이무영</p>
+                      </div>
+
+                      <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 14px', background: '#ffffff' }}>
+                        <strong style={{ color: '#0284c7', fontSize: '0.88rem', display: 'block', marginBottom: '4px' }}>🚩 경기위원회</strong>
+                        <p style={{ margin: 0, fontSize: '0.82rem', color: '#334155' }}><strong>위원장:</strong> 윤해광</p>
+                        <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>위원: 김두훈, 김한율, 임지훈</p>
+                      </div>
+
+                      <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 14px', background: '#ffffff' }}>
+                        <strong style={{ color: '#0284c7', fontSize: '0.88rem', display: 'block', marginBottom: '4px' }}>📐 계측위원회</strong>
+                        <p style={{ margin: 0, fontSize: '0.82rem', color: '#334155' }}><strong>위원장:</strong> 제해진</p>
+                        <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>위원: 이명헌, 김종민</p>
+                      </div>
+
+                      <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 14px', background: '#ffffff' }}>
+                        <strong style={{ color: '#0284c7', fontSize: '0.88rem', display: 'block', marginBottom: '4px' }}>⚓ 경기행정위원회</strong>
+                        <p style={{ margin: 0, fontSize: '0.82rem', color: '#334155' }}><strong>위원장:</strong> 손유진</p>
+                        <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>위원: 남현동, 최민기, 정예림</p>
+                      </div>
+
+                      <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 14px', background: '#ffffff' }}>
+                        <strong style={{ color: '#0284c7', fontSize: '0.88rem', display: 'block', marginBottom: '4px' }}>📣 홍보위원회</strong>
+                        <p style={{ margin: 0, fontSize: '0.82rem', color: '#334155' }}><strong>위원장:</strong> 김윤호</p>
+                        <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>위원: 조형구, 황현석, 김학노</p>
+                      </div>
+
+                      <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 14px', background: '#ffffff' }}>
+                        <strong style={{ color: '#0f766e', fontSize: '0.88rem', display: 'block', marginBottom: '4px' }}>📢 의전 및 안내</strong>
+                        <p style={{ margin: 0, fontSize: '0.82rem', color: '#334155' }}><strong>담당:</strong> 김진숙</p>
+                        <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>위원: 김승희, 유승이, 김민서</p>
+                      </div>
+
+                      <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 14px', background: '#ffffff' }}>
+                        <strong style={{ color: '#0f766e', fontSize: '0.88rem', display: 'block', marginBottom: '4px' }}>🔔 하비관리</strong>
+                        <p style={{ margin: 0, fontSize: '0.82rem', color: '#334155' }}><strong>담당:</strong> 김석용</p>
+                        <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>위원: 이중형</p>
+                      </div>
+
+                      <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 14px', background: '#ffffff' }}>
+                        <strong style={{ color: '#b91c1c', fontSize: '0.88rem', display: 'block', marginBottom: '4px' }}>🩺 의무</strong>
+                        <p style={{ margin: 0, fontSize: '0.82rem', color: '#334155', fontWeight: '700' }}>강태훈청소년소아과</p>
+                        <p style={{ margin: '2px 0 0 0', fontSize: '0.82rem', color: '#334155', fontWeight: '700' }}>통영고려병원</p>
+                      </div>
+
+                      <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 14px', background: '#ffffff' }}>
+                        <strong style={{ color: '#1e40af', fontSize: '0.88rem', display: 'block', marginBottom: '4px' }}>🛡️ 구조 및 해상안전</strong>
+                        <p style={{ margin: 0, fontSize: '0.85rem', color: '#334155', fontWeight: '800' }}>통영해양경찰서</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 

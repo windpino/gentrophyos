@@ -138,7 +138,7 @@ export async function POST(
           birth: row.birth || '',
           gender: row.gender || '남자',
           club: row.club || '미소속',
-          division: row.division || '윈드포일 (남자부)',
+          division: row.division || '윈드포일',
           tshirtSize: row.tshirtSize || 'M (100)',
           vestAgreement: '네. 확인했습니다.',
           paymentNoticeAgreement: '네. 확인했습니다.',

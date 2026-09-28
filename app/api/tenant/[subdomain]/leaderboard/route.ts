@@ -47,6 +47,7 @@ export async function GET(
         return NextResponse.json({
           tournamentTitle: tournament.title,
           leaderboard: savedData.list || [],
+          rounds: savedData.rounds || null,
           isCustom: true
         });
       }
@@ -217,18 +218,31 @@ export async function POST(
   try {
     const { subdomain } = await params;
     const body = await req.json();
-    const { tournamentId, division, list } = body;
+    const { tournamentId, division, list, rounds } = body;
 
-    if (!tournamentId || !division || !list) {
-      return NextResponse.json({ error: '대회 ID, 종목, 순위 목록은 필수입니다.' }, { status: 400 });
+    if (!tournamentId || !division) {
+      return NextResponse.json({ error: '대회 ID와 종목은 필수입니다.' }, { status: 400 });
     }
 
     const leaderboardRef = doc(firestore, `tournaments/${tournamentId}/leaderboards`, division);
-    await setDoc(leaderboardRef, {
+    
+    // 기존 문서가 있으면 데이터 유지하면서 병합
+    const existingSnap = await getDoc(leaderboardRef);
+    const existingData = existingSnap.exists() ? existingSnap.data() : {};
+
+    const updatePayload: any = {
+      ...existingData,
       division,
-      list,
       updatedAt: new Date().toISOString()
-    });
+    };
+    if (list !== undefined) {
+      updatePayload.list = list;
+    }
+    if (rounds !== undefined) {
+      updatePayload.rounds = rounds;
+    }
+
+    await setDoc(leaderboardRef, updatePayload);
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

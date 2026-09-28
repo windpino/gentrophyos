@@ -64,7 +64,7 @@ export default function RefereeMobilePage({
   // 참가자 목록 및 종목 선택
   const [rawRegistrations, setRawRegistrations] = useState<any[]>([]);
   const [participants, setParticipants] = useState<any[]>([]);
-  const [activeDivisionTab, setActiveDivisionTab] = useState<string>('윈드포일 (남자부)');
+  const [activeDivisionTab, setActiveDivisionTab] = useState<string>('윈드포일');
   const [formFields, setFormFields] = useState<any[]>([]);
 
   // 순위 입력란 전용 상태
@@ -193,14 +193,18 @@ export default function RefereeMobilePage({
           .filter((r: any) => r.status === 'APPROVED')
           .map((r: any) => {
             let birth = '';
-            let division = '윈드포일 (남자부)';
+            let division = '윈드포일';
             try {
               if (r.formResponses) {
                 const extra = JSON.parse(r.formResponses);
                 birth = extra.birth || '';
-                division = extra.division || '윈드포일 (남자부)';
+                division = extra.division || '윈드포일';
               }
             } catch (e) {}
+
+            if (division.includes('윈드포일')) {
+              division = '윈드포일';
+            }
 
             const baseObj: any = {
               id: r.id,
@@ -223,40 +227,93 @@ export default function RefereeMobilePage({
     }
   };
 
+  const getRoundsStorageKey = (tId: string, div: string) => `gentrophy_rounds_${subdomain}_${tId}_${div}`;
+
+  const persistRounds = async (tId: string, div: string, updatedRounds: RoundItem[], currentList?: any[]) => {
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(getRoundsStorageKey(tId, div), JSON.stringify(updatedRounds));
+      }
+    } catch (e) {
+      console.error('Failed to save rounds to localStorage:', e);
+    }
+
+    try {
+      await fetch(`/api/tenant/${subdomain}/leaderboard`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tournamentId: tId,
+          division: div,
+          rounds: updatedRounds,
+          list: currentList
+        })
+      });
+    } catch (e) {
+      console.error('Failed to sync rounds to server:', e);
+    }
+  };
+
   const loadLeaderboardForDivision = async (tId: string, divisionName: string, baseRegistrations: any[]) => {
     try {
-      const res = await fetch(`/api/tenant/${subdomain}/leaderboard?tournamentId=${tId}&division=${encodeURIComponent(divisionName)}`);
+      const res = await fetch(`/api/tenant/${subdomain}/leaderboard?tournamentId=${tId}&division=${encodeURIComponent(divisionName)}&_t=${Date.now()}`);
       const data = await res.json();
-      if (data.leaderboard && data.leaderboard.length > 0) {
-        // 1. 저장된 리더보드에서 라운드 키 감지 (r1, r2, ... rN)
-        const discoveredRoundKeys = new Set<string>();
-        data.leaderboard.forEach((item: any) => {
-          Object.keys(item).forEach(k => {
-            if (/^r\d+$/.test(k)) {
-              discoveredRoundKeys.add(k);
+
+      // 1. 라운드 결정 우선순위:
+      // (1) 서버에 명시적으로 저장된 data.rounds
+      // (2) 로컬 스토리지에 캐시된 라운드 목록
+      // (3) 저장된 리더보드 데이터에서 발견된 라운드 키들
+      // (4) 기본 6개 라운드 (DEFAULT_ROUNDS)
+      let activeRounds: RoundItem[] = [...DEFAULT_ROUNDS];
+
+      if (data.rounds && Array.isArray(data.rounds) && data.rounds.length > 0) {
+        activeRounds = data.rounds;
+      } else {
+        const localRoundsStr = typeof window !== 'undefined' ? localStorage.getItem(getRoundsStorageKey(tId, divisionName)) : null;
+        if (localRoundsStr) {
+          try {
+            const parsed = JSON.parse(localRoundsStr);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              activeRounds = parsed;
             }
+          } catch (e) {}
+        } else if (data.leaderboard && data.leaderboard.length > 0) {
+          const discoveredRoundKeys = new Set<string>();
+          data.leaderboard.forEach((item: any) => {
+            Object.keys(item).forEach(k => {
+              if (/^r\d+$/.test(k)) {
+                discoveredRoundKeys.add(k);
+              }
+            });
           });
-        });
 
-        let activeRounds = [...DEFAULT_ROUNDS];
-        if (discoveredRoundKeys.size > 0) {
-          const sortedKeys = Array.from(discoveredRoundKeys).sort((a, b) => {
-            const numA = parseInt(a.replace('r', ''), 10);
-            const numB = parseInt(b.replace('r', ''), 10);
-            return numA - numB;
-          });
-          const maxNum = Math.max(...sortedKeys.map(k => parseInt(k.replace('r', ''), 10)), 6);
-          activeRounds = Array.from({ length: maxNum }, (_, idx) => {
-            const num = idx + 1;
-            return {
-              key: `r${num}`,
-              label: `${num}라운드 (${num}R)`,
-              short: `${num}R`
-            };
-          });
+          if (discoveredRoundKeys.size > 0) {
+            const sortedKeys = Array.from(discoveredRoundKeys).sort((a, b) => {
+              const numA = parseInt(a.replace('r', ''), 10);
+              const numB = parseInt(b.replace('r', ''), 10);
+              return numA - numB;
+            });
+            activeRounds = sortedKeys.map(k => {
+              const num = parseInt(k.replace('r', ''), 10);
+              return {
+                key: k,
+                label: `${num}라운드 (${num}R)`,
+                short: `${num}R`
+              };
+            });
+          }
         }
-        setRounds(activeRounds);
+      }
 
+      setRounds(activeRounds);
+
+      // 선택된 라운드가 activeRounds에 없으면 첫 라운드로 안전하게 변경
+      setSelectedRound(prev => {
+        if (activeRounds.some(r => r.key === prev)) return prev;
+        return activeRounds[0]?.key || 'r1';
+      });
+
+      if (data.leaderboard && data.leaderboard.length > 0) {
         const parseSavedRoundVal = (val: any) => {
           if (val === undefined || val === null || val === '') return null;
           if (val === 'DNS' || val === 'DNF') return val;
@@ -292,7 +349,7 @@ export default function RefereeMobilePage({
       } else {
         const initialized = baseRegistrations.map(p => {
           const obj: any = { ...p };
-          rounds.forEach(r => { obj[r.key] = null; });
+          activeRounds.forEach(r => { obj[r.key] = null; });
           obj.total = 0;
           obj.rank = '-';
           return obj;
@@ -307,7 +364,12 @@ export default function RefereeMobilePage({
 
   useEffect(() => {
     if (activeTournament && rawRegistrations.length > 0) {
-      const filteredBase = rawRegistrations.filter(r => r.division === activeDivisionTab);
+      const filteredBase = rawRegistrations.filter(r => {
+        if (activeDivisionTab === '윈드포일') {
+          return r.division === '윈드포일' || (r.division && r.division.includes('윈드포일'));
+        }
+        return r.division === activeDivisionTab;
+      });
       loadLeaderboardForDivision(activeTournament.id, activeDivisionTab, filteredBase);
       setCurrentRankNum(1);
       setBibInput('');
@@ -350,15 +412,18 @@ export default function RefereeMobilePage({
     const updatedRounds = [...rounds, newRound];
     setRounds(updatedRounds);
 
-    setParticipants(prev =>
-      prev.map(p => ({
-        ...p,
-        [newKey]: null
-      }))
-    );
+    const updatedParticipants = participants.map(p => ({
+      ...p,
+      [newKey]: null
+    }));
+    setParticipants(updatedParticipants);
     setSelectedRound(newKey);
     setCurrentRankNum(1);
     setInputFeedback({ text: `✨ [${nextNum}R] 라운드가 추가되었습니다!`, isError: false });
+
+    if (activeTournament) {
+      persistRounds(activeTournament.id, activeDivisionTab, updatedRounds, updatedParticipants);
+    }
   };
 
   // 특정 라운드 삭제
@@ -380,20 +445,23 @@ export default function RefereeMobilePage({
     const updatedRounds = rounds.filter(r => r.key !== targetKey);
     setRounds(updatedRounds);
 
-    setParticipants(prev =>
-      prev.map(p => {
-        const updated = { ...p };
-        delete updated[targetKey];
-        updated.total = calculateTotal(updated, prev.length, updatedRounds);
-        return updated;
-      })
-    );
+    const updatedParticipants = participants.map(p => {
+      const updated = { ...p };
+      delete updated[targetKey];
+      updated.total = calculateTotal(updated, participants.length, updatedRounds);
+      return updated;
+    });
+    setParticipants(updatedParticipants);
 
     if (selectedRound === targetKey) {
       setSelectedRound(updatedRounds[updatedRounds.length - 1].key);
       setCurrentRankNum(1);
     }
     setInputFeedback({ text: `🗑️ [${targetName}] 라운드가 삭제되었습니다.`, isError: false });
+
+    if (activeTournament) {
+      persistRounds(activeTournament.id, activeDivisionTab, updatedRounds, updatedParticipants);
+    }
   };
 
   // 현재 라운드 전체 순위 초기화(전체 삭제)
@@ -570,6 +638,7 @@ export default function RefereeMobilePage({
         body: JSON.stringify({
           tournamentId: activeTournament.id,
           division: activeDivisionTab,
+          rounds: rounds,
           list: participants
         })
       });
@@ -712,22 +781,35 @@ export default function RefereeMobilePage({
     '--theme-primary-rgb': '99, 102, 241',
   } as React.CSSProperties;
 
-  // 종목 옵션 목록 추출
+  // 종목 옵션 목록 추출 (윈드포일은 남녀 구분 없는 단일 종목으로 정규화)
+  const normalizeDivName = (name: string) => {
+    if (!name) return '';
+    const trimmed = name.trim();
+    if (trimmed.includes('윈드포일')) return '윈드포일';
+    return trimmed;
+  };
+
   const divisionField = formFields.find((f: any) => f.id === 'division');
-  const configuredDivisions = divisionField?.options || [];
-  const registeredDivisions = Array.from(new Set(rawRegistrations.map((r: any) => r.division).filter(Boolean))) as string[];
-  const divisionTabs = Array.from(new Set([...configuredDivisions, ...registeredDivisions]));
+  const configuredDivisions = (divisionField?.options || []).map(normalizeDivName);
+  const registeredDivisions = rawRegistrations.map((r: any) => normalizeDivName(r.division)).filter(Boolean);
+  
+  const rawUnique = Array.from(new Set([...configuredDivisions, ...registeredDivisions])).filter(Boolean);
+  const standardDivisions = [
+    '윈드포일',
+    '윙포일 (남자부)',
+    '윙포일 (여자부)',
+    '혼합오픈 (남자부)',
+    '혼합오픈 (여자부)',
+    '펀엔포뮬러 (남자부)',
+    '펀엔포뮬러 (여자부)'
+  ];
+
+  const divisionTabs = standardDivisions.filter(d => rawUnique.includes(d) || rawUnique.length === 0);
+  rawUnique.forEach(d => {
+    if (!divisionTabs.includes(d)) divisionTabs.push(d);
+  });
   if (divisionTabs.length === 0) {
-    divisionTabs.push(
-      '윈드포일 (남자부)',
-      '윈드포일 (여자부)',
-      '윙포일 (남자부)',
-      '윙포일 (여자부)',
-      '혼합오픈 (남자부)',
-      '혼합오픈 (여자부)',
-      '펀엔포뮬러 (남자부)',
-      '펀엔포뮬러 (여자부)'
-    );
+    divisionTabs.push(...standardDivisions);
   }
 
   // 선택된 라운드 기준 참가자 데이터 집계
