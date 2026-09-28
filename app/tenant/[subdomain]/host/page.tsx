@@ -287,7 +287,7 @@ export default function HostDashboardPage({
         duration: '2026. 10. 31(토) ~ 11. 01(일) (1박 2일)',
         registrationStartDate: '2026-09-29T09:00',
         registrationEndDate: '2026-10-18T18:00',
-        deadlineDate: '2026년 10월 18일(일) 18:00 (130명 한도 선착순 조기마감)',
+        deadlineDate: '2026년 10월 18일(일) 18:00 (130명 한도 조기마감)',
         scale: '130명 한도 (선착순 조기마감)',
         location: '경상남도 통영시 도남동 수륙해수욕장 일원',
         registrationMode: regMode,
