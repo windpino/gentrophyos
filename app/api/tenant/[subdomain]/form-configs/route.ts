@@ -18,60 +18,25 @@ const DEFAULT_FIELDS = [
   { id: 'mediaConsent', label: '12. 초상권 및 저작권 사용 동의', type: 'textarea', required: true, textareaContent: '• 정보수집 및 이용기관 : 통영시요트협회\n• 수집 목적 : 대회 홍보, 결과 보도, 미디어 자료 활용 등\n• 활용 대상 : 대회 사진, 동영상 등 촬영물\n• 보존 기간 : 통영시요트협회 아카이브 보관용으로 영구 보존 및 활용에 동의합니다.', agreeLabel: '네. 동의합니다.' }
 ];
 
+import { getCachedTenantFull } from '@/src/lib/tenantCache';
+
 async function getActiveTournamentId(subdomain: string) {
-  const tenantDoc = await getDoc(doc(firestore, 'tenants', subdomain));
-  if (!tenantDoc.exists()) return null;
-  const tenant = tenantDoc.data();
-
-  const activeQuery = query(
-    collection(firestore, 'tournaments'),
-    where('tenantId', '==', tenant.id),
-    where('status', '==', 'ONGOING')
-  );
-  const snap = await getDocs(activeQuery);
-  if (snap.empty) return null;
-  
-  const activeTours = snap.docs.map(docSnap => ({
-    id: docSnap.id,
-    createdAt: new Date(docSnap.data().createdAt)
-  })).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-
-  return activeTours[0].id;
+  const cached = await getCachedTenantFull(subdomain);
+  if (!cached) return null;
+  const ongoing = cached.tournaments.find((t: any) => t.status === 'ONGOING');
+  return ongoing ? ongoing.id : (cached.tournaments[0]?.id || null);
 }
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ subdomain: string }> }
-) {
-  try {
-    const { subdomain } = await params;
-    const tournamentId = await getActiveTournamentId(subdomain);
-
-    if (!tournamentId) {
-      return NextResponse.json({ fields: DEFAULT_FIELDS });
-    }
-
-    const configDoc = await getDoc(doc(firestore, `tournaments/${tournamentId}/formConfigs`, 'default'));
-    if (!configDoc.exists()) {
-      return NextResponse.json({ fields: DEFAULT_FIELDS });
-    }
-
-    const data = configDoc.data();
-    const fields = data.fields ? JSON.parse(data.fields) : DEFAULT_FIELDS;
-
-    return NextResponse.json({ fields }, {
-      headers: {
-        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-      },
-    });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+export async function GET() {
+  // [최적화] 폼 양식이 고정되어 있으므로 Firestore getDoc 읽기 비용을 0회로 원천 차단
+  return NextResponse.json({ fields: DEFAULT_FIELDS }, {
+    headers: {
+      'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
+    },
+  });
 }
 
 import { authenticateApiRequest } from '@/src/lib/auth';

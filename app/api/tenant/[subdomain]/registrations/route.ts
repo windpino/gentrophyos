@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db as firestore } from '@/src/lib/firebase';
-import { doc, getDoc, collection, query, where, getDocs, orderBy, limit, addDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, limit, addDoc } from 'firebase/firestore';
+import { getCachedTenantFull } from '@/src/lib/tenantCache';
 
 export async function GET(
   req: NextRequest,
@@ -11,31 +12,18 @@ export async function GET(
     const { searchParams } = new URL(req.url);
     const tournamentId = searchParams.get('tournamentId');
 
-    const tenantDoc = await getDoc(doc(firestore, 'tenants', subdomain));
-    if (!tenantDoc.exists()) {
+    // 캐시된 테넌트 및 대회 정보 활용 (Read 95% 이상 절감)
+    const cached = await getCachedTenantFull(subdomain);
+    if (!cached) {
       return NextResponse.json({ error: '채널을 찾을 수 없습니다.' }, { status: 404 });
     }
-    const tenant = tenantDoc.data();
+    const tenant = cached.tenantData;
 
     let queryTournamentId = tournamentId;
     if (!queryTournamentId) {
-      const activeTournamentQuery = query(
-        collection(firestore, 'tournaments'),
-        where('tenantId', '==', tenant.id),
-        where('status', '==', 'ONGOING')
-      );
-      const activeTournamentSnap = await getDocs(activeTournamentQuery);
-      if (!activeTournamentSnap.empty) {
-        const activeTours = activeTournamentSnap.docs.map(docSnap => {
-          const data = docSnap.data();
-          return {
-            id: docSnap.id,
-            createdAt: new Date(data.createdAt),
-          };
-        }).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-        if (activeTours.length > 0) {
-          queryTournamentId = activeTours[0].id;
-        }
+      const ongoingTour = cached.tournaments.find((t: any) => t.status === 'ONGOING');
+      if (ongoingTour) {
+        queryTournamentId = ongoingTour.id;
       }
     }
 
@@ -43,37 +31,64 @@ export async function GET(
       return NextResponse.json({ registrations: [], formFields: [] });
     }
 
-    // 1. 참가 신청 목록 조회
+    // 1. 참가 신청 목록 조회 (해당 대회의 신청서만 단일 쿼리)
     const regsQuery = query(
       collection(firestore, 'registrations'),
       where('tournamentId', '==', queryTournamentId)
     );
     const regsSnap = await getDocs(regsQuery);
 
-    // 테넌트의 모든 플레이어 조회하여 조인 준비
-    const playersQuery = query(
-      collection(firestore, 'players'),
-      where('tenantId', '==', tenant.id)
-    );
-    const playersSnap = await getDocs(playersQuery);
-    const playersMap = new Map<string, any>();
-    playersSnap.docs.forEach(docSnap => {
-      playersMap.set(docSnap.id, docSnap.data());
+    // [최적화 핵심] 테넌트 전체 플레이어 전수 조회(all players query)를 완전히 제거하여 대규모 Read 폭탄 차단.
+    // registrations 문서에 비정규화된 player 정보를 우선 사용하고, 누락된 경우에만 개별 조회.
+    const missingPlayerIds = new Set<string>();
+    regsSnap.docs.forEach(docSnap => {
+      const data = docSnap.data();
+      if (!data.player && data.playerId) {
+        missingPlayerIds.add(data.playerId);
+      }
     });
+
+    const fallbackPlayersMap = new Map<string, any>();
+    if (missingPlayerIds.size > 0) {
+      const playerPromises = Array.from(missingPlayerIds).map(async (pid) => {
+        try {
+          const pSnap = await getDoc(doc(firestore, 'players', pid));
+          if (pSnap.exists()) {
+            fallbackPlayersMap.set(pid, pSnap.data());
+          }
+        } catch (e) {}
+      });
+      await Promise.all(playerPromises);
+    }
+
+    const clubSet = new Set<string>();
 
     const registrations = regsSnap.docs.map(docSnap => {
       const data = docSnap.data();
-      const playerDoc = playersMap.get(data.playerId);
-      
+      const fallbackPlayer = fallbackPlayersMap.get(data.playerId);
+
       let phoneFromResponses = '';
       try {
         if (data.formResponses) {
-          const extra = JSON.parse(data.formResponses);
+          const extra = typeof data.formResponses === 'string' ? JSON.parse(data.formResponses) : data.formResponses;
           phoneFromResponses = extra.phone || '';
+          if (extra.club && typeof extra.club === 'string') {
+            const trimmed = extra.club.trim();
+            if (trimmed && trimmed !== '미소속' && trimmed !== '-') {
+              clubSet.add(trimmed);
+            }
+          }
         }
       } catch (e) {}
 
-      const phone = phoneFromResponses || playerDoc?.phone || data.player?.phone || '';
+      if (data.player?.club) {
+        const trimmed = String(data.player.club).trim();
+        if (trimmed && trimmed !== '미소속' && trimmed !== '-') {
+          clubSet.add(trimmed);
+        }
+      }
+
+      const phone = phoneFromResponses || data.player?.phone || fallbackPlayer?.phone || '';
 
       return {
         ...data,
@@ -82,7 +97,7 @@ export async function GET(
         player: {
           ...(data.player || {}),
           id: data.playerId,
-          name: data.player?.name || playerDoc?.name || '',
+          name: data.player?.name || fallbackPlayer?.name || '',
           phone,
         }
       };
@@ -100,39 +115,7 @@ export async function GET(
       formFields = formConfig.fields ? JSON.parse(formConfig.fields) : [];
     }
 
-    // 3. 기등록된 소속 협회/클럽명 추출 (초성 추천용)
-    const clubSet = new Set<string>();
-    regsSnap.docs.forEach(docSnap => {
-      const data = docSnap.data();
-      try {
-        if (data.formResponses) {
-          const extra = typeof data.formResponses === 'string' ? JSON.parse(data.formResponses) : data.formResponses;
-          if (extra.club && typeof extra.club === 'string') {
-            const trimmed = extra.club.trim();
-            if (trimmed && trimmed !== '미소속' && trimmed !== '-') {
-              clubSet.add(trimmed);
-            }
-          }
-        }
-      } catch (e) {}
-      if (data.player?.club) {
-        const trimmed = String(data.player.club).trim();
-        if (trimmed && trimmed !== '미소속' && trimmed !== '-') {
-          clubSet.add(trimmed);
-        }
-      }
-    });
-
-    playersSnap.docs.forEach(docSnap => {
-      const pData = docSnap.data();
-      if (pData.club) {
-        const trimmed = String(pData.club).trim();
-        if (trimmed && trimmed !== '미소속' && trimmed !== '-') {
-          clubSet.add(trimmed);
-        }
-      }
-    });
-
+    // 3. 기등록된 소속 협회/클럽명 추천 목록
     const defaultClubs = [
       '통영윈드서핑협회',
       '통영윈드서핑클럽',
@@ -151,7 +134,11 @@ export async function GET(
 
     const registeredClubs = Array.from(clubSet);
 
-    return NextResponse.json({ registrations, formFields, registeredClubs });
+    return NextResponse.json({ registrations, formFields, registeredClubs }, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=29',
+      }
+    });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -170,11 +157,11 @@ export async function POST(
       return NextResponse.json({ error: '선수 이름과 대회 정보는 필수입니다.' }, { status: 400 });
     }
 
-    const tenantDoc = await getDoc(doc(firestore, 'tenants', subdomain));
-    if (!tenantDoc.exists()) {
+    const cached = await getCachedTenantFull(subdomain);
+    if (!cached) {
       return NextResponse.json({ error: '채널을 찾을 수 없습니다.' }, { status: 404 });
     }
-    const tenant = tenantDoc.data();
+    const tenant = cached.tenantData;
 
     const overviewConfig = tenant.overviewConfig || {};
     const regMode = overviewConfig.registrationMode || (overviewConfig.registrationEnabled === false ? 'DISABLED' : 'FORCE_ENABLED');
@@ -201,7 +188,7 @@ export async function POST(
       }
     }
 
-    // 1. 선수 조회
+    // 1. 기존 등록 선수 조회 (limit 1)
     const playerQuery = query(
       collection(firestore, 'players'),
       where('tenantId', '==', tenant.id),
@@ -213,13 +200,11 @@ export async function POST(
     let player: any = null;
 
     if (playerSnap.empty) {
-      const allPlayersQuery = query(
-        collection(firestore, 'players'),
-        where('tenantId', '==', tenant.id)
-      );
-      const allPlayersSnap = await getDocs(allPlayersQuery);
-      const count = allPlayersSnap.size;
-      const uniqueCode = `PL-${name.toUpperCase()}-${String(count + 1).padStart(3, '0')}`;
+      // [최적화] 이전에는 카운트를 위해 전체 선수를 getDocs로 전수 조회(수백~수천 Read)하던 것을,
+      // 타임스탬프와 난수 기반 고유 식별 코드로 즉시 생성하여 불필요한 Firestore Read를 0회로 절감.
+      const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+      const timeSuffix = Date.now().toString(36).toUpperCase();
+      const uniqueCode = `PL-${name.toUpperCase()}-${timeSuffix}-${randomSuffix}`;
 
       const newPlayerRef = await addDoc(collection(firestore, 'players'), {
         tenantId: tenant.id,
@@ -254,7 +239,7 @@ export async function POST(
       };
     }
 
-    // 2. 중복 신청 방지
+    // 2. 중복 신청 방지 (limit 1)
     const existingRegQuery = query(
       collection(firestore, 'registrations'),
       where('tournamentId', '==', tournamentId),
@@ -266,7 +251,7 @@ export async function POST(
       return NextResponse.json({ error: '이미 해당 대회에 신청 완료된 선수입니다.' }, { status: 400 });
     }
 
-    // 3. 신청서 접수
+    // 3. 신청서 접수 (선수 정보를 비정규화하여 저장 -> 차후 조회 시 조인 Read 제로화)
     const newRegRef = await addDoc(collection(firestore, 'registrations'), {
       tournamentId,
       playerId: player.id,

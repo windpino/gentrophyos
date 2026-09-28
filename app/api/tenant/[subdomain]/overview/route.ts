@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db as firestore } from '@/src/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { authenticateApiRequest } from '@/src/lib/auth';
+import { invalidateTenantCache } from '@/src/lib/tenantCache';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -52,6 +53,8 @@ export async function POST(
       overviewConfig: sanitizedOverview,
       updatedAt: new Date().toISOString()
     }, { merge: true });
+
+    invalidateTenantCache(subdomain);
 
     return NextResponse.json({ success: true, message: '대회 요강이 성공적으로 저장되었습니다!' });
   } catch (error: any) {

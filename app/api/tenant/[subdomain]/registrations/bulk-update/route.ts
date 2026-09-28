@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db as firestore } from '@/src/lib/firebase';
-import { writeBatch, doc, getDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { writeBatch, doc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { authenticateApiRequest } from '@/src/lib/auth';
+import { getCachedTenantFull } from '@/src/lib/tenantCache';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -24,24 +25,37 @@ export async function POST(
       return NextResponse.json({ error: '대회 고유 정보(Tournament ID)가 누락되었습니다.' }, { status: 400 });
     }
 
-    const tenantDoc = await getDoc(doc(firestore, 'tenants', subdomain));
-    if (!tenantDoc.exists()) {
+    const cached = await getCachedTenantFull(subdomain);
+    if (!cached) {
       return NextResponse.json({ error: '해당 채널을 찾을 수 없습니다.' }, { status: 404 });
     }
-    const tenant = tenantDoc.data();
+    const tenant = cached.tenantData;
 
-    const batch = writeBatch(firestore);
+    let batch = writeBatch(firestore);
+    let operationCount = 0;
+
+    const commitBatchIfNeeded = async (force = false) => {
+      if ((operationCount >= 450 || force) && operationCount > 0) {
+        await batch.commit();
+        batch = writeBatch(firestore);
+        operationCount = 0;
+      }
+    };
 
     // 1. 기존 데이터 수정 반영 (updatedList)
     if (updatedList && Array.isArray(updatedList)) {
       for (const row of updatedList) {
         if (!row.id || row.id.startsWith('temp-')) continue;
 
-        const playerRef = doc(firestore, 'players', row.playerId);
-        batch.update(playerRef, {
-          name: row.name,
-          phone: row.phone || null,
-        });
+        if (row.playerId) {
+          const playerRef = doc(firestore, 'players', row.playerId);
+          batch.update(playerRef, {
+            name: row.name,
+            phone: row.phone || null,
+          });
+          operationCount++;
+          await commitBatchIfNeeded();
+        }
 
         const formResponses = {
           birth: row.birth || '',
@@ -63,23 +77,19 @@ export async function POST(
           bibNumber: row.bibNumber || '',
           formResponses: JSON.stringify(formResponses),
           player: {
-            id: row.playerId,
+            id: row.playerId || '',
             name: row.name,
             phone: row.phone || null,
           }
         });
+        operationCount++;
+        await commitBatchIfNeeded();
       }
     }
 
     // 2. 신규 빈 행에 입력된 데이터 삽입 처리 (insertedList)
     if (insertedList && Array.isArray(insertedList)) {
-      const allPlayersQuery = query(
-        collection(firestore, 'players'),
-        where('tenantId', '==', tenant.id)
-      );
-      const allPlayersSnap = await getDocs(allPlayersQuery);
-      let count = allPlayersSnap.size;
-
+      // [최적화] 전수 조회하던 allPlayersQuery를 완전히 제거하여 Read 폭탄 제거
       for (const row of insertedList) {
         if (!row.name) continue;
 
@@ -94,8 +104,9 @@ export async function POST(
         let playerId = '';
 
         if (playerSnap.empty) {
-          count++;
-          const uniqueCode = `PL-${row.name.toUpperCase()}-${String(count).padStart(3, '0')}`;
+          const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+          const timeSuffix = Date.now().toString(36).toUpperCase();
+          const uniqueCode = `PL-${row.name.toUpperCase()}-${timeSuffix}-${randomSuffix}`;
           
           const newPlayerRef = doc(collection(firestore, 'players'));
           batch.set(newPlayerRef, {
@@ -106,6 +117,8 @@ export async function POST(
             createdAt: new Date().toISOString(),
           });
           playerId = newPlayerRef.id;
+          operationCount++;
+          await commitBatchIfNeeded();
 
           const statsRef = doc(collection(firestore, 'playerStats'));
           batch.set(statsRef, {
@@ -115,6 +128,8 @@ export async function POST(
             losses: 0,
             draws: 0,
           });
+          operationCount++;
+          await commitBatchIfNeeded();
         } else {
           playerId = playerSnap.docs[0].id;
         }
@@ -147,6 +162,8 @@ export async function POST(
             phone: row.phone || null,
           }
         });
+        operationCount++;
+        await commitBatchIfNeeded();
       }
     }
 
@@ -156,10 +173,12 @@ export async function POST(
         if (id.startsWith('temp-')) continue;
         const regRef = doc(firestore, 'registrations', id);
         batch.delete(regRef);
+        operationCount++;
+        await commitBatchIfNeeded();
       }
     }
 
-    await batch.commit();
+    await commitBatchIfNeeded(true);
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

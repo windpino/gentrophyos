@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db as firestore } from '@/src/lib/firebase';
 import { doc, getDoc, collection, query, where, getDocs, orderBy, limit, setDoc } from 'firebase/firestore';
 import { sortPlayersByRules, assignRanks, PlayerRankInput, MatchResult } from '@/src/lib/tieBreaker';
+import { getCachedTenantFull } from '@/src/lib/tenantCache';
 
 export async function GET(
   req: NextRequest,
@@ -12,38 +13,22 @@ export async function GET(
     const { searchParams } = new URL(req.url);
     const tournamentIdParam = searchParams.get('tournamentId');
 
-    const tenantDoc = await getDoc(doc(firestore, 'tenants', subdomain));
-    if (!tenantDoc.exists()) {
+    const cached = await getCachedTenantFull(subdomain);
+    if (!cached) {
       return NextResponse.json({ error: '해당 대회를 찾을 수 없습니다.' }, { status: 404 });
     }
-    const tenant = tenantDoc.data();
 
     let tournament: any = null;
     if (tournamentIdParam) {
-      const tourDoc = await getDoc(doc(firestore, 'tournaments', tournamentIdParam));
-      if (tourDoc.exists()) {
-        tournament = { id: tourDoc.id, ...tourDoc.data() };
-      }
-    } else {
-      const activeTourQuery = query(
-        collection(firestore, 'tournaments'),
-        where('tenantId', '==', tenant.id),
-        where('status', '==', 'ONGOING')
-      );
-      const activeTourSnap = await getDocs(activeTourQuery);
-      if (!activeTourSnap.empty) {
-        const activeTours = activeTourSnap.docs.map(docSnap => {
-          const data = docSnap.data();
-          return {
-            id: docSnap.id,
-            ...data,
-            createdAt: new Date(data.createdAt),
-          };
-        }).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-        if (activeTours.length > 0) {
-          tournament = activeTours[0];
+      tournament = cached.tournaments.find((t: any) => t.id === tournamentIdParam);
+      if (!tournament) {
+        const tourDoc = await getDoc(doc(firestore, 'tournaments', tournamentIdParam));
+        if (tourDoc.exists()) {
+          tournament = { id: tourDoc.id, ...tourDoc.data() };
         }
       }
+    } else {
+      tournament = cached.tournaments.find((t: any) => t.status === 'ONGOING') || cached.tournaments[0] || null;
     }
 
     if (!tournament) {
@@ -214,6 +199,10 @@ export async function GET(
     return NextResponse.json({
       tournamentTitle: tournament.title,
       leaderboard: rankedPlayers,
+    }, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=29',
+      }
     });
   } catch (error: any) {
     console.error('리더보드 집계 오류:', error);

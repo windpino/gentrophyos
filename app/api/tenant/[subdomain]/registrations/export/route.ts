@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { db as firestore } from '@/src/lib/firebase';
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { getCachedTenantFull } from '@/src/lib/tenantCache';
 
 export async function GET(
   req: NextRequest,
@@ -11,27 +12,18 @@ export async function GET(
     const { searchParams } = new URL(req.url);
     const tournamentId = searchParams.get('tournamentId');
 
-    // 1. 테넌트 조회
-    const tenantDoc = await getDoc(doc(firestore, 'tenants', subdomain));
-    if (!tenantDoc.exists()) {
+    // 1. 테넌트 및 대회 캐시 조회
+    const cached = await getCachedTenantFull(subdomain);
+    if (!cached) {
       return new Response('채널을 찾을 수 없습니다.', { status: 404 });
     }
-    const tenant = tenantDoc.data();
 
     // 2. 대회 ID 결정
     let queryTournamentId = tournamentId;
     if (!queryTournamentId) {
-      const activeTournamentQuery = query(
-        collection(firestore, 'tournaments'),
-        where('tenantId', '==', tenant.id),
-        where('status', '==', 'ONGOING')
-      );
-      const activeTournamentSnap = await getDocs(activeTournamentQuery);
-      if (!activeTournamentSnap.empty) {
-        const sorted = activeTournamentSnap.docs
-          .map((d) => ({ id: d.id, createdAt: new Date(d.data().createdAt) }))
-          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-        queryTournamentId = sorted[0].id;
+      const ongoing = cached.tournaments.find((t: any) => t.status === 'ONGOING');
+      if (ongoing) {
+        queryTournamentId = ongoing.id;
       }
     }
 

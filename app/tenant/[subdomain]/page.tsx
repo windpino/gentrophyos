@@ -416,16 +416,6 @@ export default function TenantPortalPage({
         if (archived && archived.length > 0) {
           setSelectedArchiveId(archived[0].id);
         }
-
-        // 소속 협회/클럽 초성 추천용 기등록 클럽 목록 로드
-        fetch(`/api/tenant/${subdomain}/registrations?_t=${Date.now()}`)
-          .then(r => r.json())
-          .then(regData => {
-            if (regData.registeredClubs && Array.isArray(regData.registeredClubs)) {
-              setAvailableClubs(prev => Array.from(new Set([...regData.registeredClubs, ...prev])));
-            }
-          })
-          .catch(err => console.error('소속클럽 로드 오류:', err));
       }
     } catch (e) {
       console.error(e);
