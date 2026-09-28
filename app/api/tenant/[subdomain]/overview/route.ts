@@ -40,7 +40,7 @@ export async function POST(
       ...existingConfig,
       ...overviewConfig,
       duration: '2026. 10. 31(토) ~ 11. 01(일) (1박 2일)',
-      deadlineDate: '2026년 10월 18일(일) 18:00 (130명 한도 조기마감)',
+      deadlineDate: '2026년 10월 18일(일) 18:00 (130명 한도 선착순 조기마감)',
       registrationStartDate: '2026-09-29T09:00',
       registrationEndDate: '2026-10-18T18:00',
       scale: '130명 한도 (선착순 조기마감)',

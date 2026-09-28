@@ -147,7 +147,7 @@ const getDefaultTenantData = (subdomain: string): TenantData => ({
     accountHolder: '통영시요트협회',
     entryFeeIndividual: '30,000원',
     entryFeeGroup: '단체전 팀당 50,000원',
-    deadlineDate: '2026년 10월 18일(일) 18:00 (130명 한도 조기마감)',
+    deadlineDate: '2026년 10월 18일(일) 18:00 (130명 한도 선착순 조기마감)',
     registrationEnabled: true,
     registrationMode: 'FORCE_ENABLED',
     registrationStartDate: '2026-09-29T09:00',
@@ -191,8 +191,8 @@ export default function TenantPortalPage({
     ...(tenant?.overviewConfig || {}),
     // 공식 대회 일정 및 접수 기간 불변 고정
     duration: '2026. 10. 31(토) ~ 11. 01(일) (1박 2일)',
-    deadlineDate: '2026년 10월 18일(일) 18:00 (130명 한도 조기마감)',
-    registrationStartDate: '2026-09-28T09:00',
+    deadlineDate: '2026년 10월 18일(일) 18:00 (130명 한도 선착순 조기마감)',
+    registrationStartDate: '2026-09-29T09:00',
     registrationEndDate: '2026-10-18T18:00',
     scale: '130명 한도 (선착순 조기마감)',
     location: '경상남도 통영시 도남동 수륙해수욕장 일원',
@@ -390,7 +390,7 @@ export default function TenantPortalPage({
       if (data.tenant) {
         if (data.tenant.overviewConfig) {
           data.tenant.overviewConfig.duration = '2026. 10. 31(토) ~ 11. 01(일) (1박 2일)';
-          data.tenant.overviewConfig.deadlineDate = '2026년 10월 18일(일) 18:00 (130명 한도 조기마감)';
+          data.tenant.overviewConfig.deadlineDate = '2026년 10월 18일(일) 18:00 (130명 한도 선착순 조기마감)';
           data.tenant.overviewConfig.registrationStartDate = '2026-09-29T09:00';
           data.tenant.overviewConfig.registrationEndDate = '2026-10-18T18:00';
           data.tenant.overviewConfig.scale = '130명 한도 (선착순 조기마감)';
@@ -637,7 +637,7 @@ export default function TenantPortalPage({
   const regConfig = {
     ...(tenant.overviewConfig || {}),
     duration: '2026. 10. 31(토) ~ 11. 01(일) (1박 2일)',
-    deadlineDate: '2026년 10월 18일(일) 18:00 (130명 한도 조기마감)',
+    deadlineDate: '2026년 10월 18일(일) 18:00 (130명 한도 선착순 조기마감)',
     registrationStartDate: '2026-09-29T09:00',
     registrationEndDate: '2026-10-18T18:00',
     scale: '130명 한도 (선착순 조기마감)',
@@ -2999,10 +2999,12 @@ export default function TenantPortalPage({
                     </div>
                     <div>
                       <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem', fontWeight: '700' }}>접수 마감</span>
-                      <p style={{ fontWeight: '800', color: 'var(--text-main)', marginTop: '4px', fontSize: '1.02rem', margin: 0 }}>
-                        {overview.deadlineDate}
+                      <p style={{ fontWeight: '800', color: 'var(--text-main)', marginTop: '4px', fontSize: '1.02rem', margin: 0, lineHeight: '1.4' }}>
+                        <span>2026년 10월 18일(일) 18:00</span>
+                        <span style={{ display: 'block', color: '#dc2626', fontSize: '0.88rem', fontWeight: '800', marginTop: '3px' }}>
+                          (130명 한도 선착순 조기마감)
+                        </span>
                       </p>
-                      <p style={{ fontSize: '0.82rem', color: '#2563eb', fontWeight: '800', marginTop: '2px', margin: 0 }}>* 130명 한도 선착순 조기마감</p>
                     </div>
                     <button
                       type="button"
@@ -3083,67 +3085,23 @@ export default function TenantPortalPage({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   {/* 상단 타이틀 카드 */}
                   <div className="glass-panel" style={{ background: 'white', padding: '24px 28px', borderTop: '4px solid var(--theme-primary)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-                      <div>
-                        <span style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--theme-primary)', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                          TONGYEONG WINDSURFING ASSOCIATION
-                        </span>
-                        <h3 style={{ fontSize: '1.45rem', fontWeight: '900', color: 'var(--text-main)', margin: '4px 0 0 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span>⛵</span> 대회본부 조직도 (ORGANIZATION CHART)
-                        </h3>
-                        <p style={{ margin: '4px 0 0 0', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
-                          바다와 바람, 그리고 우리 — 제20회 이순신장군배 전국윈드서핑대회 조직위원회 구성도입니다.
-                        </p>
-                      </div>
-                      <a
-                        href="/images/organization-chart.jpg"
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          background: '#0284c7',
-                          color: '#ffffff',
-                          padding: '8px 16px',
-                          borderRadius: '8px',
-                          fontSize: '0.85rem',
-                          fontWeight: '800',
-                          textDecoration: 'none',
-                          boxShadow: '0 2px 8px rgba(2,132,199,0.25)'
-                        }}
-                      >
-                        <ExternalLink size={15} />
-                        <span>원본 포스터 확대보기</span>
-                      </a>
+                    <div>
+                      <span style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--theme-primary)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                        TONGYEONG WINDSURFING ASSOCIATION
+                      </span>
+                      <h3 style={{ fontSize: '1.45rem', fontWeight: '900', color: 'var(--text-main)', margin: '4px 0 0 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span>⛵</span> 대회본부 조직도 (ORGANIZATION CHART)
+                      </h3>
+                      <p style={{ margin: '4px 0 0 0', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
+                        바다와 바람, 그리고 우리 — 제20회 이순신장군배 전국윈드서핑대회 조직위원회 구성도입니다.
+                      </p>
                     </div>
-                  </div>
-
-                  {/* 공식 조직도 포스터 이미지 카드 */}
-                  <div className="glass-panel" style={{ background: 'white', padding: '16px', borderRadius: '16px', textAlign: 'center', overflow: 'hidden' }}>
-                    <a href="/images/organization-chart.jpg" target="_blank" rel="noreferrer" style={{ display: 'block', cursor: 'zoom-in' }}>
-                      <img
-                        src="/images/organization-chart.jpg"
-                        alt="대회본부 조직도"
-                        style={{
-                          width: '100%',
-                          maxHeight: '800px',
-                          objectFit: 'contain',
-                          borderRadius: '10px',
-                          border: '1px solid #e2e8f0',
-                          boxShadow: '0 4px 16px rgba(0,0,0,0.06)'
-                        }}
-                      />
-                    </a>
-                    <span style={{ display: 'inline-block', fontSize: '0.8rem', color: '#64748b', marginTop: '10px' }}>
-                      ※ 이미지를 클릭하시면 원본 고해상도 그래픽으로 크게 확인하실 수 있습니다.
-                    </span>
                   </div>
 
                   {/* 텍스트 상세 명단 안내 카드 */}
                   <div className="glass-panel" style={{ background: 'white', padding: '28px', borderRadius: '16px', borderTop: '4px solid #0284c7' }}>
                     <h4 style={{ fontSize: '1.15rem', fontWeight: '900', color: 'var(--text-main)', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span>🏛️</span> 대회본부 및 위원회 상세 명단
+                      <span>🏛️</span> 대회본부 및 위원회 조직 구성
                     </h4>
 
                     {/* 중앙 지도부 카드 */}
@@ -3191,7 +3149,7 @@ export default function TenantPortalPage({
                           <span>🌊</span> 통영윈드서핑협회 고문
                         </div>
                         <p style={{ margin: 0, fontSize: '0.85rem', color: '#475569', lineHeight: '1.7' }}>
-                          김헌태, 정봉남, 권한용, 김헌수, 강석주, 탁회철
+                          김현태, 김창용, 김현수, 강석주, 탁희철
                         </p>
                       </div>
 
@@ -3211,8 +3169,8 @@ export default function TenantPortalPage({
                         <div style={{ fontWeight: '800', color: '#1e293b', fontSize: '0.95rem', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <span>💡</span> 대회자문
                         </div>
-                        <p style={{ margin: 0, fontSize: '0.83rem', color: '#475569', lineHeight: '1.7' }}>
-                          김철수, 임호아, 정재오, 조흥희, 정상대, 김문태, 김명균, 홍석희, 김규재, 김종수, 김명송, 손문규, 진종휘, 이명헌, 박기홍, 박동식, 강태호, 권희권, 정동화, 정형남
+                        <p style={{ margin: 0, fontSize: '0.85rem', color: '#475569', lineHeight: '1.7' }}>
+                          김형수, 임호야, 정재오, 조충래, 정상대, 김문태, 김명군, 홍희성, 김무재, 김종수, 김연웅, 손문규, 전종귀, 이영태, 박기용, 박종식, 강태호, 김학겸, 정종열, 정봉남
                         </p>
                       </div>
                     </div>
@@ -3231,7 +3189,7 @@ export default function TenantPortalPage({
                       <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 14px', background: '#ffffff' }}>
                         <strong style={{ color: '#0284c7', fontSize: '0.88rem', display: 'block', marginBottom: '4px' }}>🚩 경기위원회</strong>
                         <p style={{ margin: 0, fontSize: '0.82rem', color: '#334155' }}><strong>위원장:</strong> 윤해광</p>
-                        <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>위원: 김두훈, 김한율, 임지훈</p>
+                        <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>위원: 김무훈, 김한율, 임지훈</p>
                       </div>
 
                       <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 14px', background: '#ffffff' }}>
@@ -3243,25 +3201,25 @@ export default function TenantPortalPage({
                       <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 14px', background: '#ffffff' }}>
                         <strong style={{ color: '#0284c7', fontSize: '0.88rem', display: 'block', marginBottom: '4px' }}>⚓ 경기행정위원회</strong>
                         <p style={{ margin: 0, fontSize: '0.82rem', color: '#334155' }}><strong>위원장:</strong> 손유진</p>
-                        <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>위원: 남현동, 최민기, 정예림</p>
+                        <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>위원: 남완룡, 최민기, 정예림</p>
                       </div>
 
                       <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 14px', background: '#ffffff' }}>
                         <strong style={{ color: '#0284c7', fontSize: '0.88rem', display: 'block', marginBottom: '4px' }}>📣 홍보위원회</strong>
                         <p style={{ margin: 0, fontSize: '0.82rem', color: '#334155' }}><strong>위원장:</strong> 김윤호</p>
-                        <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>위원: 조형구, 황현석, 김학노</p>
+                        <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>위원: 조병구, 황현식, 김학노</p>
                       </div>
 
                       <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 14px', background: '#ffffff' }}>
                         <strong style={{ color: '#0f766e', fontSize: '0.88rem', display: 'block', marginBottom: '4px' }}>📢 의전 및 안내</strong>
                         <p style={{ margin: 0, fontSize: '0.82rem', color: '#334155' }}><strong>담당:</strong> 김진숙</p>
-                        <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>위원: 김승희, 유승이, 김민서</p>
+                        <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>위원: 김승희, 유송이, 김민서</p>
                       </div>
 
                       <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 14px', background: '#ffffff' }}>
-                        <strong style={{ color: '#0f766e', fontSize: '0.88rem', display: 'block', marginBottom: '4px' }}>🔔 하비관리</strong>
+                        <strong style={{ color: '#0f766e', fontSize: '0.88rem', display: 'block', marginBottom: '4px' }}>🔔 하버관리</strong>
                         <p style={{ margin: 0, fontSize: '0.82rem', color: '#334155' }}><strong>담당:</strong> 김석용</p>
-                        <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>위원: 이중형</p>
+                        <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>위원: 이종형</p>
                       </div>
 
                       <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 14px', background: '#ffffff' }}>
