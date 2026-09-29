@@ -3200,7 +3200,7 @@ export default function TenantPortalPage({
                       <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 14px', background: '#ffffff' }}>
                         <strong style={{ color: '#0284c7', fontSize: '0.88rem', display: 'block', marginBottom: '4px' }}>🚩 경기위원회</strong>
                         <p style={{ margin: 0, fontSize: '0.82rem', color: '#334155' }}><strong>위원장:</strong> 윤해광</p>
-                        <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>위원: 김무훈, 김한율, 임지훈</p>
+                        <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>위원: 김무훈, 김한울, 임지훈</p>
                       </div>
 
                       <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 14px', background: '#ffffff' }}>
