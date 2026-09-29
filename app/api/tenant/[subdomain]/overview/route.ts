@@ -47,6 +47,9 @@ export async function POST(
       location: overviewConfig.location || existingConfig.location || '경상남도 통영시 도남동 수륙해수욕장 일원',
       registrationMode: 'FORCE_ENABLED',
       registrationEnabled: true,
+      contactNote: (overviewConfig?.contactNote === '* 대회 참가자 전원에게 기념 티셔츠 및 참가 기념품을 제공합니다.' || existingConfig?.contactNote === '* 대회 참가자 전원에게 기념 티셔츠 및 참가 기념품을 제공합니다.' || (!overviewConfig?.contactNote && !existingConfig?.contactNote))
+        ? '* 대회 참가자 전원에게 기념 티셔츠를 제공합니다.'
+        : (overviewConfig.contactNote || existingConfig.contactNote),
     };
 
     await setDoc(tenantRef, {

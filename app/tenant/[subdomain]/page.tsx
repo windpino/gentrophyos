@@ -160,6 +160,7 @@ const getDefaultTenantData = (subdomain: string): TenantData => ({
     itineraryDay4: '',
     itineraryDay5: '',
     contactPhone: '010-3648-9838',
+    contactNote: '* 대회 참가자 전원에게 기념 티셔츠를 제공합니다.',
   },
   tournaments: [
     {
@@ -196,6 +197,9 @@ export default function TenantPortalPage({
     registrationEndDate: '2026-10-18T18:00',
     scale: '130명 한도 (선착순 조기마감)',
     location: '경상남도 통영시 도남동 수륙해수욕장 일원',
+    contactNote: (tenant?.overviewConfig?.contactNote === '* 대회 참가자 전원에게 기념 티셔츠 및 참가 기념품을 제공합니다.' || !tenant?.overviewConfig?.contactNote)
+      ? '* 대회 참가자 전원에게 기념 티셔츠를 제공합니다.'
+      : tenant?.overviewConfig?.contactNote,
   };
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'notice' | 'intro' | 'live' | 'gallery' | 'archive'>('overview');
@@ -396,6 +400,9 @@ export default function TenantPortalPage({
           data.tenant.overviewConfig.scale = '130명 한도 (선착순 조기마감)';
           data.tenant.overviewConfig.location = '경상남도 통영시 도남동 수륙해수욕장 일원';
           data.tenant.overviewConfig.entryFeeIndividual = '30,000원';
+          if (data.tenant.overviewConfig.contactNote === '* 대회 참가자 전원에게 기념 티셔츠 및 참가 기념품을 제공합니다.' || !data.tenant.overviewConfig.contactNote) {
+            data.tenant.overviewConfig.contactNote = '* 대회 참가자 전원에게 기념 티셔츠를 제공합니다.';
+          }
         }
         if (data.tenant.tournaments) {
           data.tenant.tournaments = data.tenant.tournaments.map((t: any) => (
@@ -3069,7 +3076,9 @@ export default function TenantPortalPage({
                       )}
                     </p>
                     <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: 0 }}>
-                      {overview.contactNote || '* 대회 참가자 전원에게 기념 티셔츠 및 참가 기념품을 제공합니다.'}
+                      {overview.contactNote === '* 대회 참가자 전원에게 기념 티셔츠 및 참가 기념품을 제공합니다.'
+                        ? '* 대회 참가자 전원에게 기념 티셔츠를 제공합니다.'
+                        : (overview.contactNote || '* 대회 참가자 전원에게 기념 티셔츠를 제공합니다.')}
                     </p>
                   </div>
                 </div>

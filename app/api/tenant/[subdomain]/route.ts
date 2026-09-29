@@ -39,6 +39,9 @@ export async function GET(
       location: OFFICIAL_LOCATION,
       registrationMode: 'FORCE_ENABLED',
       registrationEnabled: true,
+      contactNote: (tenantData.overviewConfig?.contactNote === '* 대회 참가자 전원에게 기념 티셔츠 및 참가 기념품을 제공합니다.' || !tenantData.overviewConfig?.contactNote)
+        ? '* 대회 참가자 전원에게 기념 티셔츠를 제공합니다.'
+        : tenantData.overviewConfig.contactNote,
     };
 
 
