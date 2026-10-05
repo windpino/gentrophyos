@@ -57,17 +57,28 @@ export async function POST(
           await commitBatchIfNeeded();
         }
 
+        let baseResponses: Record<string, any> = {};
+        if (row.rawFormResponses) {
+          try {
+            baseResponses = typeof row.rawFormResponses === 'string'
+              ? JSON.parse(row.rawFormResponses)
+              : row.rawFormResponses;
+          } catch (e) {}
+        }
+
         const formResponses = {
-          birth: row.birth || '',
-          gender: row.gender,
-          club: row.club,
-          division: row.division,
-          tshirtSize: row.tshirtSize,
-          vestAgreement: '네. 확인했습니다.',
-          paymentNoticeAgreement: '네. 확인했습니다.',
-          liabilityWaiver: '네. 동의합니다.',
-          privacyConsent: '네. 동의합니다.',
-          mediaConsent: '네. 동의합니다.',
+          ...baseResponses,
+          birth: row.birth || baseResponses.birth || '',
+          gender: row.gender || baseResponses.gender || '남자',
+          club: row.club !== undefined ? row.club : (baseResponses.club || '미소속'),
+          division: row.division || baseResponses.division || '윈드포일',
+          tshirtSize: row.tshirtSize || baseResponses.tshirtSize || 'M (100)',
+          subclass: row.subclass || baseResponses.subclass || '통합부',
+          vestAgreement: row.vestAgreement || baseResponses.vestAgreement || '네. 확인했습니다.',
+          paymentNoticeAgreement: row.paymentNoticeAgreement || baseResponses.paymentNoticeAgreement || '네. 확인했습니다.',
+          liabilityWaiver: row.liabilityWaiver || baseResponses.liabilityWaiver || '네. 동의합니다.',
+          privacyConsent: row.privacyConsent || baseResponses.privacyConsent || '네. 동의합니다.',
+          mediaConsent: row.mediaConsent || baseResponses.mediaConsent || '네. 동의합니다.',
         };
 
         const regRef = doc(firestore, 'registrations', row.id);

@@ -85,6 +85,12 @@ export default function RefereeMobilePage({
   const [isRankConfirmed, setIsRankConfirmed] = useState(false);
   const [confirmedTime, setConfirmedTime] = useState<string | null>(null);
 
+  // 시뮬레이션(사전 시연) 모드 및 대상 필터 상태
+  // true: 홈페이지 공개/대진표 확정 전에도 서버 반영 없이 안전하게 순위 입력 시연 가능
+  const [isSimulationMode, setIsSimulationMode] = useState<boolean>(true);
+  // true: 아직 ERP에서 승인(APPROVED)되지 않은 접수 대기 참가자까지 모두 포함하여 시뮬레이션
+  const [includePendingApplicants, setIncludePendingApplicants] = useState<boolean>(true);
+
   // 세션 확인 (이미 로그인된 경우 자동 인증)
   useEffect(() => {
     const checkSession = async () => {
@@ -171,6 +177,10 @@ export default function RefereeMobilePage({
 
       if (tenantData.tenant) {
         setTenant(tenantData.tenant);
+        // ERP에서 대진표가 이미 확정 공개된 상태라면 실전 모드를 기본으로, 확정 전이라면 시뮬레이션 모드를 기본으로 설정
+        const bracketsPublished = !!tenantData.tenant.overviewConfig?.bracketsPublished;
+        setIsSimulationMode(!bracketsPublished);
+
         const ongoing = tenantData.tenant.tournaments?.find((t: any) => t.status === 'ONGOING');
         if (ongoing) {
           setActiveTournament(ongoing);
@@ -186,32 +196,52 @@ export default function RefereeMobilePage({
 
   const fetchRegistrations = async (tId: string) => {
     try {
-      const res = await fetch(`/api/tenant/${subdomain}/registrations?tournamentId=${tId}`);
+      const res = await fetch(`/api/tenant/${subdomain}/registrations?tournamentId=${tId}&_t=${Date.now()}`, { cache: 'no-store' });
       const data = await res.json();
       if (data.registrations) {
+        // 거절(REJECTED)된 건만 제외하고 모든 신청자(APPROVED + PENDING)를 로드하여 대진표 확정/홈페이지 공개 전에도 시연 가능하도록 구성
         const parsed = data.registrations
-          .filter((r: any) => r.status === 'APPROVED')
-          .map((r: any) => {
+          .filter((r: any) => r.status !== 'REJECTED')
+          .map((r: any, idx: number) => {
             let birth = '';
+            let gender = '남자';
+            let club = '미소속';
             let division = '윈드포일';
             try {
               if (r.formResponses) {
-                const extra = JSON.parse(r.formResponses);
-                birth = extra.birth || '';
+                const extra = typeof r.formResponses === 'string' ? JSON.parse(r.formResponses) : r.formResponses;
+                birth = extra.birth || extra.birthDate || '';
+                gender = extra.gender || '남자';
+                club = extra.club || '미소속';
                 division = extra.division || '윈드포일';
               }
             } catch (e) {}
 
-            if (division.includes('윈드포일')) {
+            const d = String(division).trim();
+            const isFemale = d.includes('여자') || gender === '여자';
+            const suffix = isFemale ? ' (여자부)' : ' (남자부)';
+            if (d.includes('윈드포일')) {
               division = '윈드포일';
+            } else if (!['윙포일 (남자부)', '윙포일 (여자부)', '혼합오픈 (남자부)', '혼합오픈 (여자부)', '펀엔포뮬러 (남자부)', '펀엔포뮬러 (여자부)'].includes(d)) {
+              if (d.includes('윙포일')) division = `윙포일${suffix}`;
+              else if (d.includes('혼합오픈')) division = `혼합오픈${suffix}`;
+              else if (d.includes('펀엔포뮬러') || d.includes('펀&포뮬러')) division = `펀엔포뮬러${suffix}`;
+              else division = d;
+            } else {
+              division = d;
             }
 
             const baseObj: any = {
               id: r.id,
-              name: r.player.name,
+              name: r.player?.name || '이름없음',
               birth,
+              gender,
+              club,
               division,
-              bibNumber: r.bibNumber || '',
+              regStatus: r.status || 'PENDING',
+              // 배번이 아직 부여되지 않은 신청자도 시연할 수 있도록 가상 시연 배번 보조 제공 (원본 데이터는 수정하지 않음)
+              bibNumber: r.bibNumber || String(idx + 1),
+              hasRealBib: !!r.bibNumber,
               total: 0,
               rank: '-'
             };
@@ -228,15 +258,22 @@ export default function RefereeMobilePage({
   };
 
   const getRoundsStorageKey = (tId: string, div: string) => `gentrophy_rounds_${subdomain}_${tId}_${div}`;
+  const getSimStorageKey = (tId: string, div: string) => `gentrophy_sim_scores_${subdomain}_${tId}_${div}`;
 
   const persistRounds = async (tId: string, div: string, updatedRounds: RoundItem[], currentList?: any[]) => {
     try {
       if (typeof window !== 'undefined') {
         localStorage.setItem(getRoundsStorageKey(tId, div), JSON.stringify(updatedRounds));
+        if (isSimulationMode && currentList) {
+          localStorage.setItem(getSimStorageKey(tId, div), JSON.stringify(currentList));
+        }
       }
     } catch (e) {
       console.error('Failed to save rounds to localStorage:', e);
     }
+
+    // 시뮬레이션 모드일 때는 홈페이지 실시간 리더보드(서버 DB)에 반영하지 않음!
+    if (isSimulationMode) return;
 
     try {
       await fetch(`/api/tenant/${subdomain}/leaderboard`, {
@@ -313,7 +350,23 @@ export default function RefereeMobilePage({
         return activeRounds[0]?.key || 'r1';
       });
 
-      if (data.leaderboard && data.leaderboard.length > 0) {
+      let sourceList: any[] = [];
+      if (isSimulationMode && typeof window !== 'undefined') {
+        const simSavedStr = localStorage.getItem(getSimStorageKey(tId, divisionName));
+        if (simSavedStr) {
+          try {
+            const parsedSim = JSON.parse(simSavedStr);
+            if (Array.isArray(parsedSim) && parsedSim.length > 0) {
+              sourceList = parsedSim;
+            }
+          } catch (e) {}
+        }
+      }
+      if (sourceList.length === 0 && data.leaderboard && data.leaderboard.length > 0) {
+        sourceList = data.leaderboard;
+      }
+
+      if (sourceList.length > 0) {
         const parseSavedRoundVal = (val: any) => {
           if (val === undefined || val === null || val === '') return null;
           if (val === 'DNS' || val === 'DNF') return val;
@@ -322,7 +375,7 @@ export default function RefereeMobilePage({
         };
 
         const mapped = baseRegistrations.map((player) => {
-          const savedRow = data.leaderboard.find((lItem: any) => lItem.name === player.name);
+          const savedRow = sourceList.find((lItem: any) => lItem.id === player.id || lItem.name === player.name);
           const updated: any = { ...player };
           if (savedRow) {
             updated.bibNumber = savedRow.bibNumber || player.bibNumber;
@@ -365,6 +418,9 @@ export default function RefereeMobilePage({
   useEffect(() => {
     if (activeTournament && rawRegistrations.length > 0) {
       const filteredBase = rawRegistrations.filter(r => {
+        if (!includePendingApplicants && r.regStatus !== 'APPROVED') {
+          return false;
+        }
         if (activeDivisionTab === '윈드포일') {
           return r.division === '윈드포일' || (r.division && r.division.includes('윈드포일'));
         }
@@ -374,10 +430,33 @@ export default function RefereeMobilePage({
       setCurrentRankNum(1);
       setBibInput('');
       setInputFeedback(null);
+      setIsRankConfirmed(false);
     } else {
       setParticipants([]);
     }
-  }, [activeDivisionTab, rawRegistrations, activeTournament]);
+  }, [activeDivisionTab, rawRegistrations, activeTournament, includePendingApplicants, isSimulationMode]);
+
+  // 시뮬레이션 데이터 전체 초기화 (해당 종목)
+  const handleResetSimulationData = () => {
+    if (!activeTournament) return;
+    if (!window.confirm(`[${activeDivisionTab}] 종목의 시뮬레이션(가상 시연) 입력 기록을 모두 초기화하시겠습니까?\n(참가자 신청서 원본 데이터에는 전혀 영향을 주지 않습니다.)`)) {
+      return;
+    }
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(getSimStorageKey(activeTournament.id, activeDivisionTab));
+    }
+    setParticipants(prev =>
+      prev.map(p => {
+        const next: any = { ...p, total: 0, rank: '-' };
+        rounds.forEach(r => { next[r.key] = null; });
+        return next;
+      })
+    );
+    setCurrentRankNum(1);
+    setBibInput('');
+    setIsRankConfirmed(false);
+    setInputFeedback({ text: '🧹 시뮬레이션 점수가 초기화되었습니다. 1위부터 다시 시연해 보세요!', isError: false });
+  };
 
   // 점수 및 총점 계산 (Sailing Low-point System)
   const calculateTotal = (row: any, totalParticipants: number, activeRoundsList: RoundItem[] = rounds) => {
@@ -625,11 +704,28 @@ export default function RefereeMobilePage({
     }));
 
     setParticipants(ranked);
-    alert('순위 정렬 및 공식 순위 부여가 완료되었습니다! "순위 최종 확정" 버튼을 눌러 실시간 리더보드에 반영해주세요.');
+    alert(isSimulationMode
+      ? '🧪 [시뮬레이션] 순위 자동 정렬 및 순위 산정이 완료되었습니다! 아래 [시뮬레이션 확정 테스트] 또는 [공식 순위표 인쇄]로 결과를 확인해 보세요.'
+      : '순위 정렬 및 공식 순위 부여가 완료되었습니다! "순위 최종 확정" 버튼을 눌러 실시간 리더보드에 반영해주세요.');
   };
 
-  // 최종 리더보드 서버 저장 (확정)
+  // 최종 리더보드 서버 저장 또는 시뮬레이션 확정
   const handleConfirmLeaderboard = async () => {
+    if (isSimulationMode) {
+      if (typeof window !== 'undefined' && activeTournament) {
+        localStorage.setItem(getSimStorageKey(activeTournament.id, activeDivisionTab), JSON.stringify(participants));
+      }
+      setIsRankConfirmed(true);
+      setConfirmedTime(new Date().toLocaleString('ko-KR') + ' (시뮬레이션 시연)');
+      alert(
+        '🧪 [시뮬레이션 확정 완료]\n\n' +
+        '• 홈페이지 실시간 리더보드 및 참가자 원본 데이터에는 영향을 주지 않고 심판 제어기 내에서만 안전하게 확정 시연되었습니다.\n' +
+        '• [공식 순위표 인쇄] 버튼을 눌러 A4 결과 보고서 출력까지 그대로 테스트해 보실 수 있습니다.\n' +
+        '• 실제 홈페이지 리더보드에 반영하려면 상단 배너에서 [실전 홈페이지 연동 모드]로 전환해 주세요.'
+      );
+      return;
+    }
+
     setSubmitting(true);
     try {
       const res = await fetch(`/api/tenant/${subdomain}/leaderboard`, {
@@ -901,6 +997,108 @@ export default function RefereeMobilePage({
       </header>
 
       <div style={{ maxWidth: '850px', margin: '0 auto', padding: '16px 12px 60px 12px' }}>
+
+        {/* ── [0] 시뮬레이션(사전 시연) 모드 & 실전 모드 전환 제어 배너 ── */}
+        <div
+          style={{
+            background: isSimulationMode
+              ? 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)'
+              : 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
+            border: isSimulationMode ? '2px solid #f59e0b' : '2px solid #10b981',
+            borderRadius: '16px',
+            padding: '14px 16px',
+            marginBottom: '16px',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.04)',
+            color: '#0f172a'
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span
+                style={{
+                  background: isSimulationMode ? '#d97706' : '#059669',
+                  color: 'white',
+                  fontSize: '0.75rem',
+                  fontWeight: '900',
+                  padding: '4px 10px',
+                  borderRadius: '20px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                {isSimulationMode ? '🧪 시뮬레이션(사전 시연) 모드' : '🟢 실전 홈페이지 연동 모드'}
+              </span>
+              <span style={{ fontSize: '0.82rem', fontWeight: '800', color: isSimulationMode ? '#92400e' : '#065f46' }}>
+                {tenant?.overviewConfig?.bracketsPublished
+                  ? '(ERP 대진표 공개됨)'
+                  : '(ERP 대진표 확정 전 - 홈페이지 비공개 상태)'}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => setIsSimulationMode(prev => !prev)}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '8px',
+                  border: isSimulationMode ? '1px solid #059669' : '1px solid #d97706',
+                  background: 'white',
+                  color: isSimulationMode ? '#059669' : '#d97706',
+                  fontSize: '0.78rem',
+                  fontWeight: '800',
+                  cursor: 'pointer'
+                }}
+              >
+                {isSimulationMode ? '실전 모드로 전환' : '시뮬레이션 모드로 전환'}
+              </button>
+              {isSimulationMode && (
+                <button
+                  type="button"
+                  onClick={handleResetSimulationData}
+                  style={{
+                    padding: '6px 10px',
+                    borderRadius: '8px',
+                    border: '1px solid #fca5a5',
+                    background: '#fef2f2',
+                    color: '#dc2626',
+                    fontSize: '0.78rem',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  <RotateCcw size={12} /> 시연 점수 초기화
+                </button>
+              )}
+            </div>
+          </div>
+
+          <p style={{ margin: '8px 0 10px 0', fontSize: '0.79rem', color: isSimulationMode ? '#78350f' : '#065f46', lineHeight: '1.45', fontWeight: '600' }}>
+            {isSimulationMode
+              ? '• ERP에서 대진표 확정/홈페이지 공개 전이라도 접수된 신청자 명단으로 1위부터 순위 입력, 자동 정렬, A4 결과표 인쇄까지 자유롭게 시연할 수 있습니다. (홈페이지 리더보드 및 참가자 원본 데이터에는 전혀 영향을 주지 않습니다.)'
+              : '• 실전 모드입니다. [순위 최종 확정] 시 홈페이지 실시간 리더보드에 즉시 공식 점수가 반영됩니다.'}
+          </p>
+
+          {/* 참가자 불러오기 범위 선택 (전체 접수자 포함 시연 vs ERP 승인 완료자만) */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', paddingTop: '8px', borderTop: isSimulationMode ? '1px dashed #fcd34d' : '1px dashed #6ee7b7', fontSize: '0.78rem' }}>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontWeight: '800', color: '#1e293b' }}>
+              <input
+                type="checkbox"
+                checked={includePendingApplicants}
+                onChange={(e) => setIncludePendingApplicants(e.target.checked)}
+                style={{ width: '15px', height: '15px', accentColor: '#d97706', cursor: 'pointer' }}
+              />
+              <span>ERP 미승인(대기) 신청자까지 모두 포함하여 시연하기 (배번 미지정 시 가상 시연번호 자동 부여)</span>
+            </label>
+            <span style={{ fontWeight: '700', color: '#475569' }}>
+              전체 접수: {rawRegistrations.length}명 (승인 {rawRegistrations.filter(r => r.regStatus === 'APPROVED').length}명 / 대기 {rawRegistrations.filter(r => r.regStatus !== 'APPROVED').length}명)
+            </span>
+          </div>
+        </div>
         
         {/* ── [1] 상단 모드 분리 탭 (순위 입력란 vs 순위 확정란) ── */}
         <div style={{
@@ -969,7 +1167,7 @@ export default function RefereeMobilePage({
                 🏆 참가 종목(부서) 선택
               </label>
               <span style={{ fontSize: '0.8rem', color: 'var(--theme-primary)', fontWeight: '700' }}>
-                승인 선수: {participants.length}명
+                {includePendingApplicants ? `시연 대상 선수: ${participants.length}명 (대기 포함)` : `승인 선수: ${participants.length}명`}
               </span>
             </div>
             <select
@@ -1718,11 +1916,18 @@ export default function RefereeMobilePage({
                   fontWeight: '800',
                   cursor: 'pointer',
                   borderRadius: '10px',
-                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                  boxShadow: '0 2px 8px rgba(16,185,129,0.3)'
+                  background: isSimulationMode
+                    ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
+                    : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  boxShadow: isSimulationMode
+                    ? '0 2px 8px rgba(245,158,11,0.3)'
+                    : '0 2px 8px rgba(16,185,129,0.3)'
                 }}
               >
-                <CheckCircle2 size={18} /> {isRankConfirmed ? '순위 확정 완료 (재확정)' : '순위 최종 확정 (공개)'}
+                <CheckCircle2 size={18} />
+                {isSimulationMode
+                  ? (isRankConfirmed ? '🧪 시뮬레이션 재확정 (비공개 시연)' : '🧪 시뮬레이션 확정 테스트 (비공개)')
+                  : (isRankConfirmed ? '순위 확정 완료 (재확정)' : '순위 최종 확정 (공개)')}
               </button>
               <button
                 type="button"

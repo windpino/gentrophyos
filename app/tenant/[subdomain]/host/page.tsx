@@ -23,7 +23,10 @@ interface GridRow {
   paymentStatus: 'PENDING' | 'APPROVED';
   status: 'PENDING' | 'APPROVED';
   createdAt?: string;
+  rawCreatedAt?: string;
   bibNumber?: string;
+  subclass?: string;
+  rawFormResponses?: string;
 
   // 편집 제어 플래그
   isEdited?: boolean;
@@ -109,11 +112,24 @@ export default function HostDashboardPage({
   const [tenant, setTenant] = useState<any>(null);
   const [activeTournament, setActiveTournament] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeSection, setActiveSection] = useState<'applicants' | 'tie-breaker' | 'notice'>('applicants');
+  const [activeSection, setActiveSection] = useState<'applicants' | 'brackets' | 'tie-breaker' | 'notice'>('applicants');
+  const [bracketPublishing, setBracketPublishing] = useState(false);
+  const [selectedBracketDivision, setSelectedBracketDivision] = useState<string>('전체');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [filterSortCategory, setFilterSortCategory] = useState<string>('all');
   const [subFilterValue, setSubFilterValue] = useState<string>('all');
+  const [sortField, setSortField] = useState<'name' | 'bibNumber' | 'birth' | 'createdAt' | null>(null);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  const handleHeaderSort = (field: 'name' | 'bibNumber' | 'birth' | 'createdAt') => {
+    if (sortField === field) {
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
 
   // 로컬 스토리지에서 사이드바 열림/닫힘 상태 복원
   useEffect(() => {
@@ -313,6 +329,62 @@ export default function HostDashboardPage({
     }
   };
 
+  const handleToggleBracketsPublish = async (publish: boolean) => {
+    if (!tenant) return;
+    const confirmMsg = publish
+      ? '대진표 및 조 편성표를 최종 확정하여 대회 공식 홈페이지에 공개하시겠습니까?\n(참가 신청서 원본 데이터는 안전하게 그대로 유지됩니다.)'
+      : '홈페이지에 공개된 대진표 및 조 편성표를 비공개(확정 대기) 상태로 전환하시겠습니까?';
+    if (!confirm(confirmMsg)) return;
+
+    setBracketPublishing(true);
+    try {
+      // 만약 미저장된 조 편성(subclass)이나 배번 수정사항이 있다면 함께 안전하게 저장
+      const updatedList = gridData.filter((row) => row.isEdited && !row.isNew);
+      if (updatedList.length > 0 && activeTournament) {
+        const bulkRes = await fetch(`/api/tenant/${subdomain}/registrations/bulk-update`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            tournamentId: activeTournament.id,
+            updatedList,
+            insertedList: [],
+            deletedIds: [],
+          }),
+        });
+        if (!bulkRes.ok) {
+          throw new Error('조 편성 변경사항 저장 중 오류가 발생했습니다.');
+        }
+      }
+
+      const currentConfig = tenant?.overviewConfig || {};
+      const updatedConfig = {
+        ...currentConfig,
+        bracketsPublished: publish,
+        bracketsPublishedAt: publish ? new Date().toISOString() : (currentConfig.bracketsPublishedAt || null),
+      };
+
+      const res = await fetch(`/api/tenant/${subdomain}/overview`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ overviewConfig: updatedConfig }),
+      });
+
+      if (res.ok) {
+        alert(publish
+          ? '✅ 대진표 및 조 편성표가 확정되어 홈페이지에 공식 공개되었습니다!'
+          : '🔒 대진표 및 조 편성표가 홈페이지에서 비공개(준비중) 상태로 전환되었습니다.');
+        await fetchInitialData();
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        alert(errData.error || '상태 변경에 실패했습니다.');
+      }
+    } catch (e: any) {
+      alert(e.message || '오류가 발생했습니다.');
+    } finally {
+      setBracketPublishing(false);
+    }
+  };
+
   const loadSectionData = async (tId: string) => {
     try {
       // Fetch registrations and rules-detail in parallel!
@@ -335,6 +407,7 @@ export default function HostDashboardPage({
         let club = '미소속';
         let division = '윈드포일';
         let tshirtSize = 'M (100)';
+        let subclass = '통합부';
         let vestAgreement = '';
         let paymentNoticeAgreement = '';
         let liabilityWaiver = '';
@@ -344,13 +417,14 @@ export default function HostDashboardPage({
         try {
           if (r.formResponses) {
             const extra = typeof r.formResponses === 'string' ? JSON.parse(r.formResponses) : r.formResponses;
-            birth = extra.birth || '';
+            birth = extra.birth || extra.birthDate || '';
             gender = extra.gender || '남자';
             // formResponses에 phone이 있으면 우선 사용
             phone = extra.phone || '';
             club = extra.club || '미소속';
             division = normalizeDivision(extra.division, gender);
             tshirtSize = normalizeTshirtSize(extra.tshirtSize);
+            subclass = extra.subclass || extra.class || extra.category || extra.subDivision || '통합부';
             vestAgreement = extra.vestAgreement || '';
             paymentNoticeAgreement = extra.paymentNoticeAgreement || '';
             liabilityWaiver = extra.liabilityWaiver || '';
@@ -373,6 +447,8 @@ export default function HostDashboardPage({
           club,
           division,
           tshirtSize,
+          subclass,
+          rawFormResponses: typeof r.formResponses === 'string' ? r.formResponses : JSON.stringify(r.formResponses || {}),
           vestAgreement,
           paymentNoticeAgreement,
           liabilityWaiver,
@@ -381,6 +457,7 @@ export default function HostDashboardPage({
           paymentStatus: r.paymentStatus,
           status: r.status,
           createdAt: r.createdAt ? new Date(r.createdAt).toLocaleString('ko-KR') : '',
+          rawCreatedAt: r.createdAt || '',
           bibNumber: r.bibNumber || '',
         };
       });
@@ -414,6 +491,7 @@ export default function HostDashboardPage({
 
   // 엑셀식 새 행 삽입 (대량 등록용)
   const handleAddNewRow = () => {
+    const now = new Date();
     const newRow: GridRow = {
       id: `temp-${Date.now()}`,
       playerId: '',
@@ -432,7 +510,8 @@ export default function HostDashboardPage({
       paymentStatus: 'APPROVED',
       status: 'APPROVED',
       isNew: true, // 신규 추가 행 추적
-      createdAt: new Date().toLocaleString('ko-KR'),
+      createdAt: now.toLocaleString('ko-KR'),
+      rawCreatedAt: now.toISOString(),
     };
     setGridData([newRow, ...gridData]);
   };
@@ -598,7 +677,54 @@ export default function HostDashboardPage({
     }
 
     // 3. 정렬 처리
-    if (filterSortCategory === 'birth_asc') {
+    if (sortField) {
+      result.sort((a, b) => {
+        if (sortField === 'name') {
+          const valA = (a.name || '').trim();
+          const valB = (b.name || '').trim();
+          if (!valA && !valB) return 0;
+          if (!valA) return 1;
+          if (!valB) return -1;
+          const cmp = valA.localeCompare(valB, 'ko', { numeric: true });
+          return sortOrder === 'asc' ? cmp : -cmp;
+        }
+        if (sortField === 'bibNumber') {
+          const valA = (a.bibNumber || '').trim();
+          const valB = (b.bibNumber || '').trim();
+          if (!valA && !valB) return 0;
+          if (!valA) return 1;
+          if (!valB) return -1;
+          const cmp = valA.localeCompare(valB, 'ko', { numeric: true });
+          return sortOrder === 'asc' ? cmp : -cmp;
+        }
+        if (sortField === 'birth') {
+          const valA = (a.birth || '').trim();
+          const valB = (b.birth || '').trim();
+          if (!valA && !valB) return 0;
+          if (!valA) return 1;
+          if (!valB) return -1;
+          const cmp = valA.localeCompare(valB, 'ko', { numeric: true });
+          return sortOrder === 'asc' ? cmp : -cmp;
+        }
+        if (sortField === 'createdAt') {
+          const timeA = a.rawCreatedAt ? new Date(a.rawCreatedAt).getTime() : 0;
+          const timeB = b.rawCreatedAt ? new Date(b.rawCreatedAt).getTime() : 0;
+          if (!timeA && !timeB) {
+            const strA = (a.createdAt || '').trim();
+            const strB = (b.createdAt || '').trim();
+            if (!strA && !strB) return 0;
+            if (!strA) return 1;
+            if (!strB) return -1;
+            const cmp = strA.localeCompare(strB, 'ko', { numeric: true });
+            return sortOrder === 'asc' ? cmp : -cmp;
+          }
+          if (!timeA) return 1;
+          if (!timeB) return -1;
+          return sortOrder === 'asc' ? timeA - timeB : timeB - timeA;
+        }
+        return 0;
+      });
+    } else if (filterSortCategory === 'birth_asc') {
       // 생년월일은 문자열이므로 오름차순 정렬 (비어있으면 뒤로 보냄)
       result.sort((a, b) => {
         if (!a.birth) return 1;
@@ -760,6 +886,7 @@ export default function HostDashboardPage({
         </div>
         <div style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--theme-gold)' }}>
           {activeSection === 'applicants' ? '참가자' : 
+           activeSection === 'brackets' ? '대진/조편성' :
            activeSection === 'tie-breaker' ? '룰설정' : '공시서'}
         </div>
       </div>
@@ -785,6 +912,7 @@ export default function HostDashboardPage({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {[
                 { id: 'applicants', label: '참가자관리', icon: Users },
+                { id: 'brackets', label: '대진표 및 조 편성표', icon: Layers },
                 { id: 'tie-breaker', label: '동점자 순위 규칙 설정', icon: Award },
                 { id: 'notice', label: '개최공시서 업로드', icon: Upload },
               ].map((item) => {
@@ -874,6 +1002,7 @@ export default function HostDashboardPage({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {[
             { id: 'applicants', label: '참가자관리', icon: Users },
+            { id: 'brackets', label: '대진표 및 조 편성표', icon: Layers },
             { id: 'tie-breaker', label: '동점자 순위 규칙 설정', icon: Award },
             { id: 'notice', label: '개최공시서 업로드', icon: Upload },
           ].map((item) => {
@@ -954,6 +1083,7 @@ export default function HostDashboardPage({
             <div>
               <h1 style={{ fontSize: 'clamp(1.3rem, 3.5vw, 1.9rem)', fontWeight: '800', margin: 0, marginBottom: '4px' }}>
                 {activeSection === 'applicants' ? '참가자관리' : 
+                 activeSection === 'brackets' ? '대진표 및 조 편성표' :
                  activeSection === 'tie-breaker' ? 'Tie-breaker 가중치 제어기' : '개최공시서 업로드'}
               </h1>
               <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.85rem' }}>{activeTournament.title}</p>
@@ -1060,6 +1190,7 @@ export default function HostDashboardPage({
                   onChange={(e) => {
                     setFilterSortCategory(e.target.value);
                     setSubFilterValue('all');
+                    setSortField(null);
                   }}
                   style={{
                     padding: '10px 16px',
@@ -1156,9 +1287,48 @@ export default function HostDashboardPage({
                     <tr>
                       <th style={{ width: '60px', textAlign: 'center' }}>순번</th>
                       <th style={{ width: '65px', textAlign: 'center' }}>상태</th>
-                      <th style={{ minWidth: '90px' }}>성명</th>
-                      <th style={{ minWidth: '90px' }}>배번티번호</th>
-                      <th style={{ minWidth: '110px' }}>생년월일</th>
+                      <th
+                        onClick={() => handleHeaderSort('name')}
+                        style={{ minWidth: '90px', cursor: 'pointer', userSelect: 'none' }}
+                        title="클릭하여 성명순 정렬"
+                      >
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: sortField === 'name' ? 'var(--theme-primary)' : undefined }}>
+                          성명
+                          {sortField === 'name' ? (
+                            sortOrder === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                          ) : (
+                            <span style={{ fontSize: '0.75rem', opacity: 0.4 }}>↕</span>
+                          )}
+                        </div>
+                      </th>
+                      <th
+                        onClick={() => handleHeaderSort('bibNumber')}
+                        style={{ minWidth: '90px', cursor: 'pointer', userSelect: 'none' }}
+                        title="클릭하여 배번티번호순 정렬"
+                      >
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: sortField === 'bibNumber' ? 'var(--theme-primary)' : undefined }}>
+                          배번티번호
+                          {sortField === 'bibNumber' ? (
+                            sortOrder === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                          ) : (
+                            <span style={{ fontSize: '0.75rem', opacity: 0.4 }}>↕</span>
+                          )}
+                        </div>
+                      </th>
+                      <th
+                        onClick={() => handleHeaderSort('birth')}
+                        style={{ minWidth: '110px', cursor: 'pointer', userSelect: 'none' }}
+                        title="클릭하여 생년월일순 정렬"
+                      >
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: sortField === 'birth' ? 'var(--theme-primary)' : undefined }}>
+                          생년월일
+                          {sortField === 'birth' ? (
+                            sortOrder === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                          ) : (
+                            <span style={{ fontSize: '0.75rem', opacity: 0.4 }}>↕</span>
+                          )}
+                        </div>
+                      </th>
                       <th style={{ minWidth: '70px' }}>성별</th>
                       <th style={{ minWidth: '130px' }}>전화번호</th>
                       <th style={{ minWidth: '130px' }}>소속협회 / 클럽</th>
@@ -1171,7 +1341,20 @@ export default function HostDashboardPage({
                       <th style={{ minWidth: '80px', textAlign: 'center', fontSize: '0.8rem' }}>12.초상권</th>
                       <th style={{ minWidth: '80px' }}>결제 여부</th>
                       <th style={{ minWidth: '100px', textAlign: 'center' }}>홈페이지 배포</th>
-                      <th style={{ minWidth: '150px', textAlign: 'center' }}>신청일시</th>
+                      <th
+                        onClick={() => handleHeaderSort('createdAt')}
+                        style={{ minWidth: '150px', textAlign: 'center', cursor: 'pointer', userSelect: 'none' }}
+                        title="클릭하여 신청일시순 정렬"
+                      >
+                        <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '4px', color: sortField === 'createdAt' ? 'var(--theme-primary)' : undefined }}>
+                          신청일시
+                          {sortField === 'createdAt' ? (
+                            sortOrder === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                          ) : (
+                            <span style={{ fontSize: '0.75rem', opacity: 0.4 }}>↕</span>
+                          )}
+                        </div>
+                      </th>
                       <th style={{ width: '90px', textAlign: 'center' }}>작업</th>
                     </tr>
                   </thead>
@@ -1475,6 +1658,391 @@ export default function HostDashboardPage({
             </div>
           </div>
         )}
+
+        {/* SECTION A-2: 대진표 및 조 편성표 관리 (원본 신청서 보호 & 홈페이지 확정 공개 제어) */}
+        {activeSection === 'brackets' && (() => {
+          const isPublished = !!tenant?.overviewConfig?.bracketsPublished;
+          const publishedAt = tenant?.overviewConfig?.bracketsPublishedAt;
+          const approvedList = gridData.filter(r => r.status === 'APPROVED');
+          const pendingList = gridData.filter(r => r.status !== 'APPROVED');
+
+          const formatMaskedBirth = (birthStr?: string): string => {
+            if (!birthStr) return '-';
+            const clean = String(birthStr).trim().replace(/[^0-9]/g, '');
+            if (clean.length === 8) return `${clean.substring(0, 4)}.${clean.substring(4, 6)}.**`;
+            if (clean.length === 6) return `${clean.substring(0, 2)}.${clean.substring(2, 4)}.**`;
+            return birthStr;
+          };
+
+          const parsedPlayers = approvedList.map(r => {
+            let rootDivision = r.division || '윈드포일';
+            if (rootDivision.includes('윈드포일')) rootDivision = '윈드포일';
+            else if (rootDivision.includes('윙포일')) rootDivision = '윙포일';
+            else if (rootDivision.includes('혼합오픈')) rootDivision = '혼합오픈';
+            else if (rootDivision.includes('펀엔포뮬러') || rootDivision.includes('펀&포뮬러')) rootDivision = '펀&포뮬러';
+
+            let genderGroup = r.gender || '남자';
+            if (!genderGroup.includes('부')) genderGroup = `${genderGroup}부`;
+
+            return {
+              ...r,
+              rootDivision,
+              genderGroup,
+              subclass: r.subclass || '통합부',
+            };
+          });
+
+          const filteredForView = selectedBracketDivision === '전체'
+            ? parsedPlayers
+            : parsedPlayers.filter(p => p.rootDivision === selectedBracketDivision);
+
+          const grouped: Record<string, Record<string, Record<string, typeof parsedPlayers>>> = {};
+          filteredForView.forEach(p => {
+            if (!grouped[p.rootDivision]) grouped[p.rootDivision] = {};
+            if (!grouped[p.rootDivision][p.genderGroup]) grouped[p.rootDivision][p.genderGroup] = {};
+            if (!grouped[p.rootDivision][p.genderGroup][p.subclass]) grouped[p.rootDivision][p.genderGroup][p.subclass] = [];
+            grouped[p.rootDivision][p.genderGroup][p.subclass].push(p);
+          });
+
+          const divisionOrder = ['윈드포일', '윙포일', '혼합오픈', '펀&포뮬러'];
+          const sortedDivisions = Object.keys(grouped).sort((a, b) => {
+            const idxA = divisionOrder.indexOf(a);
+            const idxB = divisionOrder.indexOf(b);
+            if (idxA === -1 && idxB === -1) return a.localeCompare(b);
+            if (idxA === -1) return 1;
+            if (idxB === -1) return -1;
+            return idxA - idxB;
+          });
+
+          const hasUnsavedBracketEdits = gridData.some(r => r.isEdited && !r.isNew);
+
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }} className="animate-fade-in">
+              {/* 1. 상단 확정 및 홈페이지 공개 제어 배너 */}
+              <div
+                className="glass-panel"
+                style={{
+                  background: 'white',
+                  padding: '24px 28px',
+                  borderTop: isPublished ? '4px solid #10b981' : '4px solid #f59e0b',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '20px'
+                }}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '5px 12px',
+                        borderRadius: '20px',
+                        fontSize: '0.82rem',
+                        fontWeight: '800',
+                        background: isPublished ? '#ecfdf5' : '#fffbeb',
+                        color: isPublished ? '#059669' : '#d97706',
+                        border: isPublished ? '1px solid #a7f3d0' : '1px solid #fde68a'
+                      }}
+                    >
+                      {isPublished ? <CheckCircle2 size={15} /> : <Clock size={15} />}
+                      {isPublished ? '홈페이지 공개 중 (확정 완료)' : '홈페이지 비공개 (운영진 확정 대기 중)'}
+                    </span>
+                    {publishedAt && (
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '600' }}>
+                        마지막 확정 일시: {new Date(publishedAt).toLocaleString('ko-KR')}
+                      </span>
+                    )}
+                  </div>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: '900', color: 'var(--text-main)', margin: '4px 0 0 0' }}>
+                    대진표 및 조 편성표 홈페이지 공개 제어
+                  </h3>
+                  <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)', margin: 0, lineHeight: '1.5' }}>
+                    • 현재 접수된 참가자 신청서 원본 데이터는 삭제되거나 훼손되지 않고 안전하게 보호됩니다.<br />
+                    • 아래에서 승인 완료된 참가자(<strong>{approvedList.length}명</strong> / 미승인 대기 {pendingList.length}명)의 조 편성을 확인한 뒤 <strong>[대진표 확정 및 홈페이지 공개]</strong> 버튼을 누르면 홈페이지에 즉시 공개됩니다.
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  {hasUnsavedBracketEdits && (
+                    <button
+                      onClick={handleSaveAllChanges}
+                      disabled={isSaving}
+                      className="btn-secondary"
+                      style={{
+                        padding: '12px 18px',
+                        fontSize: '0.9rem',
+                        fontWeight: '800',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        borderColor: 'var(--theme-primary)',
+                        color: 'var(--theme-primary)',
+                        background: '#f0f9ff'
+                      }}
+                    >
+                      <Save size={16} />
+                      {isSaving ? '저장 중...' : '조/배번 변경사항 임시저장'}
+                    </button>
+                  )}
+
+                  {isPublished ? (
+                    <>
+                      <button
+                        onClick={() => handleToggleBracketsPublish(true)}
+                        disabled={bracketPublishing}
+                        className="btn-primary"
+                        style={{
+                          padding: '12px 20px',
+                          fontSize: '0.9rem',
+                          fontWeight: '800',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          background: '#059669'
+                        }}
+                      >
+                        <CheckCircle2 size={16} />
+                        {bracketPublishing ? '처리 중...' : '변경사항 재확정 및 업데이트'}
+                      </button>
+                      <button
+                        onClick={() => handleToggleBracketsPublish(false)}
+                        disabled={bracketPublishing}
+                        style={{
+                          padding: '12px 18px',
+                          fontSize: '0.88rem',
+                          fontWeight: '800',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          background: '#fff1f2',
+                          color: '#e11d48',
+                          border: '1px solid #fecdd3',
+                          borderRadius: '10px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        홈페이지 비공개로 전환
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => handleToggleBracketsPublish(true)}
+                      disabled={bracketPublishing}
+                      className="btn-primary"
+                      style={{
+                        padding: '14px 24px',
+                        fontSize: '0.95rem',
+                        fontWeight: '900',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                        boxShadow: '0 6px 16px rgba(2, 132, 199, 0.25)'
+                      }}
+                    >
+                      <CheckCircle2 size={18} />
+                      {bracketPublishing ? '확정 처리 중...' : '대진표 확정 및 홈페이지 공개'}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* 2. 종목별 필터 및 요약 통계 바 */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+                  {['전체', '윈드포일', '윙포일', '혼합오픈', '펀&포뮬러'].map(divTab => {
+                    const active = selectedBracketDivision === divTab;
+                    const count = divTab === '전체'
+                      ? parsedPlayers.length
+                      : parsedPlayers.filter(p => p.rootDivision === divTab).length;
+                    return (
+                      <button
+                        key={divTab}
+                        onClick={() => setSelectedBracketDivision(divTab)}
+                        style={{
+                          padding: '10px 18px',
+                          borderRadius: '24px',
+                          background: active ? 'var(--theme-primary)' : '#ffffff',
+                          border: active ? 'none' : '1px solid var(--border-color)',
+                          color: active ? '#ffffff' : 'var(--text-main)',
+                          fontSize: '0.88rem',
+                          fontWeight: '800',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.03)'
+                        }}
+                      >
+                        <span>{divTab}</span>
+                        <span style={{
+                          padding: '2px 7px',
+                          borderRadius: '12px',
+                          fontSize: '0.75rem',
+                          background: active ? 'rgba(255,255,255,0.22)' : '#f1f5f9',
+                          color: active ? 'white' : 'var(--text-muted)'
+                        }}>
+                          {count}명
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div style={{ fontSize: '0.84rem', color: 'var(--text-muted)', fontWeight: '600' }}>
+                  💡 각 선수의 <strong>조 편성(통합부/1조/2조 등)</strong> 및 <strong>배번티 번호</strong>를 변경한 후 상단의 확정 버튼을 누르면 홈페이지에 그대로 반영됩니다.
+                </div>
+              </div>
+
+              {/* 3. 대진표 및 조 편성표 미리보기 & 조 배정 카드 뷰 */}
+              {approvedList.length === 0 ? (
+                <div className="glass-panel" style={{ background: 'white', padding: '60px 20px', textAlign: 'center' }}>
+                  <p style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--text-main)', margin: '0 0 8px 0' }}>
+                    현재 [홈페이지 배포(승인)] 체크된 참가 선수가 없습니다. (총 신청자: {gridData.length}명)
+                  </p>
+                  <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', margin: '0 0 18px 0' }}>
+                    [참가자관리] 메뉴에서 입금 및 참가가 확인된 선수의 &apos;홈페이지 배포&apos; 체크박스를 선택한 뒤 저장해 주세요.
+                  </p>
+                  <button
+                    onClick={() => setActiveSection('applicants')}
+                    className="btn-primary"
+                    style={{ padding: '10px 20px', fontSize: '0.88rem' }}
+                  >
+                    참가자관리 메뉴로 이동
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+                  {sortedDivisions.map(rootDiv => {
+                    const genderGroup = grouped[rootDiv] || {};
+                    return (
+                      <div key={rootDiv} className="glass-panel" style={{ background: 'white', padding: '28px', borderTop: '4px solid var(--theme-primary)', borderRadius: '16px' }}>
+                        <h3 style={{ fontSize: '1.35rem', fontWeight: '900', color: 'var(--text-main)', marginBottom: '22px', display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '2px solid var(--theme-primary)', paddingBottom: '10px' }}>
+                          <span style={{ fontSize: '1.5rem' }}>⛵</span> {rootDiv} 대진 및 조 편성표
+                        </h3>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '26px' }}>
+                          {['남자부', '여자부'].map(gender => {
+                            const subclasses = genderGroup[gender] || {};
+                            if (Object.keys(subclasses).length === 0) return null;
+
+                            return (
+                              <div key={gender} style={{ background: '#f8fafc', padding: '22px', borderRadius: '14px', border: '1px solid var(--border-color)' }}>
+                                <h4 style={{ fontSize: '1.08rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  👤 {gender}
+                                </h4>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '18px' }}>
+                                  {Object.keys(subclasses).map(subclass => {
+                                    const list = subclasses[subclass] || [];
+                                    return (
+                                      <div key={subclass} style={{ background: 'white', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '18px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                                        <h5 style={{ fontSize: '0.95rem', fontWeight: '850', color: 'var(--text-main)', margin: '0 0 12px 0', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                          <span>🏷️ {subclass}</span>
+                                          <span style={{ fontSize: '0.75rem', background: 'var(--theme-primary)', color: 'white', padding: '2px 8px', borderRadius: '10px', fontWeight: '700' }}>{list.length}명</span>
+                                        </h5>
+
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                          {list.map((player, pIdx) => (
+                                            <div
+                                              key={player.id}
+                                              style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                flexWrap: 'wrap',
+                                                gap: '8px 10px',
+                                                padding: '10px 12px',
+                                                background: '#ffffff',
+                                                borderRadius: '10px',
+                                                fontSize: '0.86rem',
+                                                border: '1px solid #e2e8f0'
+                                              }}
+                                            >
+                                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', minWidth: 0 }}>
+                                                <span style={{ color: '#94a3b8', fontWeight: '800', fontSize: '0.8rem', minWidth: '16px' }}>
+                                                  {pIdx + 1}
+                                                </span>
+                                                <span style={{ fontWeight: '900', color: '#0f172a', fontSize: '0.95rem' }}>
+                                                  {player.name}
+                                                </span>
+                                                <span style={{
+                                                  fontSize: '0.75rem',
+                                                  color: '#334155',
+                                                  background: '#f1f5f9',
+                                                  padding: '2px 7px',
+                                                  borderRadius: '6px',
+                                                  fontWeight: '700',
+                                                  border: '1px solid #e2e8f0'
+                                                }}>
+                                                  {player.club || '미소속'}
+                                                </span>
+                                                <span style={{
+                                                  fontSize: '0.75rem',
+                                                  color: '#64748b',
+                                                  fontWeight: '600'
+                                                }}>
+                                                  {formatMaskedBirth(player.birth)}
+                                                </span>
+                                              </div>
+
+                                              {/* 우측: 조 편성 변경 및 배번티 번호 표시/수정 */}
+                                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <select
+                                                  value={player.subclass || '통합부'}
+                                                  onChange={(e) => handleCellChange(player.id, 'subclass', e.target.value)}
+                                                  title="조 편성 변경"
+                                                  style={{
+                                                    fontSize: '0.78rem',
+                                                    fontWeight: '700',
+                                                    padding: '4px 6px',
+                                                    borderRadius: '6px',
+                                                    border: '1px solid #cbd5e1',
+                                                    background: '#f8fafc',
+                                                    color: '#334155',
+                                                    cursor: 'pointer'
+                                                  }}
+                                                >
+                                                  {['통합부', 'A조', 'B조', 'C조', 'D조', '1조', '2조', '3조', '4조', '청년부', '장년부', '마스터즈'].map(opt => (
+                                                    <option key={opt} value={opt}>{opt}</option>
+                                                  ))}
+                                                </select>
+                                                <span style={{
+                                                  fontWeight: '900',
+                                                  color: '#0284c7',
+                                                  background: '#f0f9ff',
+                                                  border: '1px solid #bae6fd',
+                                                  padding: '3px 8px',
+                                                  borderRadius: '6px',
+                                                  fontSize: '0.8rem',
+                                                  whiteSpace: 'nowrap'
+                                                }}>
+                                                  배번 {player.bibNumber || '-'}
+                                                </span>
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* SECTION B: 동점자 룰 제어 */}
         {activeSection === 'tie-breaker' && (

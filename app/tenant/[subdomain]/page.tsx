@@ -2397,6 +2397,18 @@ export default function TenantPortalPage({
                   <RefreshCw className="animate-spin" size={32} style={{ color: 'var(--theme-primary)', margin: '0 auto 12px auto' }} />
                   <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>참가 선수 및 조 편성표 데이터를 불러오는 중입니다...</p>
                 </div>
+              ) : !overview.bracketsPublished ? (
+                <div className="glass-panel" style={{ background: 'white', padding: '70px 24px', textAlign: 'center', color: 'var(--text-muted)', borderTop: '4px solid #cbd5e1' }}>
+                  <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto', fontSize: '1.8rem' }}>
+                    📋
+                  </div>
+                  <p style={{ fontSize: '1.15rem', fontWeight: '800', color: 'var(--text-main)', margin: '0 0 8px 0' }}>
+                    대진표 및 조 편성표가 아직 확정(공개)되지 않았습니다.
+                  </p>
+                  <p style={{ fontSize: '0.9rem', margin: 0, lineHeight: '1.6' }}>
+                    대회 운영본부에서 참가자 확인 및 조 편성을 최종 확정한 후 공식 공개됩니다.
+                  </p>
+                </div>
               ) : registrations.length === 0 ? (
                 <div className="glass-panel" style={{ background: 'white', padding: '60px 0', textAlign: 'center', color: 'var(--text-muted)' }}>
                   <p style={{ fontSize: '1rem', fontWeight: '700', margin: '0 0 4px 0' }}>승인 완료된 참가 선수가 없습니다.</p>
@@ -2404,6 +2416,11 @@ export default function TenantPortalPage({
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
+                  {overview.bracketsPublishedAt && (
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: '#059669', fontWeight: '700', padding: '0 4px', marginBottom: '-16px' }}>
+                      <CheckCircle2 size={15} /> 운영진 공식 확정 일시: {formatKoreanDateTime(overview.bracketsPublishedAt)}
+                    </div>
+                  )}
                   {(() => {
                     // 1. Parse player data with subclass categorization
                     const parsedPlayers = registrations.map((r: any) => {
