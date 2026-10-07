@@ -138,10 +138,10 @@ const getDefaultTenantData = (subdomain: string): TenantData => ({
     duration: '2026. 10. 31(토) ~ 11. 01(일) (1박 2일)',
     location: '경상남도 통영시 도남동 수륙해수욕장 일원',
     scale: '130명 한도 (선착순 조기마감)',
-    host: '통영시, 통영시요트협회',
-    sponsor: '경상남도, 경상남도체육회, 통영시체육회',
-    supporter: '대한윈드서핑카이트보딩협회',
-    office: '경상남도 통영시 도남로 269-20 통영시요트협회 사무국',
+    host: '통영시',
+    sponsor: '통영시요트협회',
+    supporter: '통영시체육회, 경상남도요트협회, 한국윈드서핑협회',
+    office: '수륙해수욕장내 대회본부',
     bankName: '농협 (NH농협)',
     accountNo: '351-1334-8643-33',
     accountHolder: '통영시요트협회',
@@ -153,24 +153,56 @@ const getDefaultTenantData = (subdomain: string): TenantData => ({
     registrationStartDate: '2026-09-29T09:00',
     registrationEndDate: '2026-10-18T18:00',
     registrationNotice: '',
-    rulesNote: '※ 참가 신청 시 소속 클럽 명확히 작성 필수.\n※ 모든 나이는 2026년 10월 31일을 기준으로 합니다.\n※ 참가인원은 선착순으로 130명이 충족되면 참가접수 기한이 조기에 마감될 수 있습니다.\n※ 참가비: 30,000원\n※ 참가비 입금계좌: 농협 351-1334-8643-33 (예금주: 통영시요트협회)\n※ 참가 신청서에 입력한 이름으로 반드시 입금해 주시기 바랍니다.\n※ 입금 완료 순서(입금순)로 선착순 130명 참가 확정 처리되며, 참가 확정 안내는 대회 공식 홈페이지에서 확인하실 수 있습니다.\n※ 신청기간 이후에는 취소 및 참가비 환불이 불가합니다.',
-    itineraryDay1: '10:00 - 12:00 : 선수단 현장등록 및 웜업\n12:00 - 13:00 : 중식\n13:00 - 13:30 : 개회식\n13:30 - 18:00 : 1일차 경기',
-    itineraryDay2: '09:00 - 12:00 : 2일차 경기\n12:00 - 13:00 : 중식\n13:00 - 18:00 : 2일차 경기 및 시상식\n18:00 - : 폐회식 및 해산',
+    rulesNote: '구명동의(라이프재킷) 착용 필수. 모든 참가 선수는 해상 레이스 중 반드시 공인된 구명조끼를 바르게 착용해야 합니다. 미착용 혹은 임의 탈착 적발 시 즉각 실격(DSQ) 처리됩니다.\n모든 출전 선수는 세일에 배정된 배번 배표 조끼를 식별이 가능하도록 착용해야 합니다.\n해상 기상 악화 시 경기위원장의 지시에 따라 즉시 레이스를 중단하고 전원 육상으로 복귀하여야 합니다.',
+    itineraryDay1: '10:00 - 12:00 : 참가선수 확인 및 등록 / 계측\n12:00 - 13:00 : 중식 제공 (대회장)\n13:00 - 13:30 : 개회식 (수륙해수욕장 특설무대)\n14:00 - 18:00 : 1일차 레이스 (각 종목 코스별)\n19:00 - : 석식 및 환영의 밤 (통영윈드서핑협회 앞마당)',
+    itineraryDay2: '10:00 - 12:00 : 2일차 레이스\n12:00 - 13:00 : 중식 제공 (대회장)\n13:00 - 15:00 : 2일차 레이스(단체전)\n16:00 - : 시상식 및 폐회식 (통영윈드서핑협회 앞마당)',
     itineraryDay3: '',
     itineraryDay4: '',
     itineraryDay5: '',
-    contactPhone: '010-3648-9838',
+    contactPhone: '통영윈드서핑협회 전무이사 임병훈(010-3648-9838)',
     contactNote: '* 대회 참가자 전원에게 기념 티셔츠를 제공합니다.',
     noticeHwpData: '/files/2026년20회통영대회_개최공시서.hwp',
     noticeHwpName: '2026년20회통영대회_개최공시서.hwp',
     noticePdfData: '/files/2026년20회통영대회_개최공시서.pdf',
     noticePdfName: '2026년20회통영대회_개최공시서.pdf',
     divisionsList: [
-      { category: '윈드포일', class: '통합부', note: '남, 녀 오픈 경기로 진행함.' },
-      { category: '윙포일', class: '통합부', note: '남, 녀 오픈 경기로 진행함.' },
-      { category: '혼합오픈', class: '청년부, 중년부, 장년부, 여자부', note: '참가 연령의 1/3로 균등분할하여 구성한다. (여자부: 연령제한없음)' },
-      { category: '펀&포뮬러', class: '청년부, 중년부, 장년부, 여자부', note: '참가 연령의 1/3로 균등분할하여 구성한다. (여자부: 연령제한없음)' },
-      { category: '단체전 (Club Team)', class: '각 클럽/동호회팀별 상위 4명 합산', note: '혼합오픈 등 각 부별 최상위 성적을 거둔 동일 클럽 소속 4명의 점수를 합산' }
+      { category: '윈드포일', class: '남녀 오픈', note: '-' },
+      { category: '윙포일', class: '남자부, 여자부', note: '-' },
+      { category: '혼합오픈', class: '청년부, 중년부, 장년부, 여자부', note: '참가 연령의 1/3로 균등분할하여 구성한다. (여자부 연령제한없음)' },
+      { category: '펀&포뮬러', class: '청년부, 중년부, 장년부, 여자부', note: '참가 연령의 1/3로 균등분할하여 구성한다. (여자부 연령제한없음)' },
+      { category: '단체전', class: '1개팀(4명)', note: '등록 선수에 한해 참가 가능' }
+    ],
+    awardsList: [
+      {
+        type: '윈드포일',
+        class: '남녀오픈',
+        standard: '1위: 상장 및 상금 40만원\n2위: 상장 및 상금 30만원\n3위: 상장 및 상금 20만원',
+        note: '각 종목 및 부별 1, 2, 3위에게 각각 상장, 상금 수여'
+      },
+      {
+        type: '윙포일',
+        class: '남자부, 여자부',
+        standard: '1위: 상장 및 상금 40만원\n2위: 상장 및 상금 30만원\n3위: 상장 및 상금 20만원',
+        note: '25만원 이상의 시상금은 제세공과금(4.4%) 원천징수 후 지급'
+      },
+      {
+        type: '혼합오픈',
+        class: '청년부, 중년부, 장년부, 여자부',
+        standard: '1위: 상장 및 상금 40만원\n2위: 상장 및 상금 30만원\n3위: 상장 및 상금 20만원',
+        note: '단체전의 경우 원천 징수 후 대표신청자에게 지급'
+      },
+      {
+        type: '펀&포뮬러',
+        class: '청년부, 중년부, 장년부, 여자부',
+        standard: '1위: 상장 및 상금 40만원\n2위: 상장 및 상금 30만원\n3위: 상장 및 상금 20만원',
+        note: '단, 각클래스별 출전팀이 다섯팀 이하일경우 상금은 대회운영위원회에서 정하는 금액을 시상'
+      },
+      {
+        type: '단체전',
+        class: '시, 도 및 클럽대항전',
+        standard: '1위: 상장 및 상금 50만원\n2위: 상장 및 상금 40만원\n3위: 상장 및 상금 30만원\n4위: 상장 및 상금 20만원\n5위: 상장 및 상금 10만원',
+        note: ''
+      }
     ],
   },
   tournaments: [
@@ -201,6 +233,9 @@ export default function TenantPortalPage({
   const rawDivisionsList = Array.isArray((tenant?.overviewConfig as any)?.divisionsList) && (tenant?.overviewConfig as any).divisionsList.length > 0
     ? (tenant?.overviewConfig as any).divisionsList
     : defaultData.overviewConfig.divisionsList;
+  const rawAwardsList = Array.isArray((tenant?.overviewConfig as any)?.awardsList) && (tenant?.overviewConfig as any).awardsList.length > 0
+    ? (tenant?.overviewConfig as any).awardsList
+    : defaultData.overviewConfig.awardsList;
   const overview = {
     ...defaultData.overviewConfig,
     ...(tenant?.overviewConfig || {}),
@@ -223,6 +258,7 @@ export default function TenantPortalPage({
       class: typeof row.class === 'string' ? row.class.replace(/1\/4/g, '1/3') : row.class,
       note: typeof row.note === 'string' ? row.note.replace(/1\/4/g, '1/3') : row.note,
     })),
+    awardsList: rawAwardsList,
   };
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'notice' | 'intro' | 'live' | 'gallery' | 'archive'>('overview');
@@ -3091,11 +3127,11 @@ export default function TenantPortalPage({
                       </thead>
                       <tbody>
                         {(overview.divisionsList || [
-                          { category: '윈드포일', class: '통합부', note: '남, 녀 오픈 경기로 진행함.' },
-                          { category: '윙포일', class: '통합부', note: '남, 녀 오픈 경기로 진행함.' },
-                          { category: '혼합오픈', class: '청년부, 중년부, 장년부, 여자부', note: '참가 연령의 1/3로 균등분할하여 구성한다. (여자부: 연령제한없음)' },
-                          { category: '펀&포뮬러', class: '청년부, 중년부, 장년부, 여자부', note: '참가 연령의 1/3로 균등분할하여 구성한다. (여자부: 연령제한없음)' },
-                          { category: '단체전 (Club Team)', class: '각 클럽/동호회팀별 상위 4명 합산', note: '혼합오픈 등 각 부별 최상위 성적을 거둔 동일 클럽 소속 4명의 점수를 합산' }
+                          { category: '윈드포일', class: '남녀 오픈', note: '-' },
+                          { category: '윙포일', class: '남자부, 여자부', note: '-' },
+                          { category: '혼합오픈', class: '청년부, 중년부, 장년부, 여자부', note: '참가 연령의 1/3로 균등분할하여 구성한다. (여자부 연령제한없음)' },
+                          { category: '펀&포뮬러', class: '청년부, 중년부, 장년부, 여자부', note: '참가 연령의 1/3로 균등분할하여 구성한다. (여자부 연령제한없음)' },
+                          { category: '단체전', class: '1개팀(4명)', note: '등록 선수에 한해 참가 가능' }
                         ]).map((row: any, i: number) => (
                           <tr key={i}>
                             <td style={{ whiteSpace: 'nowrap', fontWeight: '800', color: row.category?.includes('단체전') ? 'var(--theme-gold)' : 'var(--theme-primary)' }}>{row.category}</td>
@@ -3125,9 +3161,36 @@ export default function TenantPortalPage({
                       </thead>
                       <tbody>
                         {(overview.awardsList || [
-                          { type: '개인전', class: '전 클래스', standard: '1위: 상장 및 메달\n2위: 상장 및 메달\n3위: 상장 및 메달', note: '각 클래스별 참가자가 3명 미만일 경우 시상만 하고 메달 수여는 제외될 수 있습니다.' },
-                          { type: '단체전', class: '각 클래스별 릴레이', standard: '1위: 상패 및 메달\n2위: 상패 및 메달\n3위: 상패 및 메달', note: '-' },
-                          { type: '종합시상', class: '종합', standard: '종합 우승: 우승기 및 트로피\n종합 준우승: 트로피\n종합 3위: 트로피', note: '각 종목별 점수를 합산하여 산출함 (1위 9점, 2위 7점, 3위 6점, 4위 5점, 5위 4점, 6위 3점, 7위 2점, 8위 1점. 단체전은 배점 2배).' }
+                          {
+                            type: '윈드포일',
+                            class: '남녀오픈',
+                            standard: '1위: 상장 및 상금 40만원\n2위: 상장 및 상금 30만원\n3위: 상장 및 상금 20만원',
+                            note: '각 종목 및 부별 1, 2, 3위에게 각각 상장, 상금 수여'
+                          },
+                          {
+                            type: '윙포일',
+                            class: '남자부, 여자부',
+                            standard: '1위: 상장 및 상금 40만원\n2위: 상장 및 상금 30만원\n3위: 상장 및 상금 20만원',
+                            note: '25만원 이상의 시상금은 제세공과금(4.4%) 원천징수 후 지급'
+                          },
+                          {
+                            type: '혼합오픈',
+                            class: '청년부, 중년부, 장년부, 여자부',
+                            standard: '1위: 상장 및 상금 40만원\n2위: 상장 및 상금 30만원\n3위: 상장 및 상금 20만원',
+                            note: '단체전의 경우 원천 징수 후 대표신청자에게 지급'
+                          },
+                          {
+                            type: '펀&포뮬러',
+                            class: '청년부, 중년부, 장년부, 여자부',
+                            standard: '1위: 상장 및 상금 40만원\n2위: 상장 및 상금 30만원\n3위: 상장 및 상금 20만원',
+                            note: '단, 각클래스별 출전팀이 다섯팀 이하일경우 상금은 대회운영위원회에서 정하는 금액을 시상'
+                          },
+                          {
+                            type: '단체전',
+                            class: '시, 도 및 클럽대항전',
+                            standard: '1위: 상장 및 상금 50만원\n2위: 상장 및 상금 40만원\n3위: 상장 및 상금 30만원\n4위: 상장 및 상금 20만원\n5위: 상장 및 상금 10만원',
+                            note: ''
+                          }
                         ]).map((row: any, i: number, arr: any[]) => (
                           <tr key={i}>
                             <td style={{ whiteSpace: 'nowrap', fontWeight: '800', color: row.type?.includes('종합') ? 'var(--theme-gold)' : 'inherit' }}>{row.type}</td>

@@ -29,11 +29,11 @@ export async function GET(
     const { tenantData, tournaments: rawTournaments, fromCache } = cachedResult;
 
     const defaultDivisionsList = [
-      { category: '윈드포일', class: '남녀오픈', note: '-' },
-      { category: '윙포일', class: '남자부 / 여자부', note: '연령제한없음' },
-      { category: '혼합오픈', class: '청년부, 중년부, 장년부, 여자부', note: '참가 연령의 1/3로 균등분할하여 구성한다. (여자부: 연령제한없음)' },
-      { category: '펀&포뮬러', class: '청년부, 중년부, 장년부, 여자부', note: '참가 연령의 1/3로 균등분할하여 구성한다. (여자부: 연령제한없음)' },
-      { category: '단체전 (Relay)', class: '1개팀(4명)', note: '등록선수에 한해 참가 가능' },
+      { category: '윈드포일', class: '남녀 오픈', note: '-' },
+      { category: '윙포일', class: '남자부, 여자부', note: '-' },
+      { category: '혼합오픈', class: '청년부, 중년부, 장년부, 여자부', note: '참가 연령의 1/3로 균등분할하여 구성한다. (여자부 연령제한없음)' },
+      { category: '펀&포뮬러', class: '청년부, 중년부, 장년부, 여자부', note: '참가 연령의 1/3로 균등분할하여 구성한다. (여자부 연령제한없음)' },
+      { category: '단체전', class: '1개팀(4명)', note: '등록 선수에 한해 참가 가능' },
     ];
 
     const rawDivisionsList = Array.isArray(tenantData.overviewConfig?.divisionsList) && tenantData.overviewConfig.divisionsList.length > 0
