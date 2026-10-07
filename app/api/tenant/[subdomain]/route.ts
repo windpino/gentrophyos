@@ -39,6 +39,10 @@ export async function GET(
       location: OFFICIAL_LOCATION,
       registrationMode: 'FORCE_ENABLED',
       registrationEnabled: true,
+      noticeHwpData: tenantData.overviewConfig?.noticeHwpData || '/files/2026년20회통영대회_개최공시서.hwp',
+      noticeHwpName: tenantData.overviewConfig?.noticeHwpName || '2026년20회통영대회_개최공시서.hwp',
+      noticePdfData: tenantData.overviewConfig?.noticePdfData || '/files/2026년20회통영대회_개최공시서.pdf',
+      noticePdfName: tenantData.overviewConfig?.noticePdfName || '2026년20회통영대회_개최공시서.pdf',
       contactNote: (tenantData.overviewConfig?.contactNote === '* 대회 참가자 전원에게 기념 티셔츠 및 참가 기념품을 제공합니다.' || !tenantData.overviewConfig?.contactNote)
         ? '* 대회 참가자 전원에게 기념 티셔츠를 제공합니다.'
         : tenantData.overviewConfig.contactNote,

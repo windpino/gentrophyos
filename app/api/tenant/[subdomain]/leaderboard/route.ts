@@ -48,6 +48,7 @@ export async function GET(
           tournamentTitle: tournament.title,
           leaderboard: savedData.list || [],
           rounds: savedData.rounds || null,
+          dnsDnfRule: savedData.dnsDnfRule || null,
           isCustom: true
         });
       }
@@ -218,7 +219,7 @@ export async function POST(
   try {
     const { subdomain } = await params;
     const body = await req.json();
-    const { tournamentId, division, list, rounds } = body;
+    const { tournamentId, division, list, rounds, dnsDnfRule } = body;
 
     if (!tournamentId || !division) {
       return NextResponse.json({ error: '대회 ID와 종목은 필수입니다.' }, { status: 400 });
@@ -240,6 +241,9 @@ export async function POST(
     }
     if (rounds !== undefined) {
       updatePayload.rounds = rounds;
+    }
+    if (dnsDnfRule !== undefined) {
+      updatePayload.dnsDnfRule = dnsDnfRule;
     }
 
     await setDoc(leaderboardRef, updatePayload);

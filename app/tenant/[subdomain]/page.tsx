@@ -161,6 +161,10 @@ const getDefaultTenantData = (subdomain: string): TenantData => ({
     itineraryDay5: '',
     contactPhone: '010-3648-9838',
     contactNote: '* 대회 참가자 전원에게 기념 티셔츠를 제공합니다.',
+    noticeHwpData: '/files/2026년20회통영대회_개최공시서.hwp',
+    noticeHwpName: '2026년20회통영대회_개최공시서.hwp',
+    noticePdfData: '/files/2026년20회통영대회_개최공시서.pdf',
+    noticePdfName: '2026년20회통영대회_개최공시서.pdf',
   },
   tournaments: [
     {
@@ -197,6 +201,10 @@ export default function TenantPortalPage({
     registrationEndDate: '2026-10-18T18:00',
     scale: '130명 한도 (선착순 조기마감)',
     location: '경상남도 통영시 도남동 수륙해수욕장 일원',
+    noticeHwpData: tenant?.overviewConfig?.noticeHwpData || '/files/2026년20회통영대회_개최공시서.hwp',
+    noticeHwpName: tenant?.overviewConfig?.noticeHwpName || '2026년20회통영대회_개최공시서.hwp',
+    noticePdfData: tenant?.overviewConfig?.noticePdfData || '/files/2026년20회통영대회_개최공시서.pdf',
+    noticePdfName: tenant?.overviewConfig?.noticePdfName || '2026년20회통영대회_개최공시서.pdf',
     contactNote: (tenant?.overviewConfig?.contactNote === '* 대회 참가자 전원에게 기념 티셔츠 및 참가 기념품을 제공합니다.' || !tenant?.overviewConfig?.contactNote)
       ? '* 대회 참가자 전원에게 기념 티셔츠를 제공합니다.'
       : tenant?.overviewConfig?.contactNote,
@@ -213,6 +221,7 @@ export default function TenantPortalPage({
   // 리더보드 및 참가자 데이터
   const [leaderboards, setLeaderboards] = useState<Record<string, any[]>>({});
   const [leaderboardRounds, setLeaderboardRounds] = useState<Record<string, any[]>>({});
+  const [leaderboardDnsDnfRules, setLeaderboardDnsDnfRules] = useState<Record<string, 'FINISHER_PLUS_ONE' | 'REGISTERED_PLUS_ONE'>>({});
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [selectedLeaderboardCategory, setSelectedLeaderboardCategory] = useState<string>('전체');
   const [registrations, setRegistrations] = useState<any[]>([]);
@@ -458,24 +467,29 @@ export default function TenantPortalPage({
           try {
             const res = await fetch(`/api/tenant/${subdomain}/leaderboard?tournamentId=${tId}&division=${encodeURIComponent(div)}&_t=${Date.now()}`, { cache: 'no-store' });
             const data = await res.json();
-            return { division: div, list: data.leaderboard || [], rounds: data.rounds || null };
+            return { division: div, list: data.leaderboard || [], rounds: data.rounds || null, dnsDnfRule: data.dnsDnfRule || null };
           } catch (e) {
             console.error(`Failed to fetch leaderboard for ${div}:`, e);
-            return { division: div, list: [], rounds: null };
+            return { division: div, list: [], rounds: null, dnsDnfRule: null };
           }
         })
       );
       
       const newLeaderboards: Record<string, any[]> = {};
       const newRounds: Record<string, any[]> = {};
+      const newRules: Record<string, 'FINISHER_PLUS_ONE' | 'REGISTERED_PLUS_ONE'> = {};
       results.forEach(r => {
         newLeaderboards[r.division] = r.list;
         if (r.rounds) {
           newRounds[r.division] = r.rounds;
         }
+        if (r.dnsDnfRule === 'FINISHER_PLUS_ONE' || r.dnsDnfRule === 'REGISTERED_PLUS_ONE') {
+          newRules[r.division] = r.dnsDnfRule;
+        }
       });
       setLeaderboards(newLeaderboards);
       setLeaderboardRounds(newRounds);
+      setLeaderboardDnsDnfRules(newRules);
     } catch (e) {
       console.error(e);
     } finally {
@@ -2164,6 +2178,18 @@ export default function TenantPortalPage({
                   <RefreshCw className="animate-spin" size={32} style={{ color: 'var(--theme-primary)', margin: '0 auto 12px auto' }} />
                   <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>리더보드 집계 정보를 불러오는 중입니다...</p>
                 </div>
+              ) : !overview.bracketsPublished ? (
+                <div className="glass-panel" style={{ background: 'white', padding: '70px 24px', textAlign: 'center', color: 'var(--text-muted)', borderTop: '4px solid #cbd5e1' }}>
+                  <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto', fontSize: '1.8rem' }}>
+                    🏆
+                  </div>
+                  <p style={{ fontSize: '1.15rem', fontWeight: '800', color: 'var(--text-main)', margin: '0 0 8px 0' }}>
+                    실시간 리더보드 및 대진표가 아직 공개되지 않았습니다.
+                  </p>
+                  <p style={{ fontSize: '0.9rem', margin: 0, lineHeight: '1.6' }}>
+                    대회 운영본부에서 대진표 및 조 편성을 최종 확정한 후 실시간 순위표가 공식 공개됩니다.
+                  </p>
+                </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                   {(() => {
@@ -2210,6 +2236,33 @@ export default function TenantPortalPage({
                         }
                       }
 
+                      const activeRule: 'FINISHER_PLUS_ONE' | 'REGISTERED_PLUS_ONE' =
+                        (divKey && leaderboardDnsDnfRules[divKey]) ||
+                        (tenant?.overviewConfig as any)?.dnsDnfScoringRule ||
+                        'FINISHER_PLUS_ONE';
+
+                      const isRoundConducted = (rKey: string) =>
+                        list.some((item: any) => {
+                          const val = item[rKey];
+                          return val !== null && val !== undefined && String(val).trim() !== '';
+                        });
+
+                      const getRoundFinishedCount = (rKey: string) =>
+                        list.filter((item: any) => {
+                          const val = item[rKey];
+                          if (val === null || val === undefined || val === '') return false;
+                          if (String(val).toUpperCase() === 'DNS' || String(val).toUpperCase() === 'DNF') return false;
+                          const num = Number(val);
+                          return !isNaN(num) && num > 0;
+                        }).length;
+
+                      const dnsScore = list.length + 1;
+                      const getDnfScore = (rKey: string) => {
+                        if (activeRule === 'REGISTERED_PLUS_ONE') return list.length + 1;
+                        const finished = getRoundFinishedCount(rKey);
+                        return finished > 0 ? finished + 1 : list.length + 1;
+                      };
+
                       return (
                         <div className="premium-table-container">
                           <table className="premium-table" style={{ fontSize: '0.9rem', width: '100%', borderCollapse: 'collapse', color: 'black' }}>
@@ -2230,19 +2283,25 @@ export default function TenantPortalPage({
                             </thead>
                             <tbody>
                               {list.map((row: any, rIdx: number) => {
-                                const rounds = activeRoundKeys.map(rKey => row[rKey]);
-                                const numericScores = rounds.map(val => {
-                                  if (val === null || val === undefined || val === '') return null;
-                                  if (val === 'DNS' || val === 'DNF') return list.length;
+                                const numericScores = activeRoundKeys.map(rKey => {
+                                  const val = row[rKey];
+                                  const conducted = isRoundConducted(rKey);
+                                  if (val === null || val === undefined || val === '') {
+                                    return conducted ? dnsScore : null;
+                                  }
+                                  const upper = String(val).trim().toUpperCase();
+                                  if (upper === 'DNS') return dnsScore;
+                                  if (upper === 'DNF') return getDnfScore(rKey);
                                   const num = Number(val);
                                   return isNaN(num) ? null : num;
                                 });
-                                const validScoresCount = numericScores.filter(val => val !== null).length;
+                                const validScores = numericScores.filter((val): val is number => val !== null);
+                                const validScoresCount = validScores.length;
                                 
                                 let discardIdx = -1;
                                 if (validScoresCount >= 4) {
                                   let maxVal = -1;
-                                  for (let i = 0; i < rounds.length; i++) {
+                                  for (let i = 0; i < activeRoundKeys.length; i++) {
                                     const val = numericScores[i];
                                     if (val !== null) {
                                       if (val > maxVal) {
@@ -2252,6 +2311,13 @@ export default function TenantPortalPage({
                                     }
                                   }
                                 }
+
+                                const computedTotal = validScoresCount >= 4
+                                  ? validScores.reduce((acc, cur, idx) => {
+                                      // validScores 인덱스가 아닌 numericScores 기준 discardIdx 제외 합산
+                                      return acc;
+                                    }, 0) || numericScores.reduce<number>((acc, val, i) => (val !== null && i !== discardIdx ? acc + val : acc), 0)
+                                  : numericScores.reduce<number>((acc, val) => (val !== null ? acc + val : acc), 0);
 
                                 return (
                                   <tr key={rIdx} style={{ borderBottom: '1px solid #f1f5f9' }}>
@@ -2272,22 +2338,34 @@ export default function TenantPortalPage({
                                     <td style={{ fontWeight: '800' }}>{row.name}</td>
                                     <td>{row.bibNumber || '-'}</td>
                                     <td>{formatMaskedBirthDate(row.birth)}</td>
-                                    {rounds.map((val, idx) => {
+                                    {activeRoundKeys.map((rKey, idx) => {
+                                      const rawVal = row[rKey];
+                                      const conducted = isRoundConducted(rKey);
+                                      const effectiveVal = (rawVal === null || rawVal === undefined || rawVal === '')
+                                        ? (conducted ? 'DNS' : '-')
+                                        : rawVal;
+                                      const upper = String(effectiveVal).toUpperCase();
+                                      const isPenalty = upper === 'DNS' || upper === 'DNF';
+                                      const pointVal = numericScores[idx];
                                       const isDiscarded = idx === discardIdx;
-                                      const displayVal = val !== null && val !== undefined && val !== '' ? val : '-';
                                       return (
                                         <td key={idx} style={{
                                           textAlign: 'center',
-                                          color: isDiscarded ? '#94a3b8' : 'inherit',
+                                          color: isDiscarded ? '#94a3b8' : isPenalty ? (upper === 'DNS' ? '#ef4444' : '#d97706') : 'inherit',
                                           textDecoration: isDiscarded ? 'line-through' : 'none',
-                                          fontWeight: isDiscarded ? 'normal' : '600'
+                                          fontWeight: isDiscarded ? 'normal' : isPenalty ? '800' : '600'
                                         }}>
-                                          {displayVal}
+                                          {effectiveVal}
+                                          {isPenalty && pointVal !== null && (
+                                            <span style={{ fontSize: '0.7rem', display: 'block', textDecoration: 'none', color: isDiscarded ? '#94a3b8' : '#64748b', fontWeight: '700' }}>
+                                              ({pointVal}점)
+                                            </span>
+                                          )}
                                           {isDiscarded && <span style={{ fontSize: '0.7rem', display: 'block', textDecoration: 'none', color: '#f43f5e', fontWeight: '800' }}>(제외)</span>}
                                         </td>
                                       );
                                     })}
-                                    <td style={{ textAlign: 'center', fontWeight: '900', color: 'var(--theme-primary)', fontSize: '1.05rem' }}>{row.total}점</td>
+                                    <td style={{ textAlign: 'center', fontWeight: '900', color: 'var(--theme-primary)', fontSize: '1.05rem' }}>{computedTotal}점</td>
                                   </tr>
                                 );
                               })}
@@ -2373,7 +2451,7 @@ export default function TenantPortalPage({
                     });
                   })()}
                   <div className="glass-panel" style={{ background: 'white', padding: '20px 24px' }}>
-                    <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>※ Sailing Low-Point 채점 기준: 각 라운드 순위가 점수가 되며(1위=1점, DNF/DNS 등은 참가자 인원만큼 벌점 부여), 총점이 낮을수록 최종 순위가 높습니다.</p>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>※ Sailing Low-Point 채점 기준: 각 라운드 순위가 점수가 되며(1위=1점, 등수 미입력은 DNS로 간주, DNS=출전 등록 인원+1점, DNF=완주 인원+1점 또는 등록 인원+1점), 총점이 낮을수록 최종 순위가 높습니다.</p>
                     <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>※ 경기 수 4회 이상(4R~) 진행 시, 참가자의 성적 중 가장 성적이 낮은 라운드(가장 높은 벌점) 1개를 자동 제외하고 합산합니다.</p>
                   </div>
                 </div>
@@ -2804,11 +2882,35 @@ export default function TenantPortalPage({
                 
               </div>
 
+              {/* PDF 미리보기 영역 */}
+              {overview.noticePdfData && (
+                <div className="glass-panel" style={{ background: 'white', padding: '24px 28px', borderTop: '3px solid #ef4444' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: '900', color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span>📑</span> 개최공시서 PDF 바로보기
+                    </h3>
+                    <a
+                      href={overview.noticePdfData}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ fontSize: '0.82rem', fontWeight: '800', color: '#ef4444', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                    >
+                      새 창에서 크게 보기 <ExternalLink size={14} />
+                    </a>
+                  </div>
+                  <iframe
+                    src={overview.noticePdfData}
+                    title="개최공시서 PDF 미리보기"
+                    style={{ width: '100%', height: '680px', border: '1px solid #e2e8f0', borderRadius: '12px', background: '#f8fafc' }}
+                  />
+                </div>
+              )}
+
               {/* 하단 주의사항 */}
               <div className="glass-panel" style={{ background: 'white', padding: '24px 28px', fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.6' }}>
                 <p style={{ margin: '0 0 6px 0', fontWeight: '800', color: 'var(--text-main)' }}>💡 안내 사항</p>
                 <p style={{ margin: 0 }}>• 개최공시서 문서를 열기 위해 한글 뷰어 또는 PDF 리더(Acrobat Reader 등)가 필요할 수 있습니다.</p>
-                <p style={{ margin: 0 }}>• 파일이 정상적으로 다운로드되지 않거나 열리지 않을 경우, 주최측(인천광역시 핀수영협회 사무국)으로 문의주시기 바랍니다.</p>
+                <p style={{ margin: 0 }}>• 파일이 정상적으로 다운로드되지 않거나 열리지 않을 경우, 주최측(통영윈드서핑협회 사무국)으로 문의주시기 바랍니다.</p>
               </div>
             </div>
           )}
@@ -3052,6 +3154,55 @@ export default function TenantPortalPage({
                     >
                       참가 신청서 작성하기 ✍️
                     </button>
+
+                    {/* 공식 개최공시서 바로 다운로드 버튼 */}
+                    <div style={{ borderTop: '1px dashed var(--border-color)', paddingTop: '12px', marginTop: '4px' }}>
+                      <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem', fontWeight: '800', marginBottom: '8px' }}>
+                        📄 공식 개최공시서 다운로드
+                      </span>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                        <a
+                          href={overview.noticeHwpData}
+                          download={overview.noticeHwpName || '2026년20회통영대회_개최공시서.hwp'}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '4px',
+                            padding: '9px 8px',
+                            borderRadius: '8px',
+                            background: '#f0f9ff',
+                            color: '#0284c7',
+                            border: '1px solid #bae6fd',
+                            fontSize: '0.8rem',
+                            fontWeight: '800',
+                            textDecoration: 'none'
+                          }}
+                        >
+                          📥 한글 (.HWP)
+                        </a>
+                        <a
+                          href={overview.noticePdfData}
+                          download={overview.noticePdfName || '2026년20회통영대회_개최공시서.pdf'}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '4px',
+                            padding: '9px 8px',
+                            borderRadius: '8px',
+                            background: '#fef2f2',
+                            color: '#ef4444',
+                            border: '1px solid #fecaca',
+                            fontSize: '0.8rem',
+                            fontWeight: '800',
+                            textDecoration: 'none'
+                          }}
+                        >
+                          📥 PDF (.PDF)
+                        </a>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -3088,7 +3239,7 @@ export default function TenantPortalPage({
                         )
                       ) : (
                         <>
-                          <strong>인천광역시 핀수영협회 사무국 :</strong> 032-888-2940
+                          <strong>통영윈드서핑협회 사무국 :</strong> 010-3648-9838
                         </>
                       )}
                     </p>

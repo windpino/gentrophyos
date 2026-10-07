@@ -172,8 +172,10 @@ export default function HostDashboardPage({
   const [regNotice, setRegNotice] = useState('');
   const [regPeriodSaving, setRegPeriodSaving] = useState(false);
 
-  // 동점자 룰
+  // 동점자 룰 및 DNS/DNF 벌점 규칙
   const [rules, setRules] = useState<TieBreakerRule[]>([]);
+  const [dnsDnfRule, setDnsDnfRule] = useState<'FINISHER_PLUS_ONE' | 'REGISTERED_PLUS_ONE'>('FINISHER_PLUS_ONE');
+  const [dnsDnfSaving, setDnsDnfSaving] = useState(false);
 
   const [authChecking, setAuthChecking] = useState(true);
 
@@ -280,6 +282,17 @@ export default function HostDashboardPage({
           }
           if (cfg.registrationEnabled !== undefined) setRegEnabled(cfg.registrationEnabled !== false);
           if (cfg.registrationNotice !== undefined) setRegNotice(cfg.registrationNotice);
+          if (cfg.dnsDnfScoringRule === 'FINISHER_PLUS_ONE' || cfg.dnsDnfScoringRule === 'REGISTERED_PLUS_ONE') {
+            setDnsDnfRule(cfg.dnsDnfScoringRule);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem(`gentrophy_dns_dnf_rule_${subdomain}`, cfg.dnsDnfScoringRule);
+            }
+          } else if (typeof window !== 'undefined') {
+            const savedRule = localStorage.getItem(`gentrophy_dns_dnf_rule_${subdomain}`);
+            if (savedRule === 'FINISHER_PLUS_ONE' || savedRule === 'REGISTERED_PLUS_ONE') {
+              setDnsDnfRule(savedRule);
+            }
+          }
         }
         const ongoing = tenantData.tenant.tournaments.find((t: any) => t.status === 'ONGOING');
         if (ongoing) {
@@ -291,6 +304,33 @@ export default function HostDashboardPage({
       console.error(e);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveDnsDnfRule = async (nextRule: 'FINISHER_PLUS_ONE' | 'REGISTERED_PLUS_ONE') => {
+    setDnsDnfRule(nextRule);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(`gentrophy_dns_dnf_rule_${subdomain}`, nextRule);
+    }
+    setDnsDnfSaving(true);
+    try {
+      const currentConfig = tenant?.overviewConfig || {};
+      const updatedConfig = {
+        ...currentConfig,
+        dnsDnfScoringRule: nextRule,
+      };
+      const res = await fetch(`/api/tenant/${subdomain}/overview`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ overviewConfig: updatedConfig }),
+      });
+      if (res.ok) {
+        await fetchInitialData();
+      }
+    } catch (e) {
+      console.error('DNS/DNF 규칙 저장 실패:', e);
+    } finally {
+      setDnsDnfSaving(false);
     }
   };
 
@@ -1340,7 +1380,7 @@ export default function HostDashboardPage({
                       <th style={{ minWidth: '80px', textAlign: 'center', fontSize: '0.8rem' }}>11.개인정보</th>
                       <th style={{ minWidth: '80px', textAlign: 'center', fontSize: '0.8rem' }}>12.초상권</th>
                       <th style={{ minWidth: '80px' }}>결제 여부</th>
-                      <th style={{ minWidth: '100px', textAlign: 'center' }}>홈페이지 배포</th>
+                      <th style={{ minWidth: '90px', textAlign: 'center' }} title="체크 시 참가 확정되어 ERP 조 편성 및 심판 시뮬레이션 대상에 포함됩니다 (홈페이지에는 즉시 공개되지 않음)">참가확정</th>
                       <th
                         onClick={() => handleHeaderSort('createdAt')}
                         style={{ minWidth: '150px', textAlign: 'center', cursor: 'pointer', userSelect: 'none' }}
@@ -1596,12 +1636,13 @@ export default function HostDashboardPage({
                           </select>
                         </td>
 
-                        {/* 홈페이지 배포 체크박스 */}
+                        {/* 참가확정 체크박스 (홈페이지에는 즉시 노출되지 않으며 ERP 조편성 및 심판 시뮬레이션에 반영됨) */}
                         <td style={{ textAlign: 'center', padding: '8px' }}>
                           <input
                             type="checkbox"
                             checked={row.status === 'APPROVED'}
                             onChange={(e) => handleCellChange(row.id, 'status', e.target.checked ? 'APPROVED' : 'PENDING')}
+                            title="참가확정 체크 (홈페이지에는 공개되지 않으며 대진표 조편성 및 심판 시뮬레이션에만 사용됩니다)"
                             style={{
                               width: '18px',
                               height: '18px',
@@ -1749,7 +1790,7 @@ export default function HostDashboardPage({
                       }}
                     >
                       {isPublished ? <CheckCircle2 size={15} /> : <Clock size={15} />}
-                      {isPublished ? '홈페이지 공개 중 (확정 완료)' : '홈페이지 비공개 (운영진 확정 대기 중)'}
+                      {isPublished ? '홈페이지 공개 중 (확정 완료)' : '홈페이지 비공개 (시뮬레이션 전용 / 운영진 확정 대기)'}
                     </span>
                     {publishedAt && (
                       <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '600' }}>
@@ -1761,8 +1802,8 @@ export default function HostDashboardPage({
                     대진표 및 조 편성표 홈페이지 공개 제어
                   </h3>
                   <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)', margin: 0, lineHeight: '1.5' }}>
-                    • 현재 접수된 참가자 신청서 원본 데이터는 삭제되거나 훼손되지 않고 안전하게 보호됩니다.<br />
-                    • 아래에서 승인 완료된 참가자(<strong>{approvedList.length}명</strong> / 미승인 대기 {pendingList.length}명)의 조 편성을 확인한 뒤 <strong>[대진표 확정 및 홈페이지 공개]</strong> 버튼을 누르면 홈페이지에 즉시 공개됩니다.
+                    • [참가자관리]에서 <strong>참가확정</strong>에 체크하더라도 홈페이지(리더보드 및 대진표)에는 공개되지 않으며, <strong>ERP 조 편성 및 심판 제어기 시뮬레이션</strong>에만 사용됩니다.<br />
+                    • 참가확정 인원(<strong>{approvedList.length}명</strong> / 미확정 대기 {pendingList.length}명)의 조 편성을 확인한 뒤 우측 <strong>[대진표 확정 및 홈페이지 공개]</strong> 버튼을 누를 때만 홈페이지에 공개됩니다.
                   </p>
                 </div>
 
@@ -1902,10 +1943,10 @@ export default function HostDashboardPage({
               {approvedList.length === 0 ? (
                 <div className="glass-panel" style={{ background: 'white', padding: '60px 20px', textAlign: 'center' }}>
                   <p style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--text-main)', margin: '0 0 8px 0' }}>
-                    현재 [홈페이지 배포(승인)] 체크된 참가 선수가 없습니다. (총 신청자: {gridData.length}명)
+                    현재 [참가확정] 체크된 참가 선수가 없습니다. (총 신청자: {gridData.length}명)
                   </p>
                   <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', margin: '0 0 18px 0' }}>
-                    [참가자관리] 메뉴에서 입금 및 참가가 확인된 선수의 &apos;홈페이지 배포&apos; 체크박스를 선택한 뒤 저장해 주세요.
+                    [참가자관리] 메뉴에서 입금 및 참가가 확인된 선수의 &apos;참가확정&apos; 체크박스를 선택한 뒤 저장해 주세요. (체크해도 홈페이지에는 바로 공개되지 않습니다.)
                   </p>
                   <button
                     onClick={() => setActiveSection('applicants')}
@@ -2044,95 +2085,181 @@ export default function HostDashboardPage({
           );
         })()}
 
-        {/* SECTION B: 동점자 룰 제어 */}
+        {/* SECTION B: 동점자 및 채점 규칙 제어 */}
         {activeSection === 'tie-breaker' && (
-          <div style={{ maxWidth: '700px' }} className="glass-panel">
-            <h3 style={{ fontSize: '1.25rem', marginBottom: '16px' }}>순위 결정을 위한 규칙 체인 우선순위</h3>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '24px', fontSize: '0.9rem' }}>
-              승점이 같을 때 적용되는 타이 브레이커 규칙 순서입니다. 위/아래 버튼으로 우선순위를 즉각 조절합니다.
-            </p>
+          <div style={{ maxWidth: '820px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {/* DNS / DNF 채점 벌점 규칙 설정 */}
+            <div className="glass-panel" style={{ borderTop: '4px solid var(--theme-primary)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: '900', margin: 0 }}>⚖️ DNS (출발하지 않음) · DNF (완주하지 못함) 점수 규정 설정</h3>
+                {dnsDnfSaving && (
+                  <span style={{ fontSize: '0.82rem', color: 'var(--theme-primary)', fontWeight: '700' }}>저장 중...</span>
+                )}
+              </div>
+              <p style={{ color: 'var(--text-muted)', marginBottom: '18px', fontSize: '0.9rem', lineHeight: '1.6' }}>
+                심판단 순위 확정란(채점)에서 <strong>등수 입력이 없는 선수는 모두 DNS(출발하지 않음)로 간주</strong>되며, 선택한 규칙에 따라 DNS·DNF 벌점이 총점에 합산됩니다.
+              </p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {rules.map((rule, idx) => {
-                let ruleKorean = '';
-                let ruleDesc = '';
-                switch (rule.ruleType) {
-                  case 'HEAD_TO_HEAD':
-                    ruleKorean = '승자승 원칙 (Head-to-Head)';
-                    ruleDesc = '동점인 선수들 간 직접 승패 전적을 평가하여 상위를 결정합니다.';
-                    break;
-                  case 'SCORE_DIFF':
-                    ruleKorean = '세부 점수 득실차 (Score Difference)';
-                    ruleDesc = '경기 동안 획득한 세부 스코어의 득실차가 큰 선수를 우대합니다.';
-                    break;
-                  case 'TOTAL_SCORES':
-                    ruleKorean = '다득점 총합 (Total Points Won)';
-                    ruleDesc = '모든 매치에서 획득한 세부 포인트의 전체 누적 합산치를 우선합니다.';
-                    break;
-                  case 'AGE_ORDER':
-                    ruleKorean = '연장자 우선 원칙 (Age Order)';
-                    ruleDesc = '생년월일(YYYYMMDD)을 파싱하여 나이가 더 많은 선수를 위로 올립니다.';
-                    break;
-                  default:
-                    ruleKorean = rule.ruleType;
-                    ruleDesc = '정렬 규칙';
-                }
-
-                return (
-                  <div
-                    key={rule.id}
-                    style={{
-                      padding: '20px',
-                      background: 'rgba(255,255,255,0.02)',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between'
-                    }}
-                  >
-                    <div style={{ flex: 1, marginRight: '16px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-                        <span style={{
-                          width: '24px',
-                          height: '24px',
-                          borderRadius: '50%',
-                          backgroundColor: 'var(--theme-primary)',
-                          color: 'white',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '0.8rem',
-                          fontWeight: '700'
-                        }}>
-                          {idx + 1}
-                        </span>
-                        <h4 style={{ fontWeight: '700' }}>{ruleKorean}</h4>
-                      </div>
-                      <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{ruleDesc}</p>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <button
-                        className="btn-secondary"
-                        style={{ padding: '6px', opacity: idx === 0 ? 0.3 : 1, cursor: idx === 0 ? 'not-allowed' : 'pointer' }}
-                        onClick={() => idx !== 0 && handleMoveRule(idx, 'up')}
-                        disabled={idx === 0}
-                      >
-                        <ArrowUp size={14} />
-                      </button>
-                      <button
-                        className="btn-secondary"
-                        style={{ padding: '6px', opacity: idx === rules.length - 1 ? 0.3 : 1, cursor: idx === rules.length - 1 ? 'not-allowed' : 'pointer' }}
-                        onClick={() => idx !== rules.length - 1 && handleMoveRule(idx, 'down')}
-                        disabled={idx === rules.length - 1}
-                      >
-                        <ArrowDown size={14} />
-                      </button>
-                    </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '14px', marginBottom: '16px' }}>
+                <div
+                  onClick={() => handleSaveDnsDnfRule('FINISHER_PLUS_ONE')}
+                  style={{
+                    padding: '18px 20px',
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    border: dnsDnfRule === 'FINISHER_PLUS_ONE' ? '2px solid var(--theme-primary)' : '1px solid var(--border-color)',
+                    background: dnsDnfRule === 'FINISHER_PLUS_ONE' ? 'rgba(2, 132, 199, 0.06)' : 'rgba(255,255,255,0.02)',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <span style={{ fontWeight: '900', fontSize: '1rem', color: dnsDnfRule === 'FINISHER_PLUS_ONE' ? 'var(--theme-primary)' : 'var(--text-main)' }}>
+                      ① 표준 분리 산정 (DNS: 등록인원+1 / DNF: 완주자+1)
+                    </span>
+                    <span style={{
+                      padding: '3px 10px',
+                      borderRadius: '999px',
+                      fontSize: '0.75rem',
+                      fontWeight: '800',
+                      background: dnsDnfRule === 'FINISHER_PLUS_ONE' ? 'var(--theme-primary)' : '#e2e8f0',
+                      color: dnsDnfRule === 'FINISHER_PLUS_ONE' ? 'white' : '#64748b'
+                    }}>
+                      {dnsDnfRule === 'FINISHER_PLUS_ONE' ? '적용중' : '선택'}
+                    </span>
                   </div>
-                );
-              })}
+                  <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '0.84rem', color: 'var(--text-muted)', lineHeight: '1.6' }}>
+                    <li><strong>DNS (미출발 · 등수 미입력):</strong> 출전 등록 전체 인원 수 + 1점 <br /><span style={{ color: '#0369a1' }}>(40명 기준 → 41점 부여)</span></li>
+                    <li><strong>DNF (완주 실패):</strong> 해당 레이스 실제 결승선 통과(완주) 선수 수 + 1점 <br /><span style={{ color: '#0369a1' }}>(40명 출발 중 35명 완주 시 → 36점 부여)</span></li>
+                  </ul>
+                </div>
+
+                <div
+                  onClick={() => handleSaveDnsDnfRule('REGISTERED_PLUS_ONE')}
+                  style={{
+                    padding: '18px 20px',
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    border: dnsDnfRule === 'REGISTERED_PLUS_ONE' ? '2px solid #7c3aed' : '1px solid var(--border-color)',
+                    background: dnsDnfRule === 'REGISTERED_PLUS_ONE' ? 'rgba(124, 58, 237, 0.06)' : 'rgba(255,255,255,0.02)',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <span style={{ fontWeight: '900', fontSize: '1rem', color: dnsDnfRule === 'REGISTERED_PLUS_ONE' ? '#7c3aed' : 'var(--text-main)' }}>
+                      ② 통합 산정 (DNS · DNF 모두 참가신청자 + 1점)
+                    </span>
+                    <span style={{
+                      padding: '3px 10px',
+                      borderRadius: '999px',
+                      fontSize: '0.75rem',
+                      fontWeight: '800',
+                      background: dnsDnfRule === 'REGISTERED_PLUS_ONE' ? '#7c3aed' : '#e2e8f0',
+                      color: dnsDnfRule === 'REGISTERED_PLUS_ONE' ? 'white' : '#64748b'
+                    }}>
+                      {dnsDnfRule === 'REGISTERED_PLUS_ONE' ? '적용중' : '선택'}
+                    </span>
+                  </div>
+                  <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '0.84rem', color: 'var(--text-muted)', lineHeight: '1.6' }}>
+                    <li><strong>DNS (미출발 · 등수 미입력):</strong> 참가신청자(전체 등록 인원) 수 + 1점 <br /><span style={{ color: '#6d28d9' }}>(40명 기준 → 41점 부여)</span></li>
+                    <li><strong>DNF (완주 실패):</strong> 완주자 수와 관계없이 참가신청자 수 + 1점 동일 적용 <br /><span style={{ color: '#6d28d9' }}>(40명 기준 → 41점 부여)</span></li>
+                  </ul>
+                </div>
+              </div>
+
+              <div style={{ padding: '12px 16px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.84rem', color: '#475569', lineHeight: '1.5' }}>
+                💡 <strong>자동 연동 안내:</strong> 이곳에서 선택한 DNS·DNF 점수 규정은 <strong>심판단 순위 확정란(채점 화면)</strong>과 <strong>실시간 리더보드</strong>에 즉시 연동됩니다.
+              </div>
+            </div>
+
+            {/* 동점자 타이브레이커 우선순위 */}
+            <div className="glass-panel">
+              <h3 style={{ fontSize: '1.25rem', marginBottom: '16px' }}>순위 결정을 위한 규칙 체인 우선순위</h3>
+              <p style={{ color: 'var(--text-muted)', marginBottom: '24px', fontSize: '0.9rem' }}>
+                승점이 같을 때 적용되는 타이 브레이커 규칙 순서입니다. 위/아래 버튼으로 우선순위를 즉각 조절합니다.
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {rules.map((rule, idx) => {
+                  let ruleKorean = '';
+                  let ruleDesc = '';
+                  switch (rule.ruleType) {
+                    case 'HEAD_TO_HEAD':
+                      ruleKorean = '승자승 원칙 (Head-to-Head)';
+                      ruleDesc = '동점인 선수들 간 직접 승패 전적을 평가하여 상위를 결정합니다.';
+                      break;
+                    case 'SCORE_DIFF':
+                      ruleKorean = '세부 점수 득실차 (Score Difference)';
+                      ruleDesc = '경기 동안 획득한 세부 스코어의 득실차가 큰 선수를 우대합니다.';
+                      break;
+                    case 'TOTAL_SCORES':
+                      ruleKorean = '다득점 총합 (Total Points Won)';
+                      ruleDesc = '모든 매치에서 획득한 세부 포인트의 전체 누적 합산치를 우선합니다.';
+                      break;
+                    case 'AGE_ORDER':
+                      ruleKorean = '연장자 우선 원칙 (Age Order)';
+                      ruleDesc = '생년월일(YYYYMMDD)을 파싱하여 나이가 더 많은 선수를 위로 올립니다.';
+                      break;
+                    default:
+                      ruleKorean = rule.ruleType;
+                      ruleDesc = '정렬 규칙';
+                  }
+
+                  return (
+                    <div
+                      key={rule.id}
+                      style={{
+                        padding: '20px',
+                        background: 'rgba(255,255,255,0.02)',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between'
+                      }}
+                    >
+                      <div style={{ flex: 1, marginRight: '16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+                          <span style={{
+                            width: '24px',
+                            height: '24px',
+                            borderRadius: '50%',
+                            backgroundColor: 'var(--theme-primary)',
+                            color: 'white',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '0.8rem',
+                            fontWeight: '700'
+                          }}>
+                            {idx + 1}
+                          </span>
+                          <h4 style={{ fontWeight: '700' }}>{ruleKorean}</h4>
+                        </div>
+                        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{ruleDesc}</p>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <button
+                          className="btn-secondary"
+                          style={{ padding: '6px', opacity: idx === 0 ? 0.3 : 1, cursor: idx === 0 ? 'not-allowed' : 'pointer' }}
+                          onClick={() => idx !== 0 && handleMoveRule(idx, 'up')}
+                          disabled={idx === 0}
+                        >
+                          <ArrowUp size={14} />
+                        </button>
+                        <button
+                          className="btn-secondary"
+                          style={{ padding: '6px', opacity: idx === rules.length - 1 ? 0.3 : 1, cursor: idx === rules.length - 1 ? 'not-allowed' : 'pointer' }}
+                          onClick={() => idx !== rules.length - 1 && handleMoveRule(idx, 'down')}
+                          disabled={idx === rules.length - 1}
+                        >
+                          <ArrowDown size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}
@@ -2366,26 +2493,26 @@ interface NoticeEditorProps {
 
 function NoticeEditor({ tenant, subdomain, onSaveSuccess }: NoticeEditorProps) {
   const [noticeHwpData, setNoticeHwpData] = useState<string>(
-    tenant?.overviewConfig?.noticeHwpData || ''
+    tenant?.overviewConfig?.noticeHwpData || '/files/2026년20회통영대회_개최공시서.hwp'
   );
   const [noticeHwpName, setNoticeHwpName] = useState<string>(
-    tenant?.overviewConfig?.noticeHwpName || ''
+    tenant?.overviewConfig?.noticeHwpName || '2026년20회통영대회_개최공시서.hwp'
   );
   const [noticePdfData, setNoticePdfData] = useState<string>(
-    tenant?.overviewConfig?.noticePdfData || ''
+    tenant?.overviewConfig?.noticePdfData || '/files/2026년20회통영대회_개최공시서.pdf'
   );
   const [noticePdfName, setNoticePdfName] = useState<string>(
-    tenant?.overviewConfig?.noticePdfName || ''
+    tenant?.overviewConfig?.noticePdfName || '2026년20회통영대회_개최공시서.pdf'
   );
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<{ hwp: boolean; pdf: boolean }>({ hwp: false, pdf: false });
 
   useEffect(() => {
     if (tenant?.overviewConfig) {
-      if (tenant.overviewConfig.noticeHwpData) setNoticeHwpData(tenant.overviewConfig.noticeHwpData);
-      if (tenant.overviewConfig.noticeHwpName) setNoticeHwpName(tenant.overviewConfig.noticeHwpName);
-      if (tenant.overviewConfig.noticePdfData) setNoticePdfData(tenant.overviewConfig.noticePdfData);
-      if (tenant.overviewConfig.noticePdfName) setNoticePdfName(tenant.overviewConfig.noticePdfName);
+      setNoticeHwpData(tenant.overviewConfig.noticeHwpData || '/files/2026년20회통영대회_개최공시서.hwp');
+      setNoticeHwpName(tenant.overviewConfig.noticeHwpName || '2026년20회통영대회_개최공시서.hwp');
+      setNoticePdfData(tenant.overviewConfig.noticePdfData || '/files/2026년20회통영대회_개최공시서.pdf');
+      setNoticePdfName(tenant.overviewConfig.noticePdfName || '2026년20회통영대회_개최공시서.pdf');
     }
   }, [tenant]);
 
