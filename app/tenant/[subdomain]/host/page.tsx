@@ -369,17 +369,121 @@ export default function HostDashboardPage({
     }
   };
 
+  // 생년월일(YYYYMMDD 또는 YYMMDD)을 비교 가능한 8자리 숫자(YYYYMMDD)로 변환 (숫자가 클수록 나이가 젊음 = 청년부)
+  const parseBirthComparable = (birthStr?: string): number => {
+    if (!birthStr) return 0;
+    const digits = String(birthStr).trim().replace(/[^0-9]/g, '');
+    if (digits.length === 8) return parseInt(digits, 10) || 0;
+    if (digits.length === 6) {
+      const yy = parseInt(digits.substring(0, 2), 10);
+      const prefix = yy <= 26 ? '20' : '19';
+      return parseInt(`${prefix}${digits}`, 10) || 0;
+    }
+    if (digits.length === 4) return parseInt(`${digits}0101`, 10) || 0;
+    return parseInt(digits, 10) || 0;
+  };
+
+  const getRootDivisionName = (div?: string): string => {
+    const d = div || '윈드포일';
+    if (d.includes('윈드포일')) return '윈드포일';
+    if (d.includes('윙포일')) return '윙포일';
+    if (d.includes('혼합오픈')) return '혼합오픈';
+    if (d.includes('펀엔포뮬러') || d.includes('펀&포뮬러')) return '펀&포뮬러';
+    return d;
+  };
+
+  // 혼합오픈 및 펀&포뮬러 종목(남자부) 참가자를 생년월일 기준 1/3 균등분할하여 청년부·중년부·장년부로 계산
+  const computeAgeSplitSubclasses = (rows: GridRow[]): Record<string, '청년부' | '중년부' | '장년부'> => {
+    const result: Record<string, '청년부' | '중년부' | '장년부'> = {};
+    const targetDivisions = ['혼합오픈', '펀&포뮬러'];
+
+    targetDivisions.forEach((targetDiv) => {
+      const groupPlayers = rows.filter((r) => {
+        if (r.status !== 'APPROVED') return false;
+        const rootDiv = getRootDivisionName(r.division);
+        const isMale = !r.gender || r.gender.includes('남자') || (!r.gender.includes('여자') && !String(r.division).includes('여자'));
+        return rootDiv === targetDiv && isMale;
+      });
+
+      if (groupPlayers.length === 0) return;
+
+      // 출생연월일 내림차순 정렬 (최근 출생 = 가장 젊은 선수 = 청년부 우선)
+      const sorted = [...groupPlayers].sort((a, b) => {
+        const birthA = parseBirthComparable(a.birth);
+        const birthB = parseBirthComparable(b.birth);
+        if (birthA !== birthB) {
+          if (birthA === 0) return 1;
+          if (birthB === 0) return -1;
+          return birthB - birthA;
+        }
+        return (a.name || '').localeCompare(b.name || '', 'ko');
+      });
+
+      const total = sorted.length;
+      const youthLimit = Math.ceil(total / 3);
+      const middleLimit = Math.ceil((2 * total) / 3);
+
+      sorted.forEach((p, idx) => {
+        if (idx < youthLimit) {
+          result[p.id] = '청년부';
+        } else if (idx < middleLimit) {
+          result[p.id] = '중년부';
+        } else {
+          result[p.id] = '장년부';
+        }
+      });
+    });
+
+    return result;
+  };
+
+  const handleAutoAssignAgeSubclasses = () => {
+    const ageMap = computeAgeSplitSubclasses(gridData);
+    const targetIds = Object.keys(ageMap);
+    if (targetIds.length === 0) {
+      alert('혼합오픈 또는 펀&포뮬러 종목에 참가확정(승인)된 남자부 선수가 없습니다.');
+      return;
+    }
+
+    setGridData((prev) =>
+      prev.map((row) => {
+        const assigned = ageMap[row.id];
+        if (assigned && row.subclass !== assigned) {
+          return {
+            ...row,
+            subclass: assigned,
+            isEdited: true,
+          };
+        }
+        return row;
+      })
+    );
+    alert(`✅ 혼합오픈 및 펀&포뮬러 참가자(${targetIds.length}명)에 대해 생년월일 기준 1/3 균등분할(청년부·중년부·장년부) 편성이 적용되었습니다.\n상단 [대진표 확정 및 홈페이지 공개] 또는 [임시저장]을 누르면 최종 저장됩니다.`);
+  };
+
   const handleToggleBracketsPublish = async (publish: boolean) => {
     if (!tenant) return;
     const confirmMsg = publish
-      ? '대진표 및 조 편성표를 최종 확정하여 대회 공식 홈페이지에 공개하시겠습니까?\n(참가 신청서 원본 데이터는 안전하게 그대로 유지됩니다.)'
+      ? '대진표 및 조 편성표를 최종 확정하여 대회 공식 홈페이지에 공개하시겠습니까?\n(혼합오픈·펀&포뮬러 생년월일 기준 청년부/중년부/장년부 구분이 함께 저장되며, 참가 신청서 원본 데이터는 안전하게 유지됩니다.)'
       : '홈페이지에 공개된 대진표 및 조 편성표를 비공개(확정 대기) 상태로 전환하시겠습니까?';
     if (!confirm(confirmMsg)) return;
 
     setBracketPublishing(true);
     try {
-      // 만약 미저장된 조 편성(subclass)이나 배번 수정사항이 있다면 함께 안전하게 저장
-      const updatedList = gridData.filter((row) => row.isEdited && !row.isNew);
+      // 혼합오픈 & 펀&포뮬러 생년월일 1/3 균등분할(청년부/중년부/장년부) 자동 반영 + 수정된 행 함께 저장
+      const ageMap = computeAgeSplitSubclasses(gridData);
+      const effectiveGrid = gridData.map((row) => {
+        const autoSubclass = ageMap[row.id];
+        const currentSub = row.subclass || '통합부';
+        if (autoSubclass && !row.isEdited && (currentSub === '통합부' || currentSub === '청년부' || currentSub === '중년부' || currentSub === '장년부')) {
+          if (currentSub !== autoSubclass) {
+            return { ...row, subclass: autoSubclass, isEdited: true };
+          }
+        }
+        return row;
+      });
+
+      const updatedList = effectiveGrid.filter((row) => row.isEdited && !row.isNew);
       if (updatedList.length > 0 && activeTournament) {
         const bulkRes = await fetch(`/api/tenant/${subdomain}/registrations/bulk-update`, {
           method: 'POST',
@@ -411,7 +515,7 @@ export default function HostDashboardPage({
 
       if (res.ok) {
         alert(publish
-          ? '✅ 대진표 및 조 편성표가 확정되어 홈페이지에 공식 공개되었습니다!'
+          ? '✅ 대진표 및 조 편성표(청년부·중년부·장년부 편성 포함)가 확정되어 홈페이지에 공식 공개되었습니다!'
           : '🔒 대진표 및 조 편성표가 홈페이지에서 비공개(준비중) 상태로 전환되었습니다.');
         await fetchInitialData();
       } else {
@@ -1715,21 +1819,29 @@ export default function HostDashboardPage({
             return birthStr;
           };
 
+          // 혼합오픈 & 펀&포뮬러 남자부 생년월일 기준 1/3 균등분할(청년부·중년부·장년부) 자동 매핑
+          const ageSubclassMap = computeAgeSplitSubclasses(approvedList);
+
           const parsedPlayers = approvedList.map(r => {
-            let rootDivision = r.division || '윈드포일';
-            if (rootDivision.includes('윈드포일')) rootDivision = '윈드포일';
-            else if (rootDivision.includes('윙포일')) rootDivision = '윙포일';
-            else if (rootDivision.includes('혼합오픈')) rootDivision = '혼합오픈';
-            else if (rootDivision.includes('펀엔포뮬러') || rootDivision.includes('펀&포뮬러')) rootDivision = '펀&포뮬러';
+            const rootDivision = getRootDivisionName(r.division);
 
             let genderGroup = r.gender || '남자';
             if (!genderGroup.includes('부')) genderGroup = `${genderGroup}부`;
+
+            const rawSub = r.subclass || '통합부';
+            const autoSub = ageSubclassMap[r.id];
+            // 수동으로 별도 조(A조, 1조 등)를 지정하지 않은 경우 생년월일 1/3 균등분할(청년부/중년부/장년부) 자동 적용
+            const effectiveSubclass =
+              autoSub && (!r.isEdited ? (rawSub === '통합부' || rawSub === '청년부' || rawSub === '중년부' || rawSub === '장년부') : rawSub === '통합부')
+                ? autoSub
+                : rawSub;
 
             return {
               ...r,
               rootDivision,
               genderGroup,
-              subclass: r.subclass || '통합부',
+              subclass: effectiveSubclass,
+              isAutoAgeSplit: !!autoSub && (effectiveSubclass === '청년부' || effectiveSubclass === '중년부' || effectiveSubclass === '장년부'),
             };
           });
 
@@ -1746,6 +1858,8 @@ export default function HostDashboardPage({
           });
 
           const divisionOrder = ['윈드포일', '윙포일', '혼합오픈', '펀&포뮬러'];
+          const subclassOrder = ['청년부', '중년부', '장년부', '통합부', 'A조', 'B조', 'C조', 'D조', '1조', '2조', '3조', '4조', '마스터즈'];
+
           const sortedDivisions = Object.keys(grouped).sort((a, b) => {
             const idxA = divisionOrder.indexOf(a);
             const idxB = divisionOrder.indexOf(b);
@@ -1803,11 +1917,33 @@ export default function HostDashboardPage({
                   </h3>
                   <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)', margin: 0, lineHeight: '1.5' }}>
                     • [참가자관리]에서 <strong>참가확정</strong>에 체크하더라도 홈페이지(리더보드 및 대진표)에는 공개되지 않으며, <strong>ERP 조 편성 및 심판 제어기 시뮬레이션</strong>에만 사용됩니다.<br />
+                    • <strong>혼합오픈 · 펀&amp;포뮬러(남자부)</strong>는 참가자 <strong>생년월일 기준 1/3 균등분할(청년부 · 중년부 · 장년부)</strong>이 자동 적용됩니다.<br />
                     • 참가확정 인원(<strong>{approvedList.length}명</strong> / 미확정 대기 {pendingList.length}명)의 조 편성을 확인한 뒤 우측 <strong>[대진표 확정 및 홈페이지 공개]</strong> 버튼을 누를 때만 홈페이지에 공개됩니다.
                   </p>
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <button
+                    onClick={handleAutoAssignAgeSubclasses}
+                    type="button"
+                    style={{
+                      padding: '12px 16px',
+                      fontSize: '0.86rem',
+                      fontWeight: '800',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      borderRadius: '10px',
+                      border: '1px solid #c4b5fd',
+                      background: '#f5f3ff',
+                      color: '#6d28d9',
+                      cursor: 'pointer'
+                    }}
+                    title="혼합오픈 및 펀&포뮬러 남자부 참가자를 생년월일 1/3 균등분할 기준으로 청년부·중년부·장년부로 재편성합니다."
+                  >
+                    🎂 생년월일(1/3) 청년·중년·장년부 재편성
+                  </button>
+
                   {hasUnsavedBracketEdits && (
                     <button
                       onClick={handleSaveAllChanges}
@@ -1935,7 +2071,7 @@ export default function HostDashboardPage({
                 </div>
 
                 <div style={{ fontSize: '0.84rem', color: 'var(--text-muted)', fontWeight: '600' }}>
-                  💡 각 선수의 <strong>조 편성(통합부/1조/2조 등)</strong> 및 <strong>배번티 번호</strong>를 변경한 후 상단의 확정 버튼을 누르면 홈페이지에 그대로 반영됩니다.
+                  💡 혼합오픈 · 펀&amp;포뮬러는 <strong>생년월일 기준 1/3 균등분할(청년부 · 중년부 · 장년부)</strong>로 자동 구분되며, 개별 조 편성 및 배번 변경도 가능합니다.
                 </div>
               </div>
 
@@ -1960,16 +2096,40 @@ export default function HostDashboardPage({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
                   {sortedDivisions.map(rootDiv => {
                     const genderGroup = grouped[rootDiv] || {};
+                    const isAgeSplitDiv = rootDiv === '혼합오픈' || rootDiv === '펀&포뮬러';
                     return (
                       <div key={rootDiv} className="glass-panel" style={{ background: 'white', padding: '28px', borderTop: '4px solid var(--theme-primary)', borderRadius: '16px' }}>
-                        <h3 style={{ fontSize: '1.35rem', fontWeight: '900', color: 'var(--text-main)', marginBottom: '22px', display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '2px solid var(--theme-primary)', paddingBottom: '10px' }}>
-                          <span style={{ fontSize: '1.5rem' }}>⛵</span> {rootDiv} 대진 및 조 편성표
-                        </h3>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '22px', borderBottom: '2px solid var(--theme-primary)', paddingBottom: '10px' }}>
+                          <h3 style={{ fontSize: '1.35rem', fontWeight: '900', color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '1.5rem' }}>⛵</span> {rootDiv} 대진 및 조 편성표
+                          </h3>
+                          {isAgeSplitDiv && (
+                            <span style={{
+                              fontSize: '0.78rem',
+                              fontWeight: '800',
+                              color: '#6d28d9',
+                              background: '#f5f3ff',
+                              border: '1px solid #ddd6fe',
+                              padding: '4px 12px',
+                              borderRadius: '999px'
+                            }}>
+                              🎂 남자부: 생년월일 기준 참가 연령 1/3 균등분할 (청년부 · 중년부 · 장년부)
+                            </span>
+                          )}
+                        </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '26px' }}>
                           {['남자부', '여자부'].map(gender => {
                             const subclasses = genderGroup[gender] || {};
-                            if (Object.keys(subclasses).length === 0) return null;
+                            const sortedSubclassKeys = Object.keys(subclasses).sort((a, b) => {
+                              const idxA = subclassOrder.indexOf(a);
+                              const idxB = subclassOrder.indexOf(b);
+                              if (idxA === -1 && idxB === -1) return a.localeCompare(b, 'ko');
+                              if (idxA === -1) return 1;
+                              if (idxB === -1) return -1;
+                              return idxA - idxB;
+                            });
+                            if (sortedSubclassKeys.length === 0) return null;
 
                             return (
                               <div key={gender} style={{ background: '#f8fafc', padding: '22px', borderRadius: '14px', border: '1px solid var(--border-color)' }}>
@@ -1978,13 +2138,36 @@ export default function HostDashboardPage({
                                 </h4>
 
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '18px' }}>
-                                  {Object.keys(subclasses).map(subclass => {
-                                    const list = subclasses[subclass] || [];
+                                  {sortedSubclassKeys.map(subclass => {
+                                    const rawList = subclasses[subclass] || [];
+                                    const list = [...rawList].sort((a, b) => {
+                                      const birthA = parseBirthComparable(a.birth);
+                                      const birthB = parseBirthComparable(b.birth);
+                                      if (birthA !== birthB) {
+                                        if (birthA === 0) return 1;
+                                        if (birthB === 0) return -1;
+                                        return birthB - birthA;
+                                      }
+                                      return (a.name || '').localeCompare(b.name || '', 'ko');
+                                    });
+                                    const badgeColor =
+                                      subclass === '청년부' ? '#0284c7' :
+                                      subclass === '중년부' ? '#7c3aed' :
+                                      subclass === '장년부' ? '#b45309' :
+                                      'var(--theme-primary)';
+
                                     return (
-                                      <div key={subclass} style={{ background: 'white', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '18px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                                      <div key={subclass} style={{ background: 'white', border: '1px solid var(--border-color)', borderTop: `3px solid ${badgeColor}`, borderRadius: '12px', padding: '18px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
                                         <h5 style={{ fontSize: '0.95rem', fontWeight: '850', color: 'var(--text-main)', margin: '0 0 12px 0', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                          <span>🏷️ {subclass}</span>
-                                          <span style={{ fontSize: '0.75rem', background: 'var(--theme-primary)', color: 'white', padding: '2px 8px', borderRadius: '10px', fontWeight: '700' }}>{list.length}명</span>
+                                          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <span>🏷️ {subclass}</span>
+                                            {(subclass === '청년부' || subclass === '중년부' || subclass === '장년부') && (
+                                              <span style={{ fontSize: '0.72rem', color: badgeColor, fontWeight: '700' }}>
+                                                ({subclass === '청년부' ? '연령 1/3 청년' : subclass === '중년부' ? '연령 1/3 중년' : '연령 1/3 장년'})
+                                              </span>
+                                            )}
+                                          </span>
+                                          <span style={{ fontSize: '0.75rem', background: badgeColor, color: 'white', padding: '2px 8px', borderRadius: '10px', fontWeight: '700' }}>{list.length}명</span>
                                         </h5>
 
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -2048,7 +2231,7 @@ export default function HostDashboardPage({
                                                     cursor: 'pointer'
                                                   }}
                                                 >
-                                                  {['통합부', 'A조', 'B조', 'C조', 'D조', '1조', '2조', '3조', '4조', '청년부', '장년부', '마스터즈'].map(opt => (
+                                                  {['청년부', '중년부', '장년부', '통합부', 'A조', 'B조', 'C조', 'D조', '1조', '2조', '3조', '4조', '마스터즈'].map(opt => (
                                                     <option key={opt} value={opt}>{opt}</option>
                                                   ))}
                                                 </select>

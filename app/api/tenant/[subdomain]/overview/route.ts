@@ -35,10 +35,19 @@ export async function POST(
     const existingData = tenantSnap.data();
     const existingConfig = existingData.overviewConfig || {};
 
+    const mergedDivisionsList = Array.isArray(overviewConfig.divisionsList || existingConfig.divisionsList)
+      ? (overviewConfig.divisionsList || existingConfig.divisionsList).map((item: any) => ({
+          ...item,
+          class: typeof item.class === 'string' ? item.class.replace(/1\/4/g, '1/3') : item.class,
+          note: typeof item.note === 'string' ? item.note.replace(/1\/4/g, '1/3') : item.note,
+        }))
+      : undefined;
+
     // Firestore 테넌트 문서의 overviewConfig 필드를 병합하여 저장
     const sanitizedOverview = {
       ...existingConfig,
       ...overviewConfig,
+      ...(mergedDivisionsList ? { divisionsList: mergedDivisionsList } : {}),
       duration: '2026. 10. 31(토) ~ 11. 01(일) (1박 2일)',
       deadlineDate: '2026년 10월 18일(일) 18:00 (130명 한도 조기마감)',
       registrationStartDate: '2026-09-29T09:00',
