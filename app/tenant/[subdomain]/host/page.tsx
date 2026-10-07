@@ -39,6 +39,13 @@ interface TieBreakerRule {
   ruleType: string;
 }
 
+const DEFAULT_TIE_BREAKER_RULES: TieBreakerRule[] = [
+  { id: 'rule-h2h', priority: 1, ruleType: 'HEAD_TO_HEAD' },
+  { id: 'rule-mbf', priority: 2, ruleType: 'MOST_BETTER_FINISHES' },
+  { id: 'rule-mrr', priority: 3, ruleType: 'MOST_RECENT_RACE' },
+  { id: 'rule-drop', priority: 4, ruleType: 'DISCARD_DROP' },
+];
+
 const DEFAULT_FORM_FIELDS = [
   { id: 'name', label: '1. 성명', type: 'text', required: true, placeholder: '실명을 입력해 주세요.' },
   { id: 'birth', label: '2. 생년월일 (8자리) 예) 19450815', type: 'text', required: true, placeholder: '예) 19901024' },
@@ -115,6 +122,7 @@ export default function HostDashboardPage({
   const [activeSection, setActiveSection] = useState<'applicants' | 'brackets' | 'tie-breaker' | 'notice'>('applicants');
   const [bracketPublishing, setBracketPublishing] = useState(false);
   const [selectedBracketDivision, setSelectedBracketDivision] = useState<string>('전체');
+  const [bracketStatusFilter, setBracketStatusFilter] = useState<'all' | 'approved'>('all');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [filterSortCategory, setFilterSortCategory] = useState<string>('all');
@@ -172,8 +180,8 @@ export default function HostDashboardPage({
   const [regNotice, setRegNotice] = useState('');
   const [regPeriodSaving, setRegPeriodSaving] = useState(false);
 
-  // 동점자 룰 및 DNS/DNF 벌점 규칙
-  const [rules, setRules] = useState<TieBreakerRule[]>([]);
+  // 동점자 룰(월드세일링 RRS 부록 A8 표준 4단계) 및 DNS/DNF 벌점 규칙
+  const [rules, setRules] = useState<TieBreakerRule[]>(DEFAULT_TIE_BREAKER_RULES);
   const [dnsDnfRule, setDnsDnfRule] = useState<'FINISHER_PLUS_ONE' | 'REGISTERED_PLUS_ONE'>('FINISHER_PLUS_ONE');
   const [dnsDnfSaving, setDnsDnfSaving] = useState(false);
 
@@ -392,14 +400,13 @@ export default function HostDashboardPage({
     return d;
   };
 
-  // 혼합오픈 및 펀&포뮬러 종목(남자부) 참가자를 생년월일 기준 1/3 균등분할하여 청년부·중년부·장년부로 계산
+  // 혼합오픈 및 펀&포뮬러 종목(남자부) 참가자를 생년월일 기준 1/3 균등분할하여 청년부·중년부·장년부로 계산 (참가확정 전 신청자도 포함)
   const computeAgeSplitSubclasses = (rows: GridRow[]): Record<string, '청년부' | '중년부' | '장년부'> => {
     const result: Record<string, '청년부' | '중년부' | '장년부'> = {};
     const targetDivisions = ['혼합오픈', '펀&포뮬러'];
 
     targetDivisions.forEach((targetDiv) => {
       const groupPlayers = rows.filter((r) => {
-        if (r.status !== 'APPROVED') return false;
         const rootDiv = getRootDivisionName(r.division);
         const isMale = !r.gender || r.gender.includes('남자') || (!r.gender.includes('여자') && !String(r.division).includes('여자'));
         return rootDiv === targetDiv && isMale;
@@ -438,10 +445,13 @@ export default function HostDashboardPage({
   };
 
   const handleAutoAssignAgeSubclasses = () => {
-    const ageMap = computeAgeSplitSubclasses(gridData);
+    const targetPool = bracketStatusFilter === 'approved'
+      ? gridData.filter(r => r.status === 'APPROVED')
+      : gridData;
+    const ageMap = computeAgeSplitSubclasses(targetPool);
     const targetIds = Object.keys(ageMap);
     if (targetIds.length === 0) {
-      alert('혼합오픈 또는 펀&포뮬러 종목에 참가확정(승인)된 남자부 선수가 없습니다.');
+      alert('혼합오픈 또는 펀&포뮬러 종목에 등록된 남자부 선수가 없습니다.');
       return;
     }
 
@@ -458,7 +468,7 @@ export default function HostDashboardPage({
         return row;
       })
     );
-    alert(`✅ 혼합오픈 및 펀&포뮬러 참가자(${targetIds.length}명)에 대해 생년월일 기준 1/3 균등분할(청년부·중년부·장년부) 편성이 적용되었습니다.\n상단 [대진표 확정 및 홈페이지 공개] 또는 [임시저장]을 누르면 최종 저장됩니다.`);
+    alert(`✅ 혼합오픈 및 펀&포뮬러 참가자(${targetIds.length}명)에 대해 생년월일 기준 1/3 균등분할(청년부·중년부·장년부) 편성이 적용되었습니다.\n상단 [조/배번 변경사항 임시저장] 또는 [대진표 확정 및 홈페이지 공개]를 누르면 최종 저장됩니다.`);
   };
 
   const handleToggleBracketsPublish = async (publish: boolean) => {
@@ -607,7 +617,17 @@ export default function HostDashboardPage({
       });
 
       setGridData(parsedRows);
-      setRules(ruleData.rules || []);
+
+      const validRuleTypes = new Set(['HEAD_TO_HEAD', 'MOST_BETTER_FINISHES', 'MOST_RECENT_RACE', 'DISCARD_DROP']);
+      const fetchedRules: TieBreakerRule[] = Array.isArray(ruleData.rules) ? ruleData.rules : [];
+      const isSailingRules =
+        fetchedRules.length === 4 &&
+        fetchedRules.every((r) => validRuleTypes.has(r.ruleType));
+      const resolvedRules = isSailingRules ? fetchedRules : DEFAULT_TIE_BREAKER_RULES;
+      setRules(resolvedRules);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`gentrophy_tie_breaker_rules_${subdomain}`, JSON.stringify(resolvedRules));
+      }
     } catch (e) {
       console.error(e);
     }
@@ -698,8 +718,26 @@ export default function HostDashboardPage({
   const handleSaveAllChanges = async () => {
     if (!activeTournament) return;
 
-    const updatedList = gridData.filter((row) => row.isEdited && !row.isNew);
-    const insertedList = gridData.filter((row) => row.isNew && row.name.trim());
+    let effectiveGrid = gridData;
+    if (activeSection === 'brackets') {
+      const targetPool = bracketStatusFilter === 'approved'
+        ? gridData.filter(r => r.status === 'APPROVED')
+        : gridData;
+      const ageMap = computeAgeSplitSubclasses(targetPool);
+      effectiveGrid = gridData.map((row) => {
+        const autoSubclass = ageMap[row.id];
+        const currentSub = row.subclass || '통합부';
+        if (autoSubclass && !row.isEdited && (currentSub === '통합부' || currentSub === '청년부' || currentSub === '중년부' || currentSub === '장년부')) {
+          if (currentSub !== autoSubclass) {
+            return { ...row, subclass: autoSubclass, isEdited: true };
+          }
+        }
+        return row;
+      });
+    }
+
+    const updatedList = effectiveGrid.filter((row) => row.isEdited && !row.isNew);
+    const insertedList = effectiveGrid.filter((row) => row.isNew && row.name.trim());
 
     if (updatedList.length === 0 && insertedList.length === 0 && deletedIds.length === 0) {
       alert('저장할 변경 사항이 없습니다.');
@@ -735,10 +773,28 @@ export default function HostDashboardPage({
     }
   };
 
-  // 동점자 룰 우선순위 제어
-  const handleMoveRule = async (index: number, direction: 'up' | 'down') => {
+  // 동점자 룰 우선순위 제어 (월드세일링 RRS 부록 A8 기준)
+  const persistTieBreakerRules = async (updatedRules: TieBreakerRule[]) => {
+    setRules(updatedRules);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(`gentrophy_tie_breaker_rules_${subdomain}`, JSON.stringify(updatedRules));
+    }
     if (!activeTournament) return;
+    try {
+      await fetch(`/api/tenant/${subdomain}/rules-detail`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          tournamentId: activeTournament.id,
+          rulesList: updatedRules,
+        }),
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
+  const handleMoveRule = async (index: number, direction: 'up' | 'down') => {
     const newRules = [...rules];
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
 
@@ -753,22 +809,12 @@ export default function HostDashboardPage({
       priority: idx + 1,
     }));
 
-    try {
-      const res = await fetch(`/api/tenant/${subdomain}/rules-detail`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          tournamentId: activeTournament.id,
-          rulesList: updatedRules,
-        }),
-      });
+    await persistTieBreakerRules(updatedRules);
+  };
 
-      if (res.ok) {
-        setRules(updatedRules);
-      }
-    } catch (e) {
-      console.error(e);
-    }
+  const handleResetDefaultRules = async () => {
+    await persistTieBreakerRules(DEFAULT_TIE_BREAKER_RULES);
+    alert('✅ 월드세일링 RRS(부록 A8) 국제 표준 동점자 우선순위(1. 상대 전적 → 2. 상위 성적 횟수 비교 → 3. 가장 최근 레이스 성적 비교 → 4. 최하위 성적 제외 후 재산정)로 설정되었습니다.');
   };
 
   // 실시간 검색 및 필터링 기능 (이름/전화번호 통합 검색 및 카테고리 필터링/정렬)
@@ -1808,8 +1854,10 @@ export default function HostDashboardPage({
         {activeSection === 'brackets' && (() => {
           const isPublished = !!tenant?.overviewConfig?.bracketsPublished;
           const publishedAt = tenant?.overviewConfig?.bracketsPublishedAt;
+          const allValidList = gridData;
           const approvedList = gridData.filter(r => r.status === 'APPROVED');
           const pendingList = gridData.filter(r => r.status !== 'APPROVED');
+          const targetBracketList = bracketStatusFilter === 'approved' ? approvedList : allValidList;
 
           const formatMaskedBirth = (birthStr?: string): string => {
             if (!birthStr) return '-';
@@ -1819,10 +1867,10 @@ export default function HostDashboardPage({
             return birthStr;
           };
 
-          // 혼합오픈 & 펀&포뮬러 남자부 생년월일 기준 1/3 균등분할(청년부·중년부·장년부) 자동 매핑
-          const ageSubclassMap = computeAgeSplitSubclasses(approvedList);
+          // 혼합오픈 & 펀&포뮬러 남자부 생년월일 기준 1/3 균등분할(청년부·중년부·장년부) 자동 매핑 (참가확정 전 신청자 포함)
+          const ageSubclassMap = computeAgeSplitSubclasses(targetBracketList);
 
-          const parsedPlayers = approvedList.map(r => {
+          const parsedPlayers = targetBracketList.map(r => {
             const rootDivision = getRootDivisionName(r.division);
 
             let genderGroup = r.gender || '남자';
@@ -1913,12 +1961,12 @@ export default function HostDashboardPage({
                     )}
                   </div>
                   <h3 style={{ fontSize: '1.2rem', fontWeight: '900', color: 'var(--text-main)', margin: '4px 0 0 0' }}>
-                    대진표 및 조 편성표 홈페이지 공개 제어
+                    대진표 및 조 편성표 관리 (참가확정 전 사전 조편성 가능)
                   </h3>
                   <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)', margin: 0, lineHeight: '1.5' }}>
-                    • [참가자관리]에서 <strong>참가확정</strong>에 체크하더라도 홈페이지(리더보드 및 대진표)에는 공개되지 않으며, <strong>ERP 조 편성 및 심판 제어기 시뮬레이션</strong>에만 사용됩니다.<br />
+                    • <strong>참가확정 전(입금 대기 포함) 상태에서도</strong> 전체 신청자(총 <strong>{allValidList.length}명</strong>: 확정 {approvedList.length}명 / 확정전 {pendingList.length}명)를 대상으로 대진표 및 조 편성이 가능합니다.<br />
                     • <strong>혼합오픈 · 펀&amp;포뮬러(남자부)</strong>는 참가자 <strong>생년월일 기준 1/3 균등분할(청년부 · 중년부 · 장년부)</strong>이 자동 적용됩니다.<br />
-                    • 참가확정 인원(<strong>{approvedList.length}명</strong> / 미확정 대기 {pendingList.length}명)의 조 편성을 확인한 뒤 우측 <strong>[대진표 확정 및 홈페이지 공개]</strong> 버튼을 누를 때만 홈페이지에 공개됩니다.
+                    • 조 편성 확인 후 우측 <strong>[조/배번 변경사항 임시저장]</strong>으로 사전 저장하거나, <strong>[대진표 확정 및 홈페이지 공개]</strong> 버튼으로 홈페이지에 공개할 수 있습니다.
                   </p>
                 </div>
 
@@ -1944,27 +1992,25 @@ export default function HostDashboardPage({
                     🎂 생년월일(1/3) 청년·중년·장년부 재편성
                   </button>
 
-                  {hasUnsavedBracketEdits && (
-                    <button
-                      onClick={handleSaveAllChanges}
-                      disabled={isSaving}
-                      className="btn-secondary"
-                      style={{
-                        padding: '12px 18px',
-                        fontSize: '0.9rem',
-                        fontWeight: '800',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        borderColor: 'var(--theme-primary)',
-                        color: 'var(--theme-primary)',
-                        background: '#f0f9ff'
-                      }}
-                    >
-                      <Save size={16} />
-                      {isSaving ? '저장 중...' : '조/배번 변경사항 임시저장'}
-                    </button>
-                  )}
+                  <button
+                    onClick={handleSaveAllChanges}
+                    disabled={isSaving}
+                    className="btn-secondary"
+                    style={{
+                      padding: '12px 18px',
+                      fontSize: '0.9rem',
+                      fontWeight: '800',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      borderColor: hasUnsavedBracketEdits ? 'var(--theme-primary)' : 'var(--border-color)',
+                      color: hasUnsavedBracketEdits ? 'var(--theme-primary)' : 'var(--text-main)',
+                      background: hasUnsavedBracketEdits ? '#f0f9ff' : '#ffffff'
+                    }}
+                  >
+                    <Save size={16} />
+                    {isSaving ? '저장 중...' : '조/배번 변경사항 임시저장'}
+                  </button>
 
                   {isPublished ? (
                     <>
@@ -2028,9 +2074,9 @@ export default function HostDashboardPage({
                 </div>
               </div>
 
-              {/* 2. 종목별 필터 및 요약 통계 바 */}
+              {/* 2. 종목별 필터 및 대상자(참가확정 전 포함 / 확정자만) 토글 바 */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-                <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+                <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', flexWrap: 'wrap' }}>
                   {['전체', '윈드포일', '윙포일', '혼합오픈', '펀&포뮬러'].map(divTab => {
                     const active = selectedBracketDivision === divTab;
                     const count = divTab === '전체'
@@ -2070,27 +2116,77 @@ export default function HostDashboardPage({
                   })}
                 </div>
 
-                <div style={{ fontSize: '0.84rem', color: 'var(--text-muted)', fontWeight: '600' }}>
-                  💡 혼합오픈 · 펀&amp;포뮬러는 <strong>생년월일 기준 1/3 균등분할(청년부 · 중년부 · 장년부)</strong>로 자동 구분되며, 개별 조 편성 및 배번 변경도 가능합니다.
+                {/* 대상 범위 선택: 전체 신청자(참가확정 전 포함) vs 참가확정자만 */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'inline-flex', background: '#f1f5f9', padding: '4px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                    <button
+                      type="button"
+                      onClick={() => setBracketStatusFilter('all')}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        fontSize: '0.82rem',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        background: bracketStatusFilter === 'all' ? '#ffffff' : 'transparent',
+                        color: bracketStatusFilter === 'all' ? 'var(--theme-primary)' : '#64748b',
+                        boxShadow: bracketStatusFilter === 'all' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none'
+                      }}
+                    >
+                      전체 신청자 ({allValidList.length}명 · 확정전 포함)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBracketStatusFilter('approved')}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        fontSize: '0.82rem',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        background: bracketStatusFilter === 'approved' ? '#ffffff' : 'transparent',
+                        color: bracketStatusFilter === 'approved' ? '#059669' : '#64748b',
+                        boxShadow: bracketStatusFilter === 'approved' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none'
+                      }}
+                    >
+                      참가확정자만 ({approvedList.length}명)
+                    </button>
+                  </div>
                 </div>
               </div>
 
               {/* 3. 대진표 및 조 편성표 미리보기 & 조 배정 카드 뷰 */}
-              {approvedList.length === 0 ? (
+              {targetBracketList.length === 0 ? (
                 <div className="glass-panel" style={{ background: 'white', padding: '60px 20px', textAlign: 'center' }}>
                   <p style={{ fontSize: '1.05rem', fontWeight: '800', color: 'var(--text-main)', margin: '0 0 8px 0' }}>
-                    현재 [참가확정] 체크된 참가 선수가 없습니다. (총 신청자: {gridData.length}명)
+                    {bracketStatusFilter === 'approved'
+                      ? `현재 [참가확정] 체크된 참가 선수가 없습니다. (전체 신청자: ${allValidList.length}명)`
+                      : '현재 등록된 참가 신청자가 없습니다.'}
                   </p>
                   <p style={{ fontSize: '0.88rem', color: 'var(--text-muted)', margin: '0 0 18px 0' }}>
-                    [참가자관리] 메뉴에서 입금 및 참가가 확인된 선수의 &apos;참가확정&apos; 체크박스를 선택한 뒤 저장해 주세요. (체크해도 홈페이지에는 바로 공개되지 않습니다.)
+                    {bracketStatusFilter === 'approved'
+                      ? '참가확정 전이라도 [전체 신청자 (확정전 포함)] 보기로 전환하면 즉시 대진표 조 편성이 가능합니다.'
+                      : '[참가자관리] 메뉴에서 선수를 추가하거나 참가 신청이 접수되면 이곳에서 조 편성을 진행할 수 있습니다.'}
                   </p>
-                  <button
-                    onClick={() => setActiveSection('applicants')}
-                    className="btn-primary"
-                    style={{ padding: '10px 20px', fontSize: '0.88rem' }}
-                  >
-                    참가자관리 메뉴로 이동
-                  </button>
+                  {bracketStatusFilter === 'approved' && allValidList.length > 0 ? (
+                    <button
+                      onClick={() => setBracketStatusFilter('all')}
+                      className="btn-primary"
+                      style={{ padding: '10px 20px', fontSize: '0.88rem' }}
+                    >
+                      참가확정 전 신청자 포함하여 조편성하기 ({allValidList.length}명)
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setActiveSection('applicants')}
+                      className="btn-primary"
+                      style={{ padding: '10px 20px', fontSize: '0.88rem' }}
+                    >
+                      참가자관리 메뉴로 이동
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
@@ -2171,85 +2267,105 @@ export default function HostDashboardPage({
                                         </h5>
 
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                          {list.map((player, pIdx) => (
-                                            <div
-                                              key={player.id}
-                                              style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'space-between',
-                                                flexWrap: 'wrap',
-                                                gap: '8px 10px',
-                                                padding: '10px 12px',
-                                                background: '#ffffff',
-                                                borderRadius: '10px',
-                                                fontSize: '0.86rem',
-                                                border: '1px solid #e2e8f0'
-                                              }}
-                                            >
-                                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', minWidth: 0 }}>
-                                                <span style={{ color: '#94a3b8', fontWeight: '800', fontSize: '0.8rem', minWidth: '16px' }}>
-                                                  {pIdx + 1}
-                                                </span>
-                                                <span style={{ fontWeight: '900', color: '#0f172a', fontSize: '0.95rem' }}>
-                                                  {player.name}
-                                                </span>
-                                                <span style={{
-                                                  fontSize: '0.75rem',
-                                                  color: '#334155',
-                                                  background: '#f1f5f9',
-                                                  padding: '2px 7px',
-                                                  borderRadius: '6px',
-                                                  fontWeight: '700',
+                                          {list.map((player, pIdx) => {
+                                            const isApproved = player.status === 'APPROVED';
+                                            return (
+                                              <div
+                                                key={player.id}
+                                                style={{
+                                                  display: 'flex',
+                                                  alignItems: 'center',
+                                                  justifyContent: 'space-between',
+                                                  flexWrap: 'wrap',
+                                                  gap: '8px 10px',
+                                                  padding: '10px 12px',
+                                                  background: '#ffffff',
+                                                  borderRadius: '10px',
+                                                  fontSize: '0.86rem',
                                                   border: '1px solid #e2e8f0'
-                                                }}>
-                                                  {player.club || '미소속'}
-                                                </span>
-                                                <span style={{
-                                                  fontSize: '0.75rem',
-                                                  color: '#64748b',
-                                                  fontWeight: '600'
-                                                }}>
-                                                  {formatMaskedBirth(player.birth)}
-                                                </span>
-                                              </div>
-
-                                              {/* 우측: 조 편성 변경 및 배번티 번호 표시/수정 */}
-                                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                <select
-                                                  value={player.subclass || '통합부'}
-                                                  onChange={(e) => handleCellChange(player.id, 'subclass', e.target.value)}
-                                                  title="조 편성 변경"
-                                                  style={{
-                                                    fontSize: '0.78rem',
-                                                    fontWeight: '700',
-                                                    padding: '4px 6px',
-                                                    borderRadius: '6px',
-                                                    border: '1px solid #cbd5e1',
-                                                    background: '#f8fafc',
+                                                }}
+                                              >
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', minWidth: 0 }}>
+                                                  <span style={{ color: '#94a3b8', fontWeight: '800', fontSize: '0.8rem', minWidth: '16px' }}>
+                                                    {pIdx + 1}
+                                                  </span>
+                                                  <span style={{ fontWeight: '900', color: '#0f172a', fontSize: '0.95rem' }}>
+                                                    {player.name}
+                                                  </span>
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => handleCellChange(player.id, 'status', isApproved ? 'PENDING' : 'APPROVED')}
+                                                    title="클릭하여 참가확정/확정전 상태를 전환할 수 있습니다"
+                                                    style={{
+                                                      fontSize: '0.7rem',
+                                                      fontWeight: '800',
+                                                      padding: '2px 6px',
+                                                      borderRadius: '5px',
+                                                      cursor: 'pointer',
+                                                      background: isApproved ? '#ecfdf5' : '#fffbeb',
+                                                      color: isApproved ? '#059669' : '#d97706',
+                                                      border: isApproved ? '1px solid #a7f3d0' : '1px solid #fde68a'
+                                                    }}
+                                                  >
+                                                    {isApproved ? '확정' : '확정전'}
+                                                  </button>
+                                                  <span style={{
+                                                    fontSize: '0.75rem',
                                                     color: '#334155',
-                                                    cursor: 'pointer'
-                                                  }}
-                                                >
-                                                  {['청년부', '중년부', '장년부', '통합부', 'A조', 'B조', 'C조', 'D조', '1조', '2조', '3조', '4조', '마스터즈'].map(opt => (
-                                                    <option key={opt} value={opt}>{opt}</option>
-                                                  ))}
-                                                </select>
-                                                <span style={{
-                                                  fontWeight: '900',
-                                                  color: '#0284c7',
-                                                  background: '#f0f9ff',
-                                                  border: '1px solid #bae6fd',
-                                                  padding: '3px 8px',
-                                                  borderRadius: '6px',
-                                                  fontSize: '0.8rem',
-                                                  whiteSpace: 'nowrap'
-                                                }}>
-                                                  배번 {player.bibNumber || '-'}
-                                                </span>
+                                                    background: '#f1f5f9',
+                                                    padding: '2px 7px',
+                                                    borderRadius: '6px',
+                                                    fontWeight: '700',
+                                                    border: '1px solid #e2e8f0'
+                                                  }}>
+                                                    {player.club || '미소속'}
+                                                  </span>
+                                                  <span style={{
+                                                    fontSize: '0.75rem',
+                                                    color: '#64748b',
+                                                    fontWeight: '600'
+                                                  }}>
+                                                    {formatMaskedBirth(player.birth)}
+                                                  </span>
+                                                </div>
+
+                                                {/* 우측: 조 편성 변경 및 배번티 번호 표시/수정 */}
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                  <select
+                                                    value={player.subclass || '통합부'}
+                                                    onChange={(e) => handleCellChange(player.id, 'subclass', e.target.value)}
+                                                    title="조 편성 변경"
+                                                    style={{
+                                                      fontSize: '0.78rem',
+                                                      fontWeight: '700',
+                                                      padding: '4px 6px',
+                                                      borderRadius: '6px',
+                                                      border: '1px solid #cbd5e1',
+                                                      background: '#f8fafc',
+                                                      color: '#334155',
+                                                      cursor: 'pointer'
+                                                    }}
+                                                  >
+                                                    {['청년부', '중년부', '장년부', '통합부', 'A조', 'B조', 'C조', 'D조', '1조', '2조', '3조', '4조', '마스터즈'].map(opt => (
+                                                      <option key={opt} value={opt}>{opt}</option>
+                                                    ))}
+                                                  </select>
+                                                  <span style={{
+                                                    fontWeight: '900',
+                                                    color: '#0284c7',
+                                                    background: '#f0f9ff',
+                                                    border: '1px solid #bae6fd',
+                                                    padding: '3px 8px',
+                                                    borderRadius: '6px',
+                                                    fontSize: '0.8rem',
+                                                    whiteSpace: 'nowrap'
+                                                  }}>
+                                                    배번 {player.bibNumber || '-'}
+                                                  </span>
+                                                </div>
                                               </div>
-                                            </div>
-                                          ))}
+                                            );
+                                          })}
                                         </div>
                                       </div>
                                     );
@@ -2354,11 +2470,34 @@ export default function HostDashboardPage({
               </div>
             </div>
 
-            {/* 동점자 타이브레이커 우선순위 */}
-            <div className="glass-panel">
-              <h3 style={{ fontSize: '1.25rem', marginBottom: '16px' }}>순위 결정을 위한 규칙 체인 우선순위</h3>
-              <p style={{ color: 'var(--text-muted)', marginBottom: '24px', fontSize: '0.9rem' }}>
-                승점이 같을 때 적용되는 타이 브레이커 규칙 순서입니다. 위/아래 버튼으로 우선순위를 즉각 조절합니다.
+            {/* 동점자 타이브레이커 우선순위 (월드세일링 RRS 부록 A8 국제 규칙 기준) */}
+            <div className="glass-panel" style={{ borderTop: '4px solid #0284c7' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '12px' }}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: '900', margin: 0 }}>
+                  ⛵ 동점자(Tie-breaker) 발생 시 국제 규칙 기준 우선순위 산출법
+                </h3>
+                <button
+                  type="button"
+                  onClick={handleResetDefaultRules}
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid #bae6fd',
+                    background: '#f0f9ff',
+                    color: '#0369a1',
+                    fontSize: '0.82rem',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <RefreshCw size={14} /> 월드세일링 RRS 표준 순서로 초기화
+                </button>
+              </div>
+              <p style={{ color: 'var(--text-muted)', marginBottom: '20px', fontSize: '0.9rem', lineHeight: '1.6' }}>
+                총점이 동점인 선수들이 발생했을 때, <strong>월드세일링 RRS(부록 A8 등)에 명시된 표준 동점자 처리 규정</strong>에 따라 아래 우선순위 순서로 순위를 가립니다. 우측 위/아래 버튼으로 우선순위를 즉시 조정할 수 있습니다.
               </p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -2367,20 +2506,20 @@ export default function HostDashboardPage({
                   let ruleDesc = '';
                   switch (rule.ruleType) {
                     case 'HEAD_TO_HEAD':
-                      ruleKorean = '승자승 원칙 (Head-to-Head)';
-                      ruleDesc = '동점인 선수들 간 직접 승패 전적을 평가하여 상위를 결정합니다.';
+                      ruleKorean = '상대 전적 (Head-to-Head / 동점자 간의 레이스 비교)';
+                      ruleDesc = '동점인 선수들끼리 직접 맞붙었던 레이스(들)에서 더 좋은 순위를 기록한 선수를 상위에 둡니다.';
                       break;
-                    case 'SCORE_DIFF':
-                      ruleKorean = '세부 점수 득실차 (Score Difference)';
-                      ruleDesc = '경기 동안 획득한 세부 스코어의 득실차가 큰 선수를 우대합니다.';
+                    case 'MOST_BETTER_FINISHES':
+                      ruleKorean = '상위 성적 횟수 비교 (Most Better Finishes)';
+                      ruleDesc = '다중 레이스 시리즈에서 1위 횟수, 2위 횟수, 3위 횟수 순으로 차례대로 비교하여 더 좋은 성적을 많이 거둔 선수를 우선시합니다.';
                       break;
-                    case 'TOTAL_SCORES':
-                      ruleKorean = '다득점 총합 (Total Points Won)';
-                      ruleDesc = '모든 매치에서 획득한 세부 포인트의 전체 누적 합산치를 우선합니다.';
+                    case 'MOST_RECENT_RACE':
+                      ruleKorean = '가장 최근 레이스 성적 비교';
+                      ruleDesc = '마지막 레이스(혹은 가장 최근에 치른 레이스)에서 더 앞선 순위를 기록한 선수를 상위에 랭크시킵니다.';
                       break;
-                    case 'AGE_ORDER':
-                      ruleKorean = '연장자 우선 원칙 (Age Order)';
-                      ruleDesc = '생년월일(YYYYMMDD)을 파싱하여 나이가 더 많은 선수를 위로 올립니다.';
+                    case 'DISCARD_DROP':
+                      ruleKorean = '최하위 성적 제외 후 재산정 (Discard / Drop)';
+                      ruleDesc = '대회 규정에 따라 성적이 가장 안 좋은 레이스 점수를 제외(Drop)한 뒤의 총점으로 다시 비교하여 순위를 결정합니다.';
                       break;
                     default:
                       ruleKorean = rule.ruleType;
@@ -2389,7 +2528,7 @@ export default function HostDashboardPage({
 
                   return (
                     <div
-                      key={rule.id}
+                      key={rule.id || idx}
                       style={{
                         padding: '20px',
                         background: 'rgba(255,255,255,0.02)',
@@ -2403,22 +2542,23 @@ export default function HostDashboardPage({
                       <div style={{ flex: 1, marginRight: '16px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
                           <span style={{
-                            width: '24px',
-                            height: '24px',
+                            width: '26px',
+                            height: '26px',
                             borderRadius: '50%',
                             backgroundColor: 'var(--theme-primary)',
                             color: 'white',
                             display: 'inline-flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            fontSize: '0.8rem',
-                            fontWeight: '700'
+                            fontSize: '0.82rem',
+                            fontWeight: '800',
+                            flexShrink: 0
                           }}>
                             {idx + 1}
                           </span>
-                          <h4 style={{ fontWeight: '700' }}>{ruleKorean}</h4>
+                          <h4 style={{ fontWeight: '800', margin: 0, fontSize: '1rem', color: 'var(--text-main)' }}>{ruleKorean}</h4>
                         </div>
-                        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{ruleDesc}</p>
+                        <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)', margin: '4px 0 0 36px', lineHeight: '1.5' }}>{ruleDesc}</p>
                       </div>
 
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -2427,6 +2567,7 @@ export default function HostDashboardPage({
                           style={{ padding: '6px', opacity: idx === 0 ? 0.3 : 1, cursor: idx === 0 ? 'not-allowed' : 'pointer' }}
                           onClick={() => idx !== 0 && handleMoveRule(idx, 'up')}
                           disabled={idx === 0}
+                          title="우선순위 위로 이동"
                         >
                           <ArrowUp size={14} />
                         </button>
@@ -2435,6 +2576,7 @@ export default function HostDashboardPage({
                           style={{ padding: '6px', opacity: idx === rules.length - 1 ? 0.3 : 1, cursor: idx === rules.length - 1 ? 'not-allowed' : 'pointer' }}
                           onClick={() => idx !== rules.length - 1 && handleMoveRule(idx, 'down')}
                           disabled={idx === rules.length - 1}
+                          title="우선순위 아래로 이동"
                         >
                           <ArrowDown size={14} />
                         </button>

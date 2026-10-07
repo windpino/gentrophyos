@@ -27,6 +27,11 @@ import {
   AlertCircle,
   Printer
 } from 'lucide-react';
+import {
+  DEFAULT_SAILING_TIE_BREAKER_RULES,
+  evaluateSailingRule,
+  TieBreakerRuleInput
+} from '@/src/lib/tieBreaker';
 
 export interface RoundItem {
   key: string;
@@ -66,8 +71,9 @@ export default function RefereeMobilePage({
   // 모드 분리 상태: 'input' (순위 입력란) vs 'confirm' (순위 확정 및 검토란)
   const [activeMode, setActiveMode] = useState<'input' | 'confirm'>('input');
 
-  // DNS / DNF 벌점 산정 규칙 상태
+  // DNS / DNF 벌점 산정 규칙 및 월드세일링 RRS 동점자 타이브레이커 우선순위 상태
   const [dnsDnfRule, setDnsDnfRule] = useState<DnsDnfScoringRule>('FINISHER_PLUS_ONE');
+  const [tieBreakerRules, setTieBreakerRules] = useState<TieBreakerRuleInput[]>(DEFAULT_SAILING_TIE_BREAKER_RULES);
 
   // 참가자 목록 및 종목 선택
   const [rawRegistrations, setRawRegistrations] = useState<any[]>([]);
@@ -194,6 +200,18 @@ export default function RefereeMobilePage({
           tenantData.tenant.overviewConfig?.dnsDnfScoringRule;
         if (savedRule === 'FINISHER_PLUS_ONE' || savedRule === 'REGISTERED_PLUS_ONE') {
           setDnsDnfRule(savedRule);
+        }
+
+        const localTieRulesStr = typeof window !== 'undefined' ? localStorage.getItem(`gentrophy_tie_breaker_rules_${subdomain}`) : null;
+        if (localTieRulesStr) {
+          try {
+            const parsedTieRules = JSON.parse(localTieRulesStr);
+            if (Array.isArray(parsedTieRules) && parsedTieRules.length > 0) {
+              setTieBreakerRules(parsedTieRules);
+            }
+          } catch (e) {}
+        } else if (Array.isArray(tenantData.tenant.overviewConfig?.tieBreakerRules) && tenantData.tenant.overviewConfig.tieBreakerRules.length > 0) {
+          setTieBreakerRules(tenantData.tenant.overviewConfig.tieBreakerRules);
         }
 
         const ongoing = tenantData.tenant.tournaments?.find((t: any) => t.status === 'ONGOING');
@@ -861,23 +879,45 @@ export default function RefereeMobilePage({
     setInputFeedback(null);
   };
 
-  // 순위 자동 정렬 (등수 미입력자는 모두 DNS로 간주하여 DNS/DNF 벌점 규정을 합산한 총점 오름차순 정렬)
+  // 월드세일링 RRS(부록 A8) 기준 동점자 비교 함수
+  // 우선순위: 1. 상대 전적 (Head-to-Head) -> 2. 상위 성적 횟수 비교 (Most Better Finishes) -> 3. 가장 최근 레이스 성적 비교 -> 4. 최하위 성적 제외 후 재산정 (Discard / Drop)
+  const compareTiedSailingPlayers = (a: any, b: any, fullList: any[]) => {
+    if (a.total !== b.total) {
+      return a.total - b.total;
+    }
+
+    const conductedRounds = rounds.filter(r => isRoundConducted(r.key, fullList));
+    const scoresA = conductedRounds
+      .map(r => getRoundScoreValue(a[r.key], r.key, fullList, dnsDnfRule))
+      .filter((v): v is number => v !== null);
+    const scoresB = conductedRounds
+      .map(r => getRoundScoreValue(b[r.key], r.key, fullList, dnsDnfRule))
+      .filter((v): v is number => v !== null);
+
+    const orderedRules = [...(tieBreakerRules.length > 0 ? tieBreakerRules : DEFAULT_SAILING_TIE_BREAKER_RULES)].sort(
+      (x, y) => x.priority - y.priority
+    );
+
+    for (const rule of orderedRules) {
+      const cmp = evaluateSailingRule(rule.ruleType, scoresA, scoresB);
+      if (cmp !== 0) return cmp;
+    }
+
+    const birthA = (a.birth || '').replace(/[^0-9]/g, '');
+    const birthB = (b.birth || '').replace(/[^0-9]/g, '');
+    if (birthA && birthB && birthA !== birthB) {
+      return birthA.localeCompare(birthB);
+    }
+    return 0;
+  };
+
+  // 순위 자동 정렬 (등수 미입력자는 모두 DNS로 간주하여 DNS/DNF 벌점 규정을 합산한 총점 오름차순 정렬 + 월드세일링 RRS 동점자 규정 적용)
   const handleSortRankings = () => {
     // 1. 진행된 모든 라운드에서 등수 미입력(null/'') 선수를 모두 'DNS'로 일괄 확정하고 총점 재계산
     const withAutoDns = applyAutoDnsToConductedRounds(participants, rounds, dnsDnfRule, true);
 
-    // 2. 총점 오름차순 정렬 (Low-Point System: 낮은 점수가 상위, 동점 시 생년월일 연장자 우선)
-    const sorted = [...withAutoDns].sort((a, b) => {
-      if (a.total !== b.total) {
-        return a.total - b.total;
-      }
-      const birthA = (a.birth || '').replace(/[^0-9]/g, '');
-      const birthB = (b.birth || '').replace(/[^0-9]/g, '');
-      if (birthA && birthB && birthA !== birthB) {
-        return birthA.localeCompare(birthB);
-      }
-      return 0;
-    });
+    // 2. 총점 오름차순 정렬 (Low-Point System + 동점 시 월드세일링 RRS 부록 A8 동점자 처리 규정 적용)
+    const sorted = [...withAutoDns].sort((a, b) => compareTiedSailingPlayers(a, b, withAutoDns));
 
     const ranked = sorted.map((p, idx) => ({
       ...p,
@@ -900,6 +940,7 @@ export default function RefereeMobilePage({
         ? '🧪 [시뮬레이션] 미입력자 DNS 자동 처리 및 총점 순위 산정이 완료되었습니다!\n\n'
         : '✅ 미입력자 DNS 자동 처리 및 공식 순위 산정이 완료되었습니다!\n\n') +
       `• 적용 규칙: ${ruleDesc}\n` +
+      '• 동점자 처리: 월드세일링 RRS(상대 전적 → 상위 성적 횟수 → 최근 레이스 → 최하위 성적 제외) 우선순위 적용\n' +
       '• 등수 미입력 선수는 모두 DNS로 간주되어 총점에 합산되었습니다.'
     );
   };
@@ -908,16 +949,12 @@ export default function RefereeMobilePage({
   const handleConfirmLeaderboard = async () => {
     // 확정 시에도 등수 미입력자는 모두 DNS로 변환 및 총점/순위 재계산 보장
     const withAutoDns = applyAutoDnsToConductedRounds(participants, rounds, dnsDnfRule, false);
-    const sorted = [...withAutoDns].sort((a, b) => {
-      if (a.total !== b.total) return a.total - b.total;
-      const birthA = (a.birth || '').replace(/[^0-9]/g, '');
-      const birthB = (b.birth || '').replace(/[^0-9]/g, '');
-      if (birthA && birthB && birthA !== birthB) return birthA.localeCompare(birthB);
-      return 0;
-    }).map((p, idx) => ({
-      ...p,
-      rank: idx + 1
-    }));
+    const sorted = [...withAutoDns]
+      .sort((a, b) => compareTiedSailingPlayers(a, b, withAutoDns))
+      .map((p, idx) => ({
+        ...p,
+        rank: idx + 1
+      }));
 
     setParticipants(sorted);
 
