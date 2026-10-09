@@ -170,6 +170,8 @@ export default function HostDashboardPage({
   const [searchQuery, setSearchQuery] = useState('');
   const [searchCategory, setSearchCategory] = useState<'all' | 'name' | 'phone' | 'club' | 'division'>('all'); // 카테고리별 검색
   const [selectedReg, setSelectedReg] = useState<GridRow | null>(null); // 신청서 보기 팝업용
+  const [deleteTarget, setDeleteTarget] = useState<GridRow | null>(null); // 참가자 삭제 확인 모달
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   // 온라인 참가 신청 접수 기간 및 권한 설정 상태
@@ -680,15 +682,17 @@ export default function HostDashboardPage({
     setGridData([newRow, ...gridData]);
   };
 
-  // 행 삭제
-  const handleDeleteRow = async (rowId: string) => {
-    if (!confirm('정말 선택한 참가자를 목록에서 지우시겠습니까?')) return;
-    
-    setGridData((prev) => prev.filter((row) => row.id !== rowId));
-    
-    if (!rowId.startsWith('temp-')) {
-      if (!activeTournament) return;
-      try {
+  // 참가자 행 삭제 실행 (확인 후 실제 DB 삭제)
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    const target = deleteTarget;
+    setIsDeleting(true);
+
+    try {
+      setGridData((prev) => prev.filter((row) => row.id !== target.id));
+
+      if (!target.id.startsWith('temp-')) {
+        if (!activeTournament) return;
         const res = await fetch(`/api/tenant/${subdomain}/registrations/bulk-update`, {
           method: 'POST',
           headers: getAuthHeaders(),
@@ -696,21 +700,35 @@ export default function HostDashboardPage({
             tournamentId: activeTournament.id,
             updatedList: [],
             insertedList: [],
-            deletedIds: [rowId],
+            deletedIds: [target.id],
           }),
         });
 
         if (res.ok) {
-          alert('참가자가 성공적으로 데이터베이스에서 삭제되었습니다.');
-          setDeletedIds((prev) => prev.filter((id) => id !== rowId));
+          alert(`'${target.name || '선택한 참가자'}' 님의 정보가 성공적으로 데이터베이스에서 삭제되었습니다.`);
+          setDeletedIds((prev) => prev.filter((id) => id !== target.id));
           await loadSectionData(activeTournament.id);
         } else {
           const data = await res.json();
           alert(data.error || '삭제 실패');
         }
-      } catch (e: any) {
-        alert('삭제 중 오류가 발생했습니다: ' + e.message);
       }
+    } catch (e: any) {
+      alert('삭제 중 오류가 발생했습니다: ' + e.message);
+    } finally {
+      setIsDeleting(false);
+      setDeleteTarget(null);
+    }
+  };
+
+  // 행 삭제 요청 (확인 모달 열기)
+  const handleDeleteRow = (rowId: string) => {
+    const target = gridData.find((row) => row.id === rowId);
+    if (target) {
+      setDeleteTarget(target);
+    } else {
+      if (!confirm('정말 선택한 참가자를 목록에서 지우시겠습니까?')) return;
+      setGridData((prev) => prev.filter((row) => row.id !== rowId));
     }
   };
 
@@ -2596,6 +2614,119 @@ export default function HostDashboardPage({
 
       </main>
 
+      {/* 2.5. 참가자 삭제 확인 대화상자 (모달) */}
+      {deleteTarget && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '20px',
+            maxWidth: '460px',
+            width: '100%',
+            overflow: 'hidden',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            border: '1px solid rgba(226, 232, 240, 0.8)'
+          }}>
+            <div style={{ padding: '24px 24px 16px', display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+              <div style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '12px',
+                background: '#fee2e2',
+                color: '#ef4444',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <Trash2 size={22} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800', color: '#1e293b' }}>
+                  참가자 삭제 확인
+                </h3>
+                <p style={{ margin: '8px 0 0', fontSize: '0.92rem', color: '#64748b', lineHeight: '1.5' }}>
+                  정말 <strong style={{ color: '#0f172a' }}>'{deleteTarget.name || '미등록 참가자'}'</strong> 님의 참가 신청 정보를 삭제하시겠습니까?
+                </p>
+              </div>
+            </div>
+
+            <div style={{ margin: '0 24px 18px', padding: '14px 16px', background: '#f8fafc', borderRadius: '12px', border: '1px solid var(--border-color)', fontSize: '0.86rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '70px 1fr', gap: '8px', color: '#475569' }}>
+                <span style={{ fontWeight: '700', color: '#64748b' }}>참가종목:</span>
+                <span style={{ fontWeight: '600', color: 'var(--theme-primary)' }}>{deleteTarget.division || '-'}</span>
+                
+                <span style={{ fontWeight: '700', color: '#64748b' }}>소속클럽:</span>
+                <span style={{ fontWeight: '600' }}>{deleteTarget.club || '-'}</span>
+                
+                <span style={{ fontWeight: '700', color: '#64748b' }}>생년월일:</span>
+                <span>{deleteTarget.birth || '-'}</span>
+                
+                <span style={{ fontWeight: '700', color: '#64748b' }}>연락처:</span>
+                <span>{deleteTarget.phone || '-'}</span>
+              </div>
+              <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px dashed #cbd5e1', color: '#dc2626', fontSize: '0.8rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <AlertCircle size={15} />
+                <span>삭제 시 데이터베이스에서 영구히 삭제되며 복구할 수 없습니다.</span>
+              </div>
+            </div>
+
+            <div style={{ padding: '16px 24px', background: '#f8fafc', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                disabled={isDeleting}
+                style={{
+                  padding: '10px 18px',
+                  borderRadius: '10px',
+                  border: '1px solid #cbd5e1',
+                  background: 'white',
+                  color: '#475569',
+                  fontWeight: '700',
+                  fontSize: '0.9rem',
+                  cursor: isDeleting ? 'not-allowed' : 'pointer'
+                }}
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                style={{
+                  padding: '10px 20px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  background: '#ef4444',
+                  color: 'white',
+                  fontWeight: '700',
+                  fontSize: '0.9rem',
+                  cursor: isDeleting ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                {isDeleting ? <RefreshCw className="animate-spin" size={15} /> : <Trash2 size={15} />}
+                {isDeleting ? '삭제 중...' : '삭제 확인'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 3. 참가 신청서 원본 복제형 상세 뷰 모달 (12단계 네이버 폼 정보 정밀 복사) */}
       {selectedReg && (() => {
         // rawRegistrations에서 원본 response 찾기
@@ -2791,9 +2922,33 @@ export default function HostDashboardPage({
                 padding: '20px 30px',
                 borderTop: '1px solid var(--border-color)',
                 display: 'flex',
-                justifyContent: 'flex-end',
+                justifyContent: 'space-between',
+                alignItems: 'center',
                 background: '#f8fafc'
               }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const target = selectedReg;
+                    setSelectedReg(null);
+                    setDeleteTarget(target);
+                  }}
+                  style={{
+                    padding: '9px 16px',
+                    borderRadius: '8px',
+                    border: '1px solid #fecaca',
+                    background: '#fee2e2',
+                    color: '#dc2626',
+                    fontWeight: '700',
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <Trash2 size={15} /> 이 참가자 삭제
+                </button>
                 <button
                   onClick={() => setSelectedReg(null)}
                   className="btn-primary"
