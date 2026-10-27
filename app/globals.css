@@ -900,11 +900,11 @@ button, input, select, textarea {
     overflow: visible !important;
   }
 
-  /* 화면 전용 UI 요소들 일체 숨김 */
+  /* 화면 전용 UI 요소들 일체 숨김 (상단 심판 제어기, 버튼, 배너, 스프레드시트 등) */
   header, footer, nav, .site-header, .mobile-tabbar, .mobile-menu-overlay,
   .btn-primary, .btn-secondary, button, input, select, textarea,
   .hero-section, .subtab-bar, .mobile-header-actions, .mobile-hamburger-btn,
-  .no-print {
+  .no-print, .referee-screen-content, .referee-screen-ui {
     display: none !important;
   }
 
@@ -913,7 +913,7 @@ button, input, select, textarea {
     display: block !important;
     position: static !important;
     width: 100% !important;
-    padding: 10mm 15mm !important;
+    padding: 6mm 8mm !important;
     background: #ffffff !important;
     color: #000000 !important;
     box-sizing: border-box !important;

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, use } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Award, Calendar, Layers, FileText, CheckCircle2, User, UserPlus, RefreshCw, Archive, Search, Compass, MapPin, Phone, Sparkles, Trophy, Smartphone, ShieldCheck, X, AlertTriangle, Menu, Copy, Check, ExternalLink } from 'lucide-react';
+import { Award, Calendar, Layers, FileText, CheckCircle2, User, UserPlus, RefreshCw, Archive, Search, Compass, MapPin, Phone, Sparkles, Trophy, Smartphone, ShieldCheck, X, AlertTriangle, Menu, Copy, Check, ExternalLink, Bell, MessageSquare, Megaphone, Lock, Unlock, HelpCircle, Edit3, Trash2, Plus, Clock } from 'lucide-react';
 
 interface TenantData {
   id: string;
@@ -261,7 +261,7 @@ export default function TenantPortalPage({
     awardsList: rawAwardsList,
   };
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'notice' | 'intro' | 'live' | 'gallery' | 'archive'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'notice' | 'intro' | 'live' | 'gallery' | 'archive' | 'announcements' | 'qna'>('overview');
   const [activeSubTab, setActiveSubTab] = useState<string>('');
   const [activeDivisionTab, setActiveDivisionTab] = useState<string>('윈드포일');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -278,6 +278,201 @@ export default function TenantPortalPage({
   const [registrations, setRegistrations] = useState<any[]>([]);
   const [regsLoading, setRegsLoading] = useState(false);
   const [liveStatus, setLiveStatus] = useState<'connected' | 'reconnecting' | 'disconnected'>('disconnected');
+
+  // 공지사항 (알림) 및 팝업 공지 상태
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [loadingAnnouncements, setLoadingAnnouncements] = useState(false);
+  const [announcementSearch, setAnnouncementSearch] = useState('');
+  const [selectedAnnouncementCategory, setSelectedAnnouncementCategory] = useState('전체');
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState<any | null>(null);
+  const [activePopupAnnouncement, setActivePopupAnnouncement] = useState<any | null>(null);
+  const [dontShowPopupToday, setDontShowPopupToday] = useState(false);
+
+  // Q&A 게시판 상태
+  const [qnaList, setQnaList] = useState<any[]>([]);
+  const [loadingQna, setLoadingQna] = useState(false);
+  const [qnaSearch, setQnaSearch] = useState('');
+  const [isQnaWriteModalOpen, setIsQnaWriteModalOpen] = useState(false);
+  const [qnaWriteForm, setQnaWriteForm] = useState({
+    title: '',
+    content: '',
+    authorName: '',
+    password: '',
+    isSecret: false,
+  });
+  const [isSubmittingQna, setIsSubmittingQna] = useState(false);
+  const [selectedQna, setSelectedQna] = useState<any | null>(null);
+  const [qnaPasswordModal, setQnaPasswordModal] = useState<{
+    open: boolean;
+    targetItem: any | null;
+    inputPassword: string;
+    error: string;
+    isVerifying: boolean;
+  }>({
+    open: false,
+    targetItem: null,
+    inputPassword: '',
+    error: '',
+    isVerifying: false,
+  });
+  const [unlockedQnaPosts, setUnlockedQnaPosts] = useState<Record<string, any>>({});
+
+  // 공지사항 조회 및 팝업 공지 체크
+  const fetchPublicAnnouncements = async () => {
+    if (!subdomain) return;
+    setLoadingAnnouncements(true);
+    try {
+      const res = await fetch(`/api/tenant/${subdomain}/announcements?_t=${Date.now()}`);
+      const data = await res.json();
+      if (data.announcements && Array.isArray(data.announcements)) {
+        setAnnouncements(data.announcements);
+
+        // 팝업 공지 검사 (isPopup: true인 최신 공지 확인)
+        const popupItem = data.announcements.find((item: any) => item.isPopup);
+        if (popupItem && typeof window !== 'undefined') {
+          const hideKey = `gentrophy_hide_popup_${subdomain}_${popupItem.id}`;
+          const hideUntil = localStorage.getItem(hideKey);
+          if (!hideUntil || Number(hideUntil) <= Date.now()) {
+            setActivePopupAnnouncement(popupItem);
+          }
+        }
+      }
+    } catch (e) {
+      console.error('공지사항 조회 오류:', e);
+    } finally {
+      setLoadingAnnouncements(false);
+    }
+  };
+
+  // Q&A 목록 조회
+  const fetchPublicQnaList = async () => {
+    if (!subdomain) return;
+    setLoadingQna(true);
+    try {
+      const res = await fetch(`/api/tenant/${subdomain}/qna?_t=${Date.now()}`);
+      const data = await res.json();
+      if (data.qnaList && Array.isArray(data.qnaList)) {
+        setQnaList(data.qnaList);
+      }
+    } catch (e) {
+      console.error('Q&A 조회 오류:', e);
+    } finally {
+      setLoadingQna(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPublicAnnouncements();
+    fetchPublicQnaList();
+  }, [subdomain]);
+
+  const handleClosePopup = () => {
+    if (activePopupAnnouncement && dontShowPopupToday && typeof window !== 'undefined') {
+      const hideKey = `gentrophy_hide_popup_${subdomain}_${activePopupAnnouncement.id}`;
+      const expireTime = Date.now() + 24 * 60 * 60 * 1000;
+      localStorage.setItem(hideKey, String(expireTime));
+    }
+    setActivePopupAnnouncement(null);
+  };
+
+  const handleCreateQna = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!qnaWriteForm.authorName.trim()) {
+      alert('작성자 이름을 입력해 주세요.');
+      return;
+    }
+    if (!qnaWriteForm.password.trim() || qnaWriteForm.password.trim().length < 4) {
+      alert('비밀번호를 4자리 이상 입력해 주세요 (글 수정/삭제 및 비밀글 열람용).');
+      return;
+    }
+    if (!qnaWriteForm.title.trim()) {
+      alert('질문 제목을 입력해 주세요.');
+      return;
+    }
+    if (!qnaWriteForm.content.trim()) {
+      alert('질문 내용을 입력해 주세요.');
+      return;
+    }
+
+    setIsSubmittingQna(true);
+    try {
+      const res = await fetch(`/api/tenant/${subdomain}/qna`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(qnaWriteForm),
+      });
+
+      if (res.ok) {
+        alert('Q&A 질문이 성공적으로 등록되었습니다.');
+        setIsQnaWriteModalOpen(false);
+        setQnaWriteForm({
+          title: '',
+          content: '',
+          authorName: '',
+          password: '',
+          isSecret: false,
+        });
+        await fetchPublicQnaList();
+      } else {
+        const data = await res.json();
+        alert(data.error || '등록 실패');
+      }
+    } catch (err: any) {
+      alert('등록 중 오류 발생: ' + err.message);
+    } finally {
+      setIsSubmittingQna(false);
+    }
+  };
+
+  const handleVerifyQnaPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!qnaPasswordModal.targetItem) return;
+    if (!qnaPasswordModal.inputPassword.trim()) {
+      setQnaPasswordModal(prev => ({ ...prev, error: '비밀번호를 입력해 주세요.' }));
+      return;
+    }
+
+    setQnaPasswordModal(prev => ({ ...prev, isVerifying: true, error: '' }));
+    try {
+      const res = await fetch(`/api/tenant/${subdomain}/qna/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: qnaPasswordModal.targetItem.id,
+          password: qnaPasswordModal.inputPassword.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setUnlockedQnaPosts(prev => ({ ...prev, [data.qna.id]: data.qna }));
+        setSelectedQna(data.qna);
+        setQnaPasswordModal({ open: false, targetItem: null, inputPassword: '', error: '', isVerifying: false });
+      } else {
+        setQnaPasswordModal(prev => ({ ...prev, error: data.error || '비밀번호가 일치하지 않습니다.', isVerifying: false }));
+      }
+    } catch (err: any) {
+      setQnaPasswordModal(prev => ({ ...prev, error: '검증 중 오류가 발생했습니다.', isVerifying: false }));
+    }
+  };
+
+  const handleOpenQnaItem = (item: any) => {
+    if (!item.isSecret) {
+      setSelectedQna(item);
+      return;
+    }
+    if (unlockedQnaPosts[item.id]) {
+      setSelectedQna(unlockedQnaPosts[item.id]);
+      return;
+    }
+    setQnaPasswordModal({
+      open: true,
+      targetItem: item,
+      inputPassword: '',
+      error: '',
+      isVerifying: false,
+    });
+  };
 
   // 대진표 데이터
   const [matches, setMatches] = useState<Match[]>([]);
@@ -496,7 +691,7 @@ export default function TenantPortalPage({
     const divisionField = formFields.find((f: any) => f.id === 'division');
     const configuredDivisions = divisionField?.options || [];
     if (configuredDivisions.length > 0) {
-      return configuredDivisions;
+      return [...configuredDivisions, '단체전'];
     }
     return [
       '윈드포일',
@@ -505,7 +700,8 @@ export default function TenantPortalPage({
       '혼합오픈 (남자부)',
       '혼합오픈 (여자부)',
       '펀엔포뮬러 (남자부)',
-      '펀엔포뮬러 (여자부)'
+      '펀엔포뮬러 (여자부)',
+      '단체전'
     ];
   };
 
@@ -1618,6 +1814,29 @@ export default function TenantPortalPage({
               disabled: false
             },
             {
+              id: 'announcements',
+              label: '공지사항',
+              icon: (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                </svg>
+              ),
+              defaultSubTab: '',
+              disabled: false
+            },
+            {
+              id: 'qna',
+              label: 'Q&A 문의',
+              icon: (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
+              ),
+              defaultSubTab: '',
+              disabled: false
+            },
+            {
               id: 'intro',
               label: '대회소개',
               icon: (
@@ -1845,6 +2064,8 @@ export default function TenantPortalPage({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
               {[
                 { id: 'overview', label: '대회 요강', icon: '📋', defaultSubTab: '' },
+                { id: 'announcements', label: '공지사항 (알림)', icon: '🔔', defaultSubTab: '' },
+                { id: 'qna', label: 'Q&A 문의게시판', icon: '💬', defaultSubTab: '' },
                 { id: 'intro', label: '대회소개 및 일정', icon: '⛵', defaultSubTab: 'intro-greeting' },
                 { id: 'live', label: '실시간 경기운영 / 순위', icon: '⏱️', defaultSubTab: 'live-leaderboard', disabled: !ongoingTournament },
                 { id: 'gallery', label: '미디어 & 갤러리', icon: '📸', defaultSubTab: 'gallery-photos' },
@@ -2067,7 +2288,7 @@ export default function TenantPortalPage({
         <div className="content-inner">
 
           {/* 가로형 서브 탭 네비게이션 Pill Bar */}
-          {activeTab !== 'overview' && activeTab !== 'notice' && (
+          {activeTab !== 'overview' && activeTab !== 'notice' && activeTab !== 'announcements' && activeTab !== 'qna' && (
             <div className="subtab-bar" style={{
               display: 'flex',
               gap: '10px',
@@ -2196,7 +2417,7 @@ export default function TenantPortalPage({
               {/* 종목 카테고리 필터바 */}
               <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
                 {(() => {
-                  const categories = ['전체', '윈드포일', '윙포일', '혼합오픈', '펀엔포뮬러'];
+                  const categories = ['전체', '윈드포일', '윙포일', '혼합오픈', '펀엔포뮬러', '단체전'];
                   return categories.map((cat: string) => {
                     const active = selectedLeaderboardCategory === cat;
                     return (
@@ -2428,10 +2649,36 @@ export default function TenantPortalPage({
 
                     const activeRoot = selectedLeaderboardCategory;
                     const rootsToRender = activeRoot === '전체'
-                      ? ['윈드포일', '윙포일', '혼합오픈', '펀엔포뮬러']
+                      ? ['윈드포일', '윙포일', '혼합오픈', '펀엔포뮬러', '단체전']
                       : [activeRoot];
 
                     return rootsToRender.map((root: string) => {
+                      if (root === '단체전') {
+                        const teamList = leaderboards['단체전'] || [];
+                        if (activeRoot === '전체' && teamList.length === 0) return null;
+
+                        return (
+                          <div key={root} style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '10px' }}>
+                            <div style={{ margin: '15px 0 0px 0', padding: '4px 12px', borderLeft: '4px solid #10b981' }}>
+                              <h3 style={{ fontSize: '1.3rem', fontWeight: '900', color: 'var(--text-main)', margin: 0 }}>
+                                단체전 (소속협회/클럽 대항전)
+                              </h3>
+                            </div>
+
+                            <div className="glass-panel" style={{ background: 'white', padding: '24px 30px', borderTop: '4px solid #10b981' }}>
+                              <h4 style={{ fontSize: '1.15rem', fontWeight: '900', color: 'var(--text-main)', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ fontSize: '1.2rem' }}>🏆</span> 단체전 (소속협회/클럽 대항전)
+                              </h4>
+                              {teamList.length === 0 ? (
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '10px 0' }}>
+                                  해당 부서의 등록/확정된 순위표가 없습니다.
+                                </p>
+                              ) : renderTable(teamList, '단체전')}
+                            </div>
+                          </div>
+                        );
+                      }
+
                       if (root === '윈드포일') {
                         const openList = leaderboards['윈드포일'] || [];
                         if (activeRoot === '전체' && openList.length === 0) return null;
@@ -3798,6 +4045,359 @@ export default function TenantPortalPage({
             </div>
           )}
 
+          {/* ── 공지사항 (알림) 섹션 ── */}
+          {activeTab === 'announcements' && (() => {
+            const filteredAnnouncements = announcements.filter(item => {
+              const matchesCategory = selectedAnnouncementCategory === '전체' || item.category === selectedAnnouncementCategory;
+              const matchesSearch = !announcementSearch.trim() ||
+                (item.title && item.title.toLowerCase().includes(announcementSearch.toLowerCase())) ||
+                (item.content && item.content.toLowerCase().includes(announcementSearch.toLowerCase()));
+              return matchesCategory && matchesSearch;
+            });
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '30px', maxWidth: '960px', margin: '0 auto', width: '100%' }} className="animate-fade-in">
+                {/* 헤더 배너 */}
+                <div className="glass-panel" style={{ background: 'white', padding: '35px 30px', borderTop: '4px solid var(--theme-primary)', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '60px', height: '60px', background: 'rgba(31, 111, 139, 0.1)', borderRadius: '50%', color: 'var(--theme-primary)', marginBottom: '4px' }}>
+                    <Bell size={28} />
+                  </div>
+                  <h2 style={{ fontSize: '1.8rem', fontWeight: '900', color: 'var(--text-main)', margin: 0 }}>
+                    대회 공지사항 및 공식 알림
+                  </h2>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', margin: 0, maxWidth: '600px' }}>
+                    {tenant?.name || '제20회 이순신장군배 전국윈드서핑대회'}의 공식 안내, 긴급 공지, 경기 변경 사항 등을 실시간으로 전해드립니다.
+                  </p>
+                </div>
+
+                {/* 검색 및 카테고리 필터 바 */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
+                  <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+                    {['전체', '일반공지', '경기안내', '긴급공지', '결과안내'].map(cat => (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => setSelectedAnnouncementCategory(cat)}
+                        style={{
+                          padding: '8px 16px',
+                          borderRadius: '20px',
+                          border: 'none',
+                          fontSize: '0.85rem',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          background: selectedAnnouncementCategory === cat ? 'var(--theme-primary)' : 'white',
+                          color: selectedAnnouncementCategory === cat ? 'white' : 'var(--text-muted)',
+                          boxShadow: selectedAnnouncementCategory === cat ? '0 4px 10px rgba(31, 111, 139, 0.25)' : '0 1px 3px rgba(0,0,0,0.05)',
+                          transition: 'all 0.2s',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'white', border: '1px solid var(--border-color)', borderRadius: '20px', padding: '6px 14px', width: '260px' }}>
+                    <Search size={16} style={{ color: 'var(--text-muted)' }} />
+                    <input
+                      type="text"
+                      placeholder="공지사항 검색..."
+                      value={announcementSearch}
+                      onChange={(e) => setAnnouncementSearch(e.target.value)}
+                      style={{ border: 'none', outline: 'none', background: 'transparent', width: '100%', fontSize: '0.85rem' }}
+                    />
+                  </div>
+                </div>
+
+                {/* 공지사항 카드 리스트 */}
+                {loadingAnnouncements ? (
+                  <div style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                    <RefreshCw className="animate-spin" size={26} style={{ margin: '0 auto 12px' }} />
+                    <p style={{ margin: 0, fontWeight: '700' }}>공지사항을 불러오는 중입니다...</p>
+                  </div>
+                ) : filteredAnnouncements.length === 0 ? (
+                  <div className="glass-panel" style={{ padding: '60px 20px', textAlign: 'center', background: 'white' }}>
+                    <Bell size={40} style={{ margin: '0 auto 14px', opacity: 0.25, color: 'var(--text-muted)' }} />
+                    <p style={{ margin: '0 0 6px', fontWeight: '800', fontSize: '1.1rem', color: 'var(--text-main)' }}>
+                      등록된 공지사항이 없습니다.
+                    </p>
+                    <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                      새로운 공지가 등록되면 이곳에 즉시 표시됩니다.
+                    </p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    {filteredAnnouncements.map((item, idx) => {
+                      const isExpanded = selectedAnnouncement?.id === item.id;
+                      const dateStr = item.createdAt ? new Date(item.createdAt).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }) : '-';
+
+                      return (
+                        <div
+                          key={item.id}
+                          className="glass-panel"
+                          style={{
+                            background: 'white',
+                            borderRadius: '16px',
+                            border: item.isPinned ? '2px solid rgba(31, 111, 139, 0.35)' : '1px solid var(--border-color)',
+                            overflow: 'hidden',
+                            transition: 'all 0.2s ease',
+                            boxShadow: item.isPinned ? '0 6px 18px rgba(31, 111, 139, 0.08)' : '0 2px 8px rgba(0,0,0,0.03)'
+                          }}
+                        >
+                          <div
+                            onClick={() => setSelectedAnnouncement(isExpanded ? null : item)}
+                            style={{
+                              padding: '20px 24px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: '16px',
+                              background: item.isPinned ? 'rgba(31, 111, 139, 0.03)' : 'white'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
+                              {item.isPinned && (
+                                <span style={{ padding: '4px 8px', borderRadius: '6px', background: 'rgba(197, 168, 128, 0.2)', color: '#b39366', fontWeight: '800', fontSize: '0.75rem', flexShrink: 0 }}>
+                                  📌 중요
+                                </span>
+                              )}
+                              <span style={{
+                                padding: '4px 10px',
+                                borderRadius: '6px',
+                                background: item.category === '긴급공지' ? '#fee2e2' : '#f1f5f9',
+                                color: item.category === '긴급공지' ? '#dc2626' : '#475569',
+                                fontWeight: '700',
+                                fontSize: '0.78rem',
+                                flexShrink: 0
+                              }}>
+                                {item.category || '일반공지'}
+                              </span>
+                              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '800', color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {item.title}
+                              </h3>
+                              {item.isPopup && (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '2px 8px', borderRadius: '12px', background: '#fef2f2', color: '#dc2626', fontSize: '0.72rem', fontWeight: '800', flexShrink: 0 }}>
+                                  <Bell size={10} /> 팝업알림
+                                </span>
+                              )}
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0 }}>
+                              <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{dateStr}</span>
+                              <span style={{ fontSize: '0.85rem', color: 'var(--theme-primary)', fontWeight: '700' }}>
+                                {isExpanded ? '접기 ▲' : '보기 ▼'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {isExpanded && (
+                            <div style={{ padding: '20px 24px', borderTop: '1px solid #f1f5f9', background: '#fafbfc' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                                <span>작성: <strong>{item.author || '대회운영본부'}</strong></span>
+                                <span>등록일: {new Date(item.createdAt).toLocaleString('ko-KR')}</span>
+                              </div>
+                              <div style={{ fontSize: '0.95rem', color: '#334155', lineHeight: '1.75', whiteSpace: 'pre-wrap', padding: '16px', background: 'white', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                                {item.content}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* ── Q&A 문의 게시판 섹션 ── */}
+          {activeTab === 'qna' && (() => {
+            const filteredQna = qnaList.filter(item => {
+              if (!qnaSearch.trim()) return true;
+              const q = qnaSearch.toLowerCase();
+              return (item.title && item.title.toLowerCase().includes(q)) ||
+                     (item.authorName && item.authorName.toLowerCase().includes(q));
+            });
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '30px', maxWidth: '960px', margin: '0 auto', width: '100%' }} className="animate-fade-in">
+                {/* 헤더 배너 */}
+                <div className="glass-panel" style={{ background: 'white', padding: '35px 30px', borderTop: '4px solid var(--theme-primary)', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '60px', height: '60px', background: 'rgba(31, 111, 139, 0.1)', borderRadius: '50%', color: 'var(--theme-primary)', marginBottom: '4px' }}>
+                    <MessageSquare size={28} />
+                  </div>
+                  <h2 style={{ fontSize: '1.8rem', fontWeight: '900', color: 'var(--text-main)', margin: 0 }}>
+                    Q&A 참가자 문의 및 안내
+                  </h2>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', margin: 0, maxWidth: '600px' }}>
+                    대회 참가 신청, 경기 규정, 장비 계측, 일정 등 궁금한 점을 질문해 주세요. 이름과 비밀번호로 간편하게 글을 작성할 수 있습니다.
+                  </p>
+                </div>
+
+                {/* 툴바 (질문 작성 버튼 & 검색) */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsQnaWriteModalOpen(true)}
+                    className="btn-primary"
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 22px', fontSize: '0.95rem', borderRadius: '12px', boxShadow: '0 4px 12px rgba(31, 111, 139, 0.25)' }}
+                  >
+                    <Plus size={18} /> 질문 작성하기
+                  </button>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'white', border: '1px solid var(--border-color)', borderRadius: '20px', padding: '8px 16px', width: '280px' }}>
+                    <Search size={16} style={{ color: 'var(--text-muted)' }} />
+                    <input
+                      type="text"
+                      placeholder="질문 제목 또는 작성자 검색..."
+                      value={qnaSearch}
+                      onChange={(e) => setQnaSearch(e.target.value)}
+                      style={{ border: 'none', outline: 'none', background: 'transparent', width: '100%', fontSize: '0.88rem' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Q&A 카드 리스트 */}
+                {loadingQna ? (
+                  <div style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                    <RefreshCw className="animate-spin" size={26} style={{ margin: '0 auto 12px' }} />
+                    <p style={{ margin: 0, fontWeight: '700' }}>Q&A 목록을 불러오는 중입니다...</p>
+                  </div>
+                ) : filteredQna.length === 0 ? (
+                  <div className="glass-panel" style={{ padding: '60px 20px', textAlign: 'center', background: 'white' }}>
+                    <HelpCircle size={40} style={{ margin: '0 auto 14px', opacity: 0.25, color: 'var(--text-muted)' }} />
+                    <p style={{ margin: '0 0 8px', fontWeight: '800', fontSize: '1.1rem', color: 'var(--text-main)' }}>
+                      등록된 Q&A 문의글이 없습니다.
+                    </p>
+                    <p style={{ margin: '0 0 16px', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                      대회에 대해 궁금하신 점이 있으시면 언제든지 첫 번째 질문을 남겨주세요!
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setIsQnaWriteModalOpen(true)}
+                      className="btn-primary"
+                      style={{ padding: '10px 20px', fontSize: '0.9rem', borderRadius: '10px' }}
+                    >
+                      질문 작성하기
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    {filteredQna.map((item, idx) => {
+                      const isAnswered = item.status === 'ANSWERED' || Boolean(item.answer);
+                      const isUnlocked = unlockedQnaPosts[item.id];
+                      const displayItem = isUnlocked || item;
+                      const isExpanded = selectedQna?.id === item.id;
+                      const dateStr = item.createdAt ? new Date(item.createdAt).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }) : '-';
+
+                      return (
+                        <div
+                          key={item.id}
+                          className="glass-panel"
+                          style={{
+                            background: 'white',
+                            borderRadius: '16px',
+                            border: isAnswered ? '1px solid rgba(5, 150, 105, 0.2)' : '1px solid var(--border-color)',
+                            overflow: 'hidden',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
+                          }}
+                        >
+                          <div
+                            onClick={() => handleOpenQnaItem(item)}
+                            style={{
+                              padding: '20px 24px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: '16px'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
+                              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '700', minWidth: '32px' }}>
+                                #{filteredQna.length - idx}
+                              </span>
+
+                              {isAnswered ? (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '4px 8px', borderRadius: '20px', background: '#ecfdf5', color: '#059669', fontSize: '0.75rem', fontWeight: '800', flexShrink: 0 }}>
+                                  <CheckCircle2 size={11} /> 답변완료
+                                </span>
+                              ) : (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '4px 8px', borderRadius: '20px', background: '#fffbeb', color: '#d97706', fontSize: '0.75rem', fontWeight: '800', flexShrink: 0 }}>
+                                  <Clock size={11} /> 답변대기
+                                </span>
+                              )}
+
+                              {item.isSecret && (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '3px 7px', borderRadius: '4px', background: '#fef2f2', color: '#dc2626', fontSize: '0.75rem', fontWeight: '800', flexShrink: 0 }}>
+                                  <Lock size={11} /> 비밀글
+                                </span>
+                              )}
+
+                              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '800', color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {item.title}
+                              </h3>
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0 }}>
+                              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{item.authorName}</span>
+                              <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{dateStr}</span>
+                              <span style={{ fontSize: '0.85rem', color: 'var(--theme-primary)', fontWeight: '700' }}>
+                                {item.isSecret && !isUnlocked ? '🔒 열람' : (isExpanded ? '접기 ▲' : '보기 ▼')}
+                              </span>
+                            </div>
+                          </div>
+
+                          {isExpanded && (!item.isSecret || isUnlocked) && (
+                            <div style={{ padding: '22px 24px', borderTop: '1px solid #f1f5f9', background: '#fafbfc' }}>
+                              {/* 질문 본문 */}
+                              <div style={{ marginBottom: '18px' }}>
+                                <div style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                                  Q. 질문 내용 ({new Date(item.createdAt).toLocaleString('ko-KR')})
+                                </div>
+                                <div style={{ fontSize: '0.95rem', color: '#1e293b', lineHeight: '1.7', whiteSpace: 'pre-wrap', padding: '16px', background: 'white', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                                  {displayItem.content}
+                                </div>
+                              </div>
+
+                              {/* 주최측 공식 답변 */}
+                              {displayItem.answer ? (
+                                <div style={{ padding: '18px 20px', background: 'linear-gradient(135deg, rgba(5, 150, 105, 0.06) 0%, rgba(31, 111, 139, 0.06) 100%)', borderRadius: '12px', border: '1px solid rgba(5, 150, 105, 0.2)' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                    <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#059669', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '900' }}>
+                                      A
+                                    </div>
+                                    <span style={{ fontSize: '0.88rem', fontWeight: '800', color: '#059669' }}>
+                                      주최측 공식 답변 ({displayItem.answeredBy || '대회운영본부'})
+                                    </span>
+                                    {displayItem.answeredAt && (
+                                      <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginLeft: 'auto' }}>
+                                        {new Date(displayItem.answeredAt).toLocaleString('ko-KR')}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div style={{ fontSize: '0.92rem', color: '#0f172a', lineHeight: '1.7', whiteSpace: 'pre-wrap', paddingLeft: '30px' }}>
+                                    {displayItem.answer}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div style={{ padding: '14px 18px', background: '#fffbeb', borderRadius: '10px', border: '1px solid #fef3c7', display: 'flex', alignItems: 'center', gap: '10px', color: '#b45309', fontSize: '0.88rem', fontWeight: '600' }}>
+                                  <Clock size={16} />
+                                  <span>주최측에서 확인 중이며 빠른 시일 내에 답변이 등록될 예정입니다.</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
         </main>
       </div>
       </div>
@@ -3921,10 +4521,10 @@ export default function TenantPortalPage({
         <div className="mobile-tabbar-inner">
           {[
             { id: 'overview', label: '대회요강', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>, defaultSubTab: '' },
-            { id: 'intro', label: '대회소개', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>, defaultSubTab: 'intro-greeting' },
+            { id: 'announcements', label: '공지사항', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>, defaultSubTab: '' },
+            { id: 'qna', label: 'Q&A', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>, defaultSubTab: '' },
             { id: 'live', label: '경기운영', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>, defaultSubTab: 'live-leaderboard', disabled: !ongoingTournament },
             { id: 'gallery', label: '미디어', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>, defaultSubTab: 'gallery-photos' },
-            { id: 'archive', label: '역대기록', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.45 1-1 1H4v2h16v-2h-5c-.55 0-1-.45-1-1v-2.34M12 2a7 7 0 0 1 7 7v4.66a5 5 0 0 1-5 4.67h-4a5 5 0 0 1-5-4.67V9a7 7 0 0 1 7-7z"/></svg>, defaultSubTab: 'archive-home' },
             { id: 'notice', label: '공시서', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>, defaultSubTab: '' },
           ].map((tab) => (
             <button
@@ -3954,6 +4554,365 @@ export default function TenantPortalPage({
           ))}
         </div>
       </div>
+
+      {/* ── 팝업 공지 안내창 (신규 알림글 팝업 + 더 이상 보지 않기 체크박스) ── */}
+      {activePopupAnnouncement && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.7)',
+          backdropFilter: 'blur(5px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100000,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '24px',
+            maxWidth: '520px',
+            width: '100%',
+            overflow: 'hidden',
+            boxShadow: '0 30px 60px -15px rgba(0, 0, 0, 0.35)',
+            border: '2px solid rgba(197, 168, 128, 0.4)',
+            animation: 'modalSlideUp 0.25s ease-out',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            {/* 팝업 헤더 */}
+            <div style={{
+              background: 'linear-gradient(135deg, var(--theme-primary) 0%, #004d4d 100%)',
+              padding: '22px 24px',
+              color: 'white',
+              position: 'relative'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                <span style={{ padding: '3px 10px', borderRadius: '12px', background: 'rgba(255,255,255,0.2)', fontSize: '0.78rem', fontWeight: '800', letterSpacing: '0.5px' }}>
+                  {activePopupAnnouncement.category || '공식 알림'}
+                </span>
+                <span style={{ fontSize: '0.78rem', opacity: 0.85 }}>
+                  {new Date(activePopupAnnouncement.createdAt).toLocaleDateString('ko-KR')}
+                </span>
+              </div>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '900', lineHeight: '1.4', paddingRight: '32px' }}>
+                {activePopupAnnouncement.title}
+              </h3>
+              <button
+                type="button"
+                onClick={handleClosePopup}
+                style={{
+                  position: 'absolute',
+                  top: '18px',
+                  right: '18px',
+                  background: 'rgba(255,255,255,0.15)',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  cursor: 'pointer'
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* 팝업 본문 */}
+            <div style={{ padding: '24px', maxHeight: '55vh', overflowY: 'auto' }}>
+              <div style={{
+                fontSize: '0.95rem',
+                color: '#334155',
+                lineHeight: '1.75',
+                whiteSpace: 'pre-wrap',
+                background: '#f8fafc',
+                padding: '18px 20px',
+                borderRadius: '14px',
+                border: '1px solid #e2e8f0'
+              }}>
+                {activePopupAnnouncement.content}
+              </div>
+
+              <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                <span>발신: <strong>{activePopupAnnouncement.author || '대회운영본부'}</strong></span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleClosePopup();
+                    setActiveTab('announcements');
+                  }}
+                  style={{ background: 'none', border: 'none', color: 'var(--theme-primary)', fontWeight: '800', cursor: 'pointer', padding: 0 }}
+                >
+                  공지사항 전체보기 →
+                </button>
+              </div>
+            </div>
+
+            {/* 팝업 푸터 (더이상 보지 않기 체크박스 및 닫기) */}
+            <div style={{
+              padding: '16px 24px',
+              background: '#f1f5f9',
+              borderTop: '1px solid #e2e8f0',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', userSelect: 'none' }}>
+                <input
+                  type="checkbox"
+                  checked={dontShowPopupToday}
+                  onChange={(e) => setDontShowPopupToday(e.target.checked)}
+                  style={{ width: '17px', height: '17px', accentColor: 'var(--theme-primary)' }}
+                />
+                <span style={{ fontSize: '0.88rem', fontWeight: '700', color: '#475569' }}>
+                  오늘 하루 보지 않기
+                </span>
+              </label>
+
+              <button
+                type="button"
+                onClick={handleClosePopup}
+                className="btn-primary"
+                style={{ padding: '9px 24px', fontSize: '0.9rem', borderRadius: '10px' }}
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Q&A 질문 작성 모달 ── */}
+      {isQnaWriteModalOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100000,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '20px',
+            maxWidth: '560px',
+            width: '100%',
+            overflow: 'hidden',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            maxHeight: '90vh',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <MessageSquare size={20} style={{ color: 'var(--theme-primary)' }} />
+                Q&A 질문 작성하기
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsQnaWriteModalOpen(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateQna} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', marginBottom: '6px', color: 'var(--text-main)' }}>
+                    작성자 성명 <span style={{ color: '#ef4444' }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="실명 입력"
+                    value={qnaWriteForm.authorName}
+                    onChange={(e) => setQnaWriteForm({ ...qnaWriteForm, authorName: e.target.value })}
+                    style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1px solid var(--border-color)', fontSize: '0.9rem', outline: 'none' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', marginBottom: '6px', color: 'var(--text-main)' }}>
+                    비밀번호 (4자리 이상) <span style={{ color: '#ef4444' }}>*</span>
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="수정/삭제/비밀글용"
+                    value={qnaWriteForm.password}
+                    onChange={(e) => setQnaWriteForm({ ...qnaWriteForm, password: e.target.value })}
+                    style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1px solid var(--border-color)', fontSize: '0.9rem', outline: 'none' }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', marginBottom: '6px', color: 'var(--text-main)' }}>
+                  질문 제목 <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="질문 제목을 입력해 주세요."
+                  value={qnaWriteForm.title}
+                  onChange={(e) => setQnaWriteForm({ ...qnaWriteForm, title: e.target.value })}
+                  style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1px solid var(--border-color)', fontSize: '0.9rem', outline: 'none' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', marginBottom: '6px', color: 'var(--text-main)' }}>
+                  질문 내용 <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <textarea
+                  required
+                  rows={6}
+                  placeholder="문의하실 내용을 자세하게 남겨주시면 주최측에서 신속히 공식 답변을 드립니다."
+                  value={qnaWriteForm.content}
+                  onChange={(e) => setQnaWriteForm({ ...qnaWriteForm, content: e.target.value })}
+                  style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-color)', fontSize: '0.9rem', outline: 'none', resize: 'vertical', lineHeight: '1.6' }}
+                />
+              </div>
+
+              {/* 비밀글 체크박스 */}
+              <div style={{ padding: '12px 16px', background: '#f8fafc', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', userSelect: 'none' }}>
+                  <input
+                    type="checkbox"
+                    checked={qnaWriteForm.isSecret}
+                    onChange={(e) => setQnaWriteForm({ ...qnaWriteForm, isSecret: e.target.checked })}
+                    style={{ width: '18px', height: '18px', accentColor: 'var(--theme-primary)' }}
+                  />
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: '0.88rem', fontWeight: '700', color: 'var(--text-main)' }}>
+                      🔒 비밀글로 등록하기
+                    </span>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                      비밀글로 설정 시 작성자(비밀번호 입력 시)와 대회 관리자만 내용을 열람할 수 있습니다.
+                    </span>
+                  </div>
+                </label>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsQnaWriteModalOpen(false)}
+                  disabled={isSubmittingQna}
+                  className="btn-secondary"
+                  style={{ padding: '10px 18px', fontSize: '0.9rem' }}
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingQna}
+                  className="btn-primary"
+                  style={{ padding: '10px 24px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  {isSubmittingQna ? <RefreshCw className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
+                  {isSubmittingQna ? '등록 중...' : '질문 등록'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Q&A 비밀번호 확인 모달 (비밀글 열람용) ── */}
+      {qnaPasswordModal.open && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100000,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '20px',
+            maxWidth: '420px',
+            width: '100%',
+            overflow: 'hidden',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            border: '1px solid rgba(226, 232, 240, 0.8)'
+          }}>
+            <div style={{ padding: '24px 24px 16px', display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
+              <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#fee2e2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Lock size={22} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '800', color: '#1e293b' }}>
+                  비밀글 본인 확인
+                </h3>
+                <p style={{ margin: '6px 0 0', fontSize: '0.85rem', color: '#64748b', lineHeight: '1.5' }}>
+                  작성 시 설정하신 4자리 이상의 비밀번호를 입력해 주세요.
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleVerifyQnaPassword} style={{ padding: '0 24px 20px' }}>
+              <div style={{ marginBottom: '14px' }}>
+                <input
+                  type="password"
+                  required
+                  autoFocus
+                  placeholder="비밀번호 입력"
+                  value={qnaPasswordModal.inputPassword}
+                  onChange={(e) => setQnaPasswordModal({ ...qnaPasswordModal, inputPassword: e.target.value, error: '' })}
+                  style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-color)', fontSize: '0.95rem', outline: 'none' }}
+                />
+                {qnaPasswordModal.error && (
+                  <p style={{ margin: '6px 0 0', fontSize: '0.82rem', color: '#ef4444', fontWeight: '700' }}>
+                    {qnaPasswordModal.error}
+                  </p>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setQnaPasswordModal({ open: false, targetItem: null, inputPassword: '', error: '', isVerifying: false })}
+                  className="btn-secondary"
+                  style={{ padding: '9px 16px', fontSize: '0.88rem' }}
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  disabled={qnaPasswordModal.isVerifying}
+                  className="btn-primary"
+                  style={{ padding: '9px 20px', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  {qnaPasswordModal.isVerifying ? <RefreshCw className="animate-spin" size={14} /> : <Unlock size={14} />}
+                  확인 및 열람
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* 참가 신청 완료 안내 팝업 모달 */}
       {renderSuccessModal()}

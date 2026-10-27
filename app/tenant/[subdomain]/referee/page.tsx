@@ -79,6 +79,9 @@ export default function RefereeMobilePage({
   const [rawRegistrations, setRawRegistrations] = useState<any[]>([]);
   const [participants, setParticipants] = useState<any[]>([]);
   const [activeDivisionTab, setActiveDivisionTab] = useState<string>('윈드포일');
+  // 단체전 출전 클럽(팀) 관리 상태
+  const [selectedClubToAdd, setSelectedClubToAdd] = useState<string>('');
+  const [customTeamNameToAdd, setCustomTeamNameToAdd] = useState<string>('');
   const [formFields, setFormFields] = useState<any[]>([]);
 
   // 순위 입력란 전용 상태
@@ -574,22 +577,37 @@ export default function RefereeMobilePage({
           return isNaN(num) ? null : num;
         };
 
-        const preliminary = baseRegistrations.map((player) => {
-          const savedRow = sourceList.find((lItem: any) => lItem.id === player.id || lItem.name === player.name);
-          const updated: any = { ...player };
-          if (savedRow) {
-            updated.bibNumber = savedRow.bibNumber || player.bibNumber;
-            updated.rank = savedRow.rank || '-';
+        let preliminary: any[] = [];
+        if (divisionName === '단체전') {
+          preliminary = sourceList.map((team: any, idx: number) => {
+            const updated = { ...team };
+            if (!updated.id) updated.id = `team_${idx + 1}`;
+            if (!updated.name) updated.name = team.club || `팀 ${idx + 1}`;
+            if (!updated.club) updated.club = updated.name;
+            if (!updated.bibNumber) updated.bibNumber = `T${idx + 1}`;
             activeRounds.forEach(r => {
-              updated[r.key] = parseSavedRoundVal(savedRow[r.key]);
+              updated[r.key] = parseSavedRoundVal(team[r.key]);
             });
-          } else {
-            activeRounds.forEach(r => {
-              updated[r.key] = null;
-            });
-          }
-          return updated;
-        });
+            return updated;
+          });
+        } else {
+          preliminary = baseRegistrations.map((player) => {
+            const savedRow = sourceList.find((lItem: any) => lItem.id === player.id || lItem.name === player.name);
+            const updated: any = { ...player };
+            if (savedRow) {
+              updated.bibNumber = savedRow.bibNumber || player.bibNumber;
+              updated.rank = savedRow.rank || '-';
+              activeRounds.forEach(r => {
+                updated[r.key] = parseSavedRoundVal(savedRow[r.key]);
+              });
+            } else {
+              activeRounds.forEach(r => {
+                updated[r.key] = null;
+              });
+            }
+            return updated;
+          });
+        }
 
         const mapped = recalculateAllParticipants(preliminary, activeRounds, activeRule);
 
@@ -617,7 +635,65 @@ export default function RefereeMobilePage({
   };
 
   useEffect(() => {
-    if (activeTournament && rawRegistrations.length > 0) {
+    if (!activeTournament) {
+      setParticipants([]);
+      return;
+    }
+
+    if (activeDivisionTab === '단체전') {
+      const clubNames = Array.from(
+        new Set(
+          rawRegistrations
+            .map((r: any) => r.club?.trim())
+            .filter(Boolean)
+        )
+      ) as string[];
+
+      const teamStorageKey = `gentrophy_${activeTournament.id}_teams_단체전`;
+      let defaultTeams: any[] = [];
+      if (typeof window !== 'undefined') {
+        const savedTeamsStr = localStorage.getItem(teamStorageKey);
+        if (savedTeamsStr) {
+          try {
+            const parsed = JSON.parse(savedTeamsStr);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              defaultTeams = parsed;
+            }
+          } catch (e) {}
+        }
+      }
+
+      if (defaultTeams.length === 0) {
+        if (clubNames.length > 0) {
+          defaultTeams = clubNames.map((club, idx) => ({
+            id: `team_${idx + 1}`,
+            name: club,
+            club: club,
+            bibNumber: `T${idx + 1}`,
+            birth: '단체팀',
+            division: '단체전',
+            total: 0,
+            rank: '-'
+          }));
+        } else {
+          defaultTeams = [
+            { id: 'team_1', name: '통영윈드서핑클럽', club: '통영윈드서핑클럽', bibNumber: 'T1', birth: '단체팀', division: '단체전', total: 0, rank: '-' },
+            { id: 'team_2', name: '거제요트클럽', club: '거제요트클럽', bibNumber: 'T2', birth: '단체팀', division: '단체전', total: 0, rank: '-' },
+            { id: 'team_3', name: '부산세일링클럽', club: '부산세일링클럽', bibNumber: 'T3', birth: '단체팀', division: '단체전', total: 0, rank: '-' },
+            { id: 'team_4', name: '창원윈드클럽', club: '창원윈드클럽', bibNumber: 'T4', birth: '단체팀', division: '단체전', total: 0, rank: '-' }
+          ];
+        }
+      }
+
+      loadLeaderboardForDivision(activeTournament.id, '단체전', defaultTeams);
+      setCurrentRankNum(1);
+      setBibInput('');
+      setInputFeedback(null);
+      setIsRankConfirmed(false);
+      return;
+    }
+
+    if (rawRegistrations.length > 0) {
       const filteredBase = rawRegistrations.filter(r => {
         if (!includePendingApplicants && r.regStatus !== 'APPROVED') {
           return false;
@@ -636,6 +712,76 @@ export default function RefereeMobilePage({
       setParticipants([]);
     }
   }, [activeDivisionTab, rawRegistrations, activeTournament, includePendingApplicants, isSimulationMode]);
+
+  // ── [단체전 전용: 출전 팀 추가 및 삭제 핸들러] ──
+  const handleAddTeamFromClub = (clubOrTeamName: string) => {
+    const trimmed = clubOrTeamName.trim();
+    if (!trimmed) return;
+
+    // 이미 같은 이름/클럽의 팀이 몇 개 있는지 확인
+    const sameClubCount = participants.filter(p => p.club === trimmed || p.name.startsWith(trimmed)).length;
+    const finalTeamName = sameClubCount > 0 ? `${trimmed} ${sameClubCount + 1}팀` : trimmed;
+    const nextBib = `T${participants.length + 1}`;
+    const newTeam: any = {
+      id: `team_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      name: finalTeamName,
+      club: trimmed,
+      bibNumber: nextBib,
+      birth: '단체팀',
+      division: '단체전',
+      total: 0,
+      rank: '-'
+    };
+    rounds.forEach(r => {
+      newTeam[r.key] = null;
+    });
+
+    const updated = [...participants, newTeam];
+    const recalculated = recalculateAllParticipants(updated, rounds, dnsDnfRule);
+    setParticipants(recalculated);
+
+    if (activeTournament) {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`gentrophy_${activeTournament.id}_teams_단체전`, JSON.stringify(recalculated));
+        if (isSimulationMode) {
+          localStorage.setItem(getSimStorageKey(activeTournament.id, '단체전'), JSON.stringify(recalculated));
+        }
+      }
+    }
+
+    setInputFeedback({
+      text: `✨ [${finalTeamName}] 팀이 출전 목록에 추가되었습니다! (현재 출전: 총 ${updated.length}개 팀)`,
+      isError: false
+    });
+  };
+
+  const handleDeleteTeam = (teamId: string, teamName: string) => {
+    if (participants.length <= 1) {
+      alert('최소 1개 이상의 출전 팀이 유지되어야 합니다.');
+      return;
+    }
+    if (!window.confirm(`정말 [${teamName}] 팀을 출전 목록에서 제외하시겠습니까?`)) {
+      return;
+    }
+
+    const updated = participants.filter(p => p.id !== teamId);
+    const recalculated = recalculateAllParticipants(updated, rounds, dnsDnfRule);
+    setParticipants(recalculated);
+
+    if (activeTournament) {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`gentrophy_${activeTournament.id}_teams_단체전`, JSON.stringify(recalculated));
+        if (isSimulationMode) {
+          localStorage.setItem(getSimStorageKey(activeTournament.id, '단체전'), JSON.stringify(recalculated));
+        }
+      }
+    }
+
+    setInputFeedback({
+      text: `🗑️ [${teamName}] 팀이 출전 목록에서 제외되었습니다. (현재 출전: 총 ${updated.length}개 팀)`,
+      isError: false
+    });
+  };
 
   // 시뮬레이션 데이터 전체 초기화 (해당 종목)
   const handleResetSimulationData = () => {
@@ -1145,7 +1291,8 @@ export default function RefereeMobilePage({
     '혼합오픈 (남자부)',
     '혼합오픈 (여자부)',
     '펀엔포뮬러 (남자부)',
-    '펀엔포뮬러 (여자부)'
+    '펀엔포뮬러 (여자부)',
+    '단체전'
   ];
 
   const divisionTabs = standardDivisions.filter(d => rawUnique.includes(d) || rawUnique.length === 0);
@@ -1155,6 +1302,21 @@ export default function RefereeMobilePage({
   if (divisionTabs.length === 0) {
     divisionTabs.push(...standardDivisions);
   }
+  if (!divisionTabs.includes('단체전')) {
+    divisionTabs.push('단체전');
+  }
+
+  // 단체전 출전 클럽 후보군
+  const registeredClubsList = Array.from(
+    new Set([
+      ...rawRegistrations.map((r: any) => r.club?.trim()).filter(Boolean),
+      '통영윈드서핑클럽',
+      '거제요트클럽',
+      '부산세일링클럽',
+      '창원윈드클럽',
+      '서울세일링협회'
+    ])
+  ) as string[];
 
   // 선택된 라운드 기준 참가자 데이터 집계
   const currentRankPlayer = participants.find(p => p[selectedRound] === currentRankNum);
@@ -1176,6 +1338,7 @@ export default function RefereeMobilePage({
     <div style={themeStyles} className="animate-fade-in">
       {/* ── 심판 전용 헤더 ── */}
       <header
+        className="no-print"
         style={{
           background: 'rgba(15, 23, 42, 0.95)',
           padding: '14px 20px',
@@ -1244,7 +1407,7 @@ export default function RefereeMobilePage({
         </div>
       </header>
 
-      <div style={{ maxWidth: '850px', margin: '0 auto', padding: '16px 12px 60px 12px' }}>
+      <div className="no-print referee-screen-content referee-screen-ui" style={{ maxWidth: '850px', margin: '0 auto', padding: '16px 12px 60px 12px' }}>
 
         {/* ── [0] 시뮬레이션(사전 시연) 모드 & 실전 모드 전환 제어 배너 ── */}
         <div
@@ -1426,7 +1589,7 @@ export default function RefereeMobilePage({
                 🏆 참가 종목(부서) 선택
               </label>
               <span style={{ fontSize: '0.8rem', color: 'var(--theme-primary)', fontWeight: '700' }}>
-                {includePendingApplicants ? `시연 대상 선수: ${participants.length}명 (대기 포함)` : `승인 선수: ${participants.length}명`}
+                {activeDivisionTab === '단체전' ? `출전 팀: ${participants.length}개 팀` : (includePendingApplicants ? `시연 대상 선수: ${participants.length}명 (대기 포함)` : `승인 선수: ${participants.length}명`)}
               </span>
             </div>
             <select
@@ -1453,6 +1616,203 @@ export default function RefereeMobilePage({
             </select>
           </div>
         </div>
+
+        {/* ── 단체전 전용: 각 소속협회/클럽 출전 팀 편성 및 추가 관리 ── */}
+        {activeDivisionTab === '단체전' && (
+          <div
+            className="glass-panel"
+            style={{
+              background: 'white',
+              color: 'black',
+              padding: '16px 20px',
+              borderRadius: '16px',
+              marginBottom: '16px',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.04)',
+              border: '2px solid #3b82f6'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '1.2rem' }}>🚩</span>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: '900', color: '#1e3a8a' }}>
+                    단체전 출전 클럽(팀) 편성 설정
+                  </h4>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                    각 소속협회/클럽을 선택하거나 직접 입력하여 출전 팀을 추가하세요. (현재 출전: <strong>{participants.length}개 팀</strong>)
+                  </span>
+                </div>
+              </div>
+              <div style={{ background: '#eff6ff', color: '#2563eb', padding: '4px 10px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: '800' }}>
+                출전 {participants.length}팀
+              </div>
+            </div>
+
+            {/* 클럽 선택 및 팀 추가 컨트롤 */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '10px', marginBottom: '14px' }}>
+              {/* (1) 등록된 소속클럽에서 선택 추가 */}
+              <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                <label style={{ fontSize: '0.78rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '6px' }}>
+                  🏢 등록된 소속협회/클럽에서 팀 추가:
+                </label>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <select
+                    value={selectedClubToAdd}
+                    onChange={(e) => setSelectedClubToAdd(e.target.value)}
+                    style={{
+                      flex: 1,
+                      padding: '8px 10px',
+                      borderRadius: '8px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '0.85rem',
+                      fontWeight: '700',
+                      background: 'white',
+                      color: '#0f172a'
+                    }}
+                  >
+                    <option value="">-- 출전할 클럽 선택 --</option>
+                    {registeredClubsList.map((club: string) => (
+                      <option key={club} value={club}>
+                        {club}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!selectedClubToAdd) {
+                        alert('추가할 클럽을 선택해 주세요.');
+                        return;
+                      }
+                      handleAddTeamFromClub(selectedClubToAdd);
+                    }}
+                    style={{
+                      background: '#2563eb',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '8px 12px',
+                      fontSize: '0.82rem',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    <Plus size={14} /> 팀 추가
+                  </button>
+                </div>
+              </div>
+
+              {/* (2) 직접 팀명 입력 추가 */}
+              <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                <label style={{ fontSize: '0.78rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '6px' }}>
+                  ✏️ 직접 팀명(클럽명) 입력하여 추가:
+                </label>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <input
+                    type="text"
+                    value={customTeamNameToAdd}
+                    onChange={(e) => setCustomTeamNameToAdd(e.target.value)}
+                    placeholder="예: 거제요트클럽 B팀"
+                    style={{
+                      flex: 1,
+                      padding: '8px 10px',
+                      borderRadius: '8px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '0.85rem',
+                      fontWeight: '700',
+                      background: 'white'
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (customTeamNameToAdd.trim()) {
+                          handleAddTeamFromClub(customTeamNameToAdd.trim());
+                          setCustomTeamNameToAdd('');
+                        }
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!customTeamNameToAdd.trim()) {
+                        alert('팀명을 입력해 주세요.');
+                        return;
+                      }
+                      handleAddTeamFromClub(customTeamNameToAdd.trim());
+                      setCustomTeamNameToAdd('');
+                    }}
+                    style={{
+                      background: '#059669',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '8px 12px',
+                      fontSize: '0.82rem',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    <Plus size={14} /> 직접 추가
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* 현재 출전 팀 목록 칩 */}
+            <div>
+              <div style={{ fontSize: '0.78rem', fontWeight: '800', color: '#475569', marginBottom: '6px' }}>
+                📋 현재 편성된 단체전 출전 팀 목록 (총 {participants.length}팀):
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {participants.map((team, idx) => (
+                  <div
+                    key={team.id}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      background: '#f1f5f9',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '8px',
+                      padding: '6px 10px',
+                      fontSize: '0.82rem',
+                      fontWeight: '800',
+                      color: '#0f172a'
+                    }}
+                  >
+                    <span style={{ color: '#2563eb' }}>#{team.bibNumber || `T${idx + 1}`}</span>
+                    <span>{team.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteTeam(team.id, team.name)}
+                      title="출전 명단에서 제외"
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#ef4444',
+                        cursor: 'pointer',
+                        padding: '0 2px',
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ═══════════════════════════════════════════════════════════
             MODE 1: 순위 입력란 (종목 & 라운드 선택 및 1위부터 순서대로 배번 입력 / 수정 / 삭제)
@@ -1711,144 +2071,265 @@ export default function RefereeMobilePage({
                 </div>
               ) : null}
 
-              {/* 배번 입력 / 수정 폼 */}
-              <form onSubmit={handleAssignBibSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <label style={{ fontSize: '0.9rem', fontWeight: '800', color: '#1e293b' }}>
-                    {currentRankPlayer ? `${currentRankNum}위 선수 변경/교체 (새 배번/이름 입력)` : `${currentRankNum}위 선수 배번(티넘버) 입력`}
-                  </label>
-                </div>
-                
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={bibInput}
-                    onChange={(e) => setBibInput(e.target.value)}
-                    placeholder="예: 27 또는 선수 이름"
-                    style={{
-                      flex: 1,
-                      padding: '14px 16px',
-                      borderRadius: '12px',
-                      border: '2px solid var(--theme-primary)',
-                      fontSize: '1.15rem',
-                      fontWeight: '800',
-                      outline: 'none',
-                      boxSizing: 'border-box',
-                      textAlign: 'center'
-                    }}
-                    autoFocus
-                  />
-                  <button
-                    type="submit"
-                    style={{
-                      background: 'var(--theme-primary)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '12px',
-                      padding: '0 20px',
-                      fontWeight: '800',
-                      fontSize: '0.95rem',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      whiteSpace: 'nowrap',
-                      boxShadow: '0 2px 8px rgba(99,102,241,0.3)'
-                    }}
-                  >
-                    <Check size={18} /> {currentRankPlayer ? `${currentRankNum}위 수정` : `${currentRankNum}위 등록`}
-                  </button>
-                </div>
+{activeDivisionTab === '단체전' ? (
+                /* ── 단체전: 출전한 팀에서 직접 순위 선택 ── */
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '14px', border: '2px solid #3b82f6' }}>
+                    <label style={{ fontSize: '0.95rem', fontWeight: '900', color: '#1e3a8a', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                      🚩 [{rounds.find(r => r.key === selectedRound)?.short || selectedRound.toUpperCase()}] {currentRankNum}위 출전 팀 선택:
+                    </label>
+                    <select
+                      value={currentRankPlayer ? currentRankPlayer.id : ''}
+                      onChange={(e) => {
+                        const selectedId = e.target.value;
+                        if (!selectedId) {
+                          handleClearCurrentRank(currentRankNum);
+                        } else {
+                          const selectedTeam = participants.find(p => p.id === selectedId);
+                          if (selectedTeam) {
+                            handleQuickAssignPlayer(selectedTeam);
+                          }
+                        }
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '14px 16px',
+                        borderRadius: '12px',
+                        border: '2px solid #2563eb',
+                        fontSize: '1.05rem',
+                        fontWeight: '800',
+                        background: 'white',
+                        color: '#0f172a',
+                        cursor: 'pointer',
+                        outline: 'none',
+                        boxShadow: '0 2px 6px rgba(37,99,235,0.1)'
+                      }}
+                    >
+                      <option value="">-- {currentRankNum}위에 배정할 출전 팀을 선택하세요 --</option>
+                      {participants.map((team) => {
+                        const assignedRank = team[selectedRound];
+                        const isThisRank = assignedRank === currentRankNum;
+                        const isOtherRank = assignedRank && assignedRank !== currentRankNum;
+                        return (
+                          <option key={team.id} value={team.id}>
+                            {team.bibNumber ? `[#${team.bibNumber}] ` : ''}{team.name}
+                            {isThisRank ? ` ⭐ (현재 ${currentRankNum}위 배정됨)` : isOtherRank ? ` (${assignedRank}위 배정됨 - 선택 시 변경)` : ' (대기중)'}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
 
-                {/* 실시간 매칭 프리뷰 */}
-                {matchedTypingPlayer && (
-                  <div style={{
-                    background: '#eff6ff',
-                    border: '1px solid #bfdbfe',
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    fontSize: '0.85rem',
-                    color: '#1e40af',
-                    fontWeight: '700',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between'
-                  }}>
-                    <span>🏃 매칭: <strong>{matchedTypingPlayer.name}</strong> (배번: #{matchedTypingPlayer.bibNumber || '-'})</span>
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                      <button
-                        type="button"
-                        onClick={() => handleSetPlayerSpecialScore(matchedTypingPlayer.id, 'DNS')}
-                        style={{ padding: '3px 6px', background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer' }}
-                      >
-                        DNS 처리
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleSetPlayerSpecialScore(matchedTypingPlayer.id, 'DNF')}
-                        style={{ padding: '3px 6px', background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer' }}
-                      >
-                        DNF 처리
-                      </button>
+                  {/* 원터치 빠른 팀 배정 버튼들 */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '0.82rem', fontWeight: '800', color: '#475569' }}>
+                        ⚡ 출전 팀 원터치 배정 (터치 시 즉시 {currentRankNum}위 등록 후 다음 순위로 이동):
+                      </span>
+                      <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '700' }}>
+                        {unassignedPlayers.length}개 팀 대기중
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {participants.map((team) => {
+                        const assignedRank = team[selectedRound];
+                        const isCurrent = assignedRank === currentRankNum;
+                        const isAssigned = assignedRank !== null && assignedRank !== undefined && assignedRank !== '';
+                        return (
+                          <button
+                            key={team.id}
+                            type="button"
+                            onClick={() => handleQuickAssignPlayer(team)}
+                            style={{
+                              background: isCurrent ? '#2563eb' : isAssigned ? '#f1f5f9' : '#ffffff',
+                              color: isCurrent ? 'white' : isAssigned ? '#64748b' : '#0f172a',
+                              border: isCurrent ? '2px solid #1d4ed8' : isAssigned ? '1px solid #cbd5e1' : '2px solid #93c5fd',
+                              borderRadius: '10px',
+                              padding: '10px 14px',
+                              fontSize: '0.88rem',
+                              fontWeight: '800',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              boxShadow: isCurrent ? '0 2px 8px rgba(37,99,235,0.3)' : '0 1px 3px rgba(0,0,0,0.05)',
+                              transition: 'all 0.15s'
+                            }}
+                          >
+                            {team.bibNumber && <span style={{ opacity: 0.9 }}>#{team.bibNumber}</span>}
+                            <span>{team.name}</span>
+                            {isAssigned ? (
+                              <span style={{ fontSize: '0.75rem', color: isCurrent ? 'white' : '#64748b', fontWeight: '900' }}>
+                                ({assignedRank}위)
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: '0.72rem', color: '#2563eb', fontWeight: '900', background: '#eff6ff', padding: '2px 5px', borderRadius: '4px' }}>
+                                선택
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
-                )}
 
-                {/* 피드백 메시지 */}
-                {inputFeedback && (
-                  <div style={{
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    fontSize: '0.85rem',
-                    fontWeight: '700',
-                    background: inputFeedback.isError ? '#fef2f2' : '#f0fdf4',
-                    color: inputFeedback.isError ? '#dc2626' : '#16a34a',
-                    border: `1px solid ${inputFeedback.isError ? '#fecaca' : '#bbf7d0'}`
-                  }}>
-                    {inputFeedback.text}
-                  </div>
-                )}
-              </form>
-
-              {/* 미배정 선수 빠른 칩 선택 (터치 시 즉시 현재 순위로 배정) */}
-              {unassignedPlayers.length > 0 && (
-                <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px dashed #cbd5e1' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#475569' }}>
-                      ⚡ 미입력 선수 빠른 선택 (터치 시 즉시 {currentRankNum}위 배정):
-                    </span>
-                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                      {unassignedPlayers.length}명 대기중
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxHeight: '140px', overflowY: 'auto', padding: '2px' }}>
-                    {unassignedPlayers.map((p) => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => handleQuickAssignPlayer(p)}
+                  {/* 피드백 메시지 */}
+                  {inputFeedback && (
+                    <div style={{
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      fontSize: '0.85rem',
+                      fontWeight: '700',
+                      background: inputFeedback.isError ? '#fef2f2' : '#f0fdf4',
+                      color: inputFeedback.isError ? '#dc2626' : '#16a34a',
+                      border: `1px solid ${inputFeedback.isError ? '#fecaca' : '#bbf7d0'}`
+                    }}>
+                      {inputFeedback.text}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* ── 개인전 배번 입력 및 빠른 칩 선택 폼 ── */
+                <>
+                  <form onSubmit={handleAssignBibSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label style={{ fontSize: '0.9rem', fontWeight: '800', color: '#1e293b' }}>
+                        {currentRankPlayer ? `${currentRankNum}위 선수 변경/교체 (새 배번/이름 입력)` : `${currentRankNum}위 선수 배번(티넘버) 입력`}
+                      </label>
+                    </div>
+                    
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={bibInput}
+                        onChange={(e) => setBibInput(e.target.value)}
+                        placeholder="예: 27 또는 선수 이름"
                         style={{
-                          background: '#f1f5f9',
-                          border: '1px solid #cbd5e1',
-                          borderRadius: '8px',
-                          padding: '6px 10px',
-                          fontSize: '0.8rem',
-                          fontWeight: '700',
-                          color: '#1e293b',
+                          flex: 1,
+                          padding: '14px 16px',
+                          borderRadius: '12px',
+                          border: '2px solid var(--theme-primary)',
+                          fontSize: '1.15rem',
+                          fontWeight: '800',
+                          outline: 'none',
+                          boxSizing: 'border-box',
+                          textAlign: 'center'
+                        }}
+                        autoFocus
+                      />
+                      <button
+                        type="submit"
+                        style={{
+                          background: 'var(--theme-primary)',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '12px',
+                          padding: '0 20px',
+                          fontWeight: '800',
+                          fontSize: '0.95rem',
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '4px',
-                          transition: 'all 0.1s'
+                          gap: '6px',
+                          whiteSpace: 'nowrap',
+                          boxShadow: '0 2px 8px rgba(99,102,241,0.3)'
                         }}
                       >
-                        {p.bibNumber && <span style={{ color: 'var(--theme-primary)' }}>#{p.bibNumber}</span>}
-                        <span>{p.name}</span>
+                        <Check size={18} /> {currentRankPlayer ? `${currentRankNum}위 수정` : `${currentRankNum}위 등록`}
                       </button>
-                    ))}
-                  </div>
-                </div>
+                    </div>
+
+                    {/* 실시간 매칭 프리뷰 */}
+                    {matchedTypingPlayer && (
+                      <div style={{
+                        background: '#eff6ff',
+                        border: '1px solid #bfdbfe',
+                        padding: '8px 12px',
+                        borderRadius: '8px',
+                        fontSize: '0.85rem',
+                        color: '#1e40af',
+                        fontWeight: '700',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between'
+                      }}>
+                        <span>🏃 매칭: <strong>{matchedTypingPlayer.name}</strong> (배번: #{matchedTypingPlayer.bibNumber || '-'})</span>
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleSetPlayerSpecialScore(matchedTypingPlayer.id, 'DNS')}
+                            style={{ padding: '3px 6px', background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer' }}
+                          >
+                            DNS 처리
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSetPlayerSpecialScore(matchedTypingPlayer.id, 'DNF')}
+                            style={{ padding: '3px 6px', background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer' }}
+                          >
+                            DNF 처리
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 피드백 메시지 */}
+                    {inputFeedback && (
+                      <div style={{
+                        padding: '8px 12px',
+                        borderRadius: '8px',
+                        fontSize: '0.85rem',
+                        fontWeight: '700',
+                        background: inputFeedback.isError ? '#fef2f2' : '#f0fdf4',
+                        color: inputFeedback.isError ? '#dc2626' : '#16a34a',
+                        border: `1px solid ${inputFeedback.isError ? '#fecaca' : '#bbf7d0'}`
+                      }}>
+                        {inputFeedback.text}
+                      </div>
+                    )}
+                  </form>
+
+                  {/* 미배정 선수 빠른 칩 선택 (터치 시 즉시 현재 순위로 배정) */}
+                  {unassignedPlayers.length > 0 && (
+                    <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px dashed #cbd5e1' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#475569' }}>
+                          ⚡ 미입력 선수 빠른 선택 (터치 시 즉시 {currentRankNum}위 배정):
+                        </span>
+                        <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                          {unassignedPlayers.length}명 대기중
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxHeight: '140px', overflowY: 'auto', padding: '2px' }}>
+                        {unassignedPlayers.map((p) => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => handleQuickAssignPlayer(p)}
+                            style={{
+                              background: '#f1f5f9',
+                              border: '1px solid #cbd5e1',
+                              borderRadius: '8px',
+                              padding: '6px 10px',
+                              fontSize: '0.8rem',
+                              fontWeight: '700',
+                              color: '#1e293b',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              transition: 'all 0.1s'
+                            }}
+                          >
+                            {p.bibNumber && <span style={{ color: 'var(--theme-primary)' }}>#{p.bibNumber}</span>}
+                            <span>{p.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -1922,58 +2403,114 @@ export default function RefereeMobilePage({
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          {assigned ? (
-                            <>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setCurrentRankNum(rankNum);
-                                  setBibInput(assigned.bibNumber || assigned.name);
+                          {activeDivisionTab === '단체전' ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }} onClick={(e) => e.stopPropagation()}>
+                              <select
+                                value={assigned ? assigned.id : ''}
+                                onChange={(e) => {
+                                  const targetId = e.target.value;
+                                  if (!targetId) {
+                                    handleClearCurrentRank(rankNum);
+                                  } else {
+                                    const targetTeam = participants.find(p => p.id === targetId);
+                                    if (targetTeam) {
+                                      assignRankToPlayer(targetTeam.id, selectedRound, rankNum);
+                                      setInputFeedback({ text: `✅ ${rankNum}위에 '${targetTeam.name}' 팀이 등록되었습니다!`, isError: false });
+                                    }
+                                  }
                                 }}
                                 style={{
-                                  background: '#eff6ff',
-                                  color: '#2563eb',
-                                  border: '1px solid #bfdbfe',
+                                  padding: '5px 8px',
                                   borderRadius: '6px',
-                                  padding: '4px 8px',
-                                  fontSize: '0.75rem',
-                                  fontWeight: '700',
-                                  cursor: 'pointer',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '2px'
+                                  border: '1px solid #cbd5e1',
+                                  fontSize: '0.82rem',
+                                  fontWeight: '800',
+                                  background: assigned ? '#eff6ff' : 'white',
+                                  color: assigned ? '#1e40af' : '#475569',
+                                  cursor: 'pointer'
                                 }}
                               >
-                                <Edit2 size={12} /> 수정
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleClearCurrentRank(rankNum);
-                                }}
-                                style={{
-                                  background: '#fee2e2',
-                                  color: '#ef4444',
-                                  border: '1px solid #fca5a5',
-                                  borderRadius: '6px',
-                                  padding: '4px 8px',
-                                  fontSize: '0.75rem',
-                                  fontWeight: '700',
-                                  cursor: 'pointer',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '2px'
-                                }}
-                              >
-                                <Trash2 size={12} /> 삭제
-                              </button>
-                            </>
+                                <option value="">-- {rankNum}위 팀 선택 --</option>
+                                {participants.map(t => (
+                                  <option key={t.id} value={t.id}>
+                                    {t.bibNumber ? `[#${t.bibNumber}] ` : ''}{t.name}
+                                  </option>
+                                ))}
+                              </select>
+                              {assigned && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleClearCurrentRank(rankNum)}
+                                  title="순위 배정 취소"
+                                  style={{
+                                    background: '#fee2e2',
+                                    color: '#ef4444',
+                                    border: '1px solid #fca5a5',
+                                    borderRadius: '6px',
+                                    padding: '5px 8px',
+                                    fontSize: '0.75rem',
+                                    fontWeight: '700',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              )}
+                            </div>
                           ) : (
-                            <span style={{ fontSize: '0.75rem', color: isCurrentFocus ? 'var(--theme-primary)' : '#cbd5e1', fontWeight: '700' }}>
-                              {isCurrentFocus ? '선택됨' : '입력 대기'}
-                            </span>
+                            assigned ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setCurrentRankNum(rankNum);
+                                    setBibInput(assigned.bibNumber || assigned.name);
+                                  }}
+                                  style={{
+                                    background: '#eff6ff',
+                                    color: '#2563eb',
+                                    border: '1px solid #bfdbfe',
+                                    borderRadius: '6px',
+                                    padding: '4px 8px',
+                                    fontSize: '0.75rem',
+                                    fontWeight: '700',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '2px'
+                                  }}
+                                >
+                                  <Edit2 size={12} /> 수정
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleClearCurrentRank(rankNum);
+                                  }}
+                                  style={{
+                                    background: '#fee2e2',
+                                    color: '#ef4444',
+                                    border: '1px solid #fca5a5',
+                                    borderRadius: '6px',
+                                    padding: '4px 8px',
+                                    fontSize: '0.75rem',
+                                    fontWeight: '700',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '2px'
+                                  }}
+                                >
+                                  <Trash2 size={12} /> 삭제
+                                </button>
+                              </>
+                            ) : (
+                              <span style={{ fontSize: '0.75rem', color: isCurrentFocus ? 'var(--theme-primary)' : '#cbd5e1', fontWeight: '700' }}>
+                                {isCurrentFocus ? '선택됨' : '입력 대기'}
+                              </span>
+                            )
                           )}
                         </div>
                       </div>
@@ -2373,9 +2910,9 @@ export default function RefereeMobilePage({
                 <thead>
                   <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
                     <th style={{ padding: '10px 6px', width: '45px', textAlign: 'center' }}>순위</th>
-                    <th style={{ padding: '10px 8px', minWidth: '80px', textAlign: 'left' }}>이름</th>
-                    <th style={{ padding: '10px 6px', width: '60px', textAlign: 'center' }}>배번</th>
-                    <th style={{ padding: '10px 6px', width: '70px', textAlign: 'center' }}>생년월일</th>
+                    <th style={{ padding: '10px 8px', minWidth: '80px', textAlign: 'left' }}>{activeDivisionTab === '단체전' ? '팀명 (소속)' : '이름'}</th>
+                    <th style={{ padding: '10px 6px', width: '60px', textAlign: 'center' }}>{activeDivisionTab === '단체전' ? '팀배번' : '배번'}</th>
+                    <th style={{ padding: '10px 6px', width: '70px', textAlign: 'center' }}>{activeDivisionTab === '단체전' ? '소속협회' : '생년월일'}</th>
                     {rounds.map(r => {
                       const conducted = isRoundConducted(r.key, participants);
                       const finishers = getRoundFinishedCount(r.key, participants);
@@ -2561,7 +3098,7 @@ export default function RefereeMobilePage({
 
       {/* ── 모바일 전용 DNS/DNF 간편 입력 바 (확정란 셀 포커스 시 표시) ── */}
       {activeMode === 'confirm' && activeCell && (
-        <div style={{
+        <div className="no-print" style={{
           position: 'fixed',
           bottom: 0,
           left: 0,
@@ -2662,35 +3199,35 @@ export default function RefereeMobilePage({
 
       {/* ── 인쇄 전용 공식 결과 보고서 (화면에서는 숨김, 인쇄 시에만 A4 규격으로 노출) ── */}
       <div className="official-print-document">
-        <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: '16px', marginBottom: '20px' }}>
-          <h1 style={{ fontSize: '22pt', fontWeight: '900', margin: '0 0 6px 0', letterSpacing: '-0.02em', color: '#000' }}>
+        <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: '12px', marginBottom: '14px' }}>
+          <h1 style={{ fontSize: '19pt', fontWeight: '900', margin: '0 0 4px 0', letterSpacing: '-0.02em', color: '#000' }}>
             {activeTournament?.title || '제20회 이순신장군배 전국윈드서핑대회'}
           </h1>
-          <h2 style={{ fontSize: '16pt', fontWeight: '800', margin: '0 0 8px 0', color: '#111' }}>
+          <h2 style={{ fontSize: '14pt', fontWeight: '800', margin: '0 0 6px 0', color: '#111' }}>
             [ {activeDivisionTab} ] 공식 경기 결과 및 순위표
           </h2>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9.5pt', color: '#333', marginTop: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8.5pt', color: '#333', marginTop: '6px' }}>
             <span>• 대회 기간: {activeTournament?.startDate || '2026. 10. 31'} ~ {activeTournament?.endDate || '11. 01'}</span>
             <span>• 장소: 경상남도 통영시 도남동 수륙해수욕장 일원</span>
             <span>• 확정/출력일시: {confirmedTime || new Date().toLocaleString('ko-KR')}</span>
           </div>
         </div>
 
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9.5pt', textAlign: 'center', color: '#000' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9pt', textAlign: 'center', color: '#000' }}>
           <thead>
             <tr style={{ background: '#f1f5f9', borderTop: '2px solid #000', borderBottom: '2px solid #000' }}>
-              <th style={{ padding: '8px 4px', width: '45px', border: '1px solid #cbd5e1' }}>순위</th>
-              <th style={{ padding: '8px 6px', width: '55px', border: '1px solid #cbd5e1' }}>배번</th>
-              <th style={{ padding: '8px 10px', minWidth: '85px', border: '1px solid #cbd5e1' }}>선수명</th>
-              <th style={{ padding: '8px 6px', width: '85px', border: '1px solid #cbd5e1' }}>생년월일</th>
-              <th style={{ padding: '8px 8px', minWidth: '95px', border: '1px solid #cbd5e1' }}>소속협회/클럽</th>
+              <th style={{ padding: '6px 4px', width: '42px', border: '1px solid #cbd5e1' }}>순위</th>
+              <th style={{ padding: '6px 4px', width: '50px', border: '1px solid #cbd5e1' }}>배번</th>
+              <th style={{ padding: '6px 8px', minWidth: '80px', border: '1px solid #cbd5e1' }}>{activeDivisionTab === '단체전' ? '팀명 (소속클럽)' : '선수명'}</th>
+              <th style={{ padding: '6px 6px', width: '85px', border: '1px solid #cbd5e1' }}>{activeDivisionTab === '단체전' ? '소속협회' : '생년월일'}</th>
+              <th style={{ padding: '6px 8px', minWidth: '95px', border: '1px solid #cbd5e1' }}>소속협회/클럽</th>
               {rounds.map(r => (
-                <th key={r.key} style={{ padding: '8px 4px', width: '48px', border: '1px solid #cbd5e1' }}>
+                <th key={r.key} style={{ padding: '6px 4px', width: '46px', border: '1px solid #cbd5e1' }}>
                   {r.short}
                 </th>
               ))}
-              <th style={{ padding: '8px 6px', width: '55px', border: '1px solid #cbd5e1', fontWeight: '900' }}>총점</th>
-              <th style={{ padding: '8px 10px', minWidth: '80px', border: '1px solid #cbd5e1' }}>비고</th>
+              <th style={{ padding: '6px 4px', width: '50px', border: '1px solid #cbd5e1', fontWeight: '900' }}>총점</th>
+              <th style={{ padding: '6px 8px', minWidth: '75px', border: '1px solid #cbd5e1' }}>비고</th>
             </tr>
           </thead>
           <tbody>
@@ -2698,13 +3235,13 @@ export default function RefereeMobilePage({
               const rankVal = p.rank || idx + 1;
               return (
                 <tr key={p.id} style={{ borderBottom: '1px solid #cbd5e1' }}>
-                  <td style={{ padding: '7px 4px', fontWeight: '900', fontSize: '10.5pt', border: '1px solid #cbd5e1' }}>
+                  <td style={{ padding: '5px 4px', fontWeight: '900', fontSize: '10pt', border: '1px solid #cbd5e1' }}>
                     {rankVal}
                   </td>
-                  <td style={{ padding: '7px 6px', border: '1px solid #cbd5e1' }}>{p.bibNumber || '-'}</td>
-                  <td style={{ padding: '7px 10px', fontWeight: '800', border: '1px solid #cbd5e1' }}>{p.name}</td>
-                  <td style={{ padding: '7px 6px', border: '1px solid #cbd5e1' }}>{p.birth || '-'}</td>
-                  <td style={{ padding: '7px 8px', border: '1px solid #cbd5e1' }}>{p.club || '-'}</td>
+                  <td style={{ padding: '5px 4px', border: '1px solid #cbd5e1' }}>{p.bibNumber || '-'}</td>
+                  <td style={{ padding: '5px 8px', fontWeight: '800', border: '1px solid #cbd5e1' }}>{p.name}</td>
+                  <td style={{ padding: '5px 4px', fontSize: '8.5pt', border: '1px solid #cbd5e1' }}>{p.birth || '-'}</td>
+                  <td style={{ padding: '5px 6px', fontSize: '8.5pt', border: '1px solid #cbd5e1' }}>{p.club || '-'}</td>
                   {rounds.map(r => {
                     const conducted = isRoundConducted(r.key, participants);
                     const rawVal = p[r.key];
@@ -2714,17 +3251,17 @@ export default function RefereeMobilePage({
                         : rawVal;
                     const pts = getRoundScoreValue(rawVal, r.key, participants, dnsDnfRule);
                     return (
-                      <td key={r.key} style={{ padding: '7px 4px', border: '1px solid #cbd5e1' }}>
+                      <td key={r.key} style={{ padding: '5px 4px', border: '1px solid #cbd5e1' }}>
                         {effective === 'DNS' || effective === 'DNF'
                           ? `${effective}(${pts})`
                           : effective}
                       </td>
                     );
                   })}
-                  <td style={{ padding: '7px 6px', fontWeight: '900', border: '1px solid #cbd5e1' }}>
+                  <td style={{ padding: '5px 4px', fontWeight: '900', border: '1px solid #cbd5e1' }}>
                     {p.total ?? 0}
                   </td>
-                  <td style={{ padding: '7px 10px', fontSize: '9pt', border: '1px solid #cbd5e1' }}>
+                  <td style={{ padding: '5px 6px', fontSize: '8.5pt', border: '1px solid #cbd5e1' }}>
                     {rankVal === 1 ? '🥇 1위 (우승)' : rankVal === 2 ? '🥈 2위 (준우승)' : rankVal === 3 ? '🥉 3위' : ''}
                   </td>
                 </tr>
@@ -2734,17 +3271,17 @@ export default function RefereeMobilePage({
         </table>
 
         {/* 심판단 서명란 */}
-        <div style={{ marginTop: '50px', paddingTop: '20px', borderTop: '1px solid #cbd5e1', display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
-          <div style={{ textAlign: 'center', fontSize: '10.5pt' }}>
-            <p style={{ margin: '0 0 35px 0', fontWeight: '700' }}>기록원 (Scorer)</p>
+        <div style={{ marginTop: '28px', paddingTop: '14px', borderTop: '1px solid #cbd5e1', display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
+          <div style={{ textAlign: 'center', fontSize: '9.5pt' }}>
+            <p style={{ margin: '0 0 24px 0', fontWeight: '700' }}>기록원 (Scorer)</p>
             <p style={{ margin: 0, color: '#334155' }}>성명: ________________ (인)</p>
           </div>
-          <div style={{ textAlign: 'center', fontSize: '10.5pt' }}>
-            <p style={{ margin: '0 0 35px 0', fontWeight: '700' }}>심판위원장 (Chief Referee)</p>
+          <div style={{ textAlign: 'center', fontSize: '9.5pt' }}>
+            <p style={{ margin: '0 0 24px 0', fontWeight: '700' }}>심판위원장 (Chief Referee)</p>
             <p style={{ margin: 0, color: '#334155' }}>성명: ________________ (인)</p>
           </div>
-          <div style={{ textAlign: 'center', fontSize: '10.5pt' }}>
-            <p style={{ margin: '0 0 35px 0', fontWeight: '700' }}>경기위원장 (Race Committee)</p>
+          <div style={{ textAlign: 'center', fontSize: '9.5pt' }}>
+            <p style={{ margin: '0 0 24px 0', fontWeight: '700' }}>경기위원장 (Race Committee)</p>
             <p style={{ margin: 0, color: '#334155' }}>성명: ________________ (인)</p>
           </div>
         </div>

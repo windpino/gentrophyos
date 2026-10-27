@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, use } from 'react';
-import { Award, Check, X, Menu, Upload, Download, Plus, Trash2, ArrowUp, ArrowDown, Users, FileText, Settings, Layers, Calendar, RefreshCw, Save, Search, Eye, ExternalLink, Clock, ShieldAlert, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Award, Check, X, Menu, Upload, Download, Plus, Trash2, ArrowUp, ArrowDown, Users, FileText, Settings, Layers, Calendar, RefreshCw, Save, Search, Eye, ExternalLink, Clock, ShieldAlert, AlertCircle, CheckCircle2, Bell, MessageSquare, Megaphone, Lock, Unlock, Edit3, HelpCircle } from 'lucide-react';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '@/src/lib/firebase';
 
@@ -119,7 +119,7 @@ export default function HostDashboardPage({
   const [tenant, setTenant] = useState<any>(null);
   const [activeTournament, setActiveTournament] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeSection, setActiveSection] = useState<'applicants' | 'brackets' | 'tie-breaker' | 'notice'>('applicants');
+  const [activeSection, setActiveSection] = useState<'applicants' | 'brackets' | 'tie-breaker' | 'notice' | 'announcements' | 'qna'>('applicants');
   const [bracketPublishing, setBracketPublishing] = useState(false);
   const [selectedBracketDivision, setSelectedBracketDivision] = useState<string>('전체');
   const [bracketStatusFilter, setBracketStatusFilter] = useState<'all' | 'approved'>('all');
@@ -186,6 +186,31 @@ export default function HostDashboardPage({
   const [rules, setRules] = useState<TieBreakerRule[]>(DEFAULT_TIE_BREAKER_RULES);
   const [dnsDnfRule, setDnsDnfRule] = useState<'FINISHER_PLUS_ONE' | 'REGISTERED_PLUS_ONE'>('FINISHER_PLUS_ONE');
   const [dnsDnfSaving, setDnsDnfSaving] = useState(false);
+
+  // 공지사항(알림) 관리 상태
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [loadingAnnouncements, setLoadingAnnouncements] = useState(false);
+  const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState(false);
+  const [editingAnnouncement, setEditingAnnouncement] = useState<any | null>(null);
+  const [announcementForm, setAnnouncementForm] = useState({
+    title: '',
+    content: '',
+    author: '통영윈드서핑협회 대회운영본부',
+    category: '일반공지',
+    isPopup: false,
+    isPinned: false,
+  });
+  const [isSavingAnnouncement, setIsSavingAnnouncement] = useState(false);
+  const [announcementDeleteTarget, setAnnouncementDeleteTarget] = useState<any | null>(null);
+
+  // Q&A 문의 관리 상태
+  const [qnaList, setQnaList] = useState<any[]>([]);
+  const [loadingQna, setLoadingQna] = useState(false);
+  const [qnaAnswerTarget, setQnaAnswerTarget] = useState<any | null>(null);
+  const [qnaAnswerText, setQnaAnswerText] = useState('');
+  const [qnaAnswerAuthor, setQnaAnswerAuthor] = useState('통영윈드서핑협회 대회운영본부');
+  const [isSavingQnaAnswer, setIsSavingQnaAnswer] = useState(false);
+  const [qnaDeleteTarget, setQnaDeleteTarget] = useState<any | null>(null);
 
   const [authChecking, setAuthChecking] = useState(true);
 
@@ -314,6 +339,200 @@ export default function HostDashboardPage({
       console.error(e);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 공지사항 데이터 불러오기
+  const fetchAnnouncements = async () => {
+    setLoadingAnnouncements(true);
+    try {
+      const res = await fetch(`/api/tenant/${subdomain}/announcements?_t=${Date.now()}`, {
+        headers: getAuthHeaders(),
+      });
+      const data = await res.json();
+      if (data.announcements) {
+        setAnnouncements(data.announcements);
+      }
+    } catch (e) {
+      console.error('공지사항 조회 실패:', e);
+    } finally {
+      setLoadingAnnouncements(false);
+    }
+  };
+
+  // Q&A 데이터 불러오기
+  const fetchQnaList = async () => {
+    setLoadingQna(true);
+    try {
+      const res = await fetch(`/api/tenant/${subdomain}/qna?_t=${Date.now()}`, {
+        headers: getAuthHeaders(),
+      });
+      const data = await res.json();
+      if (data.qnaList) {
+        setQnaList(data.qnaList);
+      }
+    } catch (e) {
+      console.error('Q&A 조회 실패:', e);
+    } finally {
+      setLoadingQna(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeSection === 'announcements') {
+      fetchAnnouncements();
+    } else if (activeSection === 'qna') {
+      fetchQnaList();
+    }
+  }, [activeSection, subdomain]);
+
+  // 공지사항 작성/수정 모달 열기
+  const handleOpenAnnouncementModal = (item?: any) => {
+    if (item) {
+      setEditingAnnouncement(item);
+      setAnnouncementForm({
+        title: item.title || '',
+        content: item.content || '',
+        author: item.author || '통영윈드서핑협회 대회운영본부',
+        category: item.category || '일반공지',
+        isPopup: Boolean(item.isPopup),
+        isPinned: Boolean(item.isPinned),
+      });
+    } else {
+      setEditingAnnouncement(null);
+      setAnnouncementForm({
+        title: '',
+        content: '',
+        author: '통영윈드서핑협회 대회운영본부',
+        category: '일반공지',
+        isPopup: false,
+        isPinned: false,
+      });
+    }
+    setIsAnnouncementModalOpen(true);
+  };
+
+  // 공지사항 저장
+  const handleSaveAnnouncement = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!announcementForm.title.trim()) {
+      alert('공지사항 제목을 입력해 주세요.');
+      return;
+    }
+    if (!announcementForm.content.trim()) {
+      alert('공지사항 내용을 입력해 주세요.');
+      return;
+    }
+
+    setIsSavingAnnouncement(true);
+    try {
+      const url = editingAnnouncement
+        ? `/api/tenant/${subdomain}/announcements/${editingAnnouncement.id}`
+        : `/api/tenant/${subdomain}/announcements`;
+      const method = editingAnnouncement ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: getAuthHeaders(),
+        body: JSON.stringify(announcementForm),
+      });
+
+      if (res.ok) {
+        alert(editingAnnouncement ? '공지사항이 수정되었습니다.' : '새 공지사항이 등록되었습니다.');
+        setIsAnnouncementModalOpen(false);
+        await fetchAnnouncements();
+      } else {
+        const data = await res.json();
+        alert(data.error || '저장에 실패했습니다.');
+      }
+    } catch (err: any) {
+      alert('저장 중 오류가 발생했습니다: ' + err.message);
+    } finally {
+      setIsSavingAnnouncement(false);
+    }
+  };
+
+  // 공지사항 삭제
+  const handleDeleteAnnouncement = async () => {
+    if (!announcementDeleteTarget) return;
+    try {
+      const res = await fetch(`/api/tenant/${subdomain}/announcements/${announcementDeleteTarget.id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+      if (res.ok) {
+        alert('공지사항이 성공적으로 삭제되었습니다.');
+        setAnnouncementDeleteTarget(null);
+        await fetchAnnouncements();
+      } else {
+        const data = await res.json();
+        alert(data.error || '삭제 실패');
+      }
+    } catch (err: any) {
+      alert('삭제 중 오류가 발생했습니다: ' + err.message);
+    }
+  };
+
+  // Q&A 답변 모달 열기
+  const handleOpenQnaAnswerModal = (item: any) => {
+    setQnaAnswerTarget(item);
+    setQnaAnswerText(item.answer || '');
+    setQnaAnswerAuthor(item.answeredBy || '통영윈드서핑협회 대회운영본부');
+  };
+
+  // Q&A 답변 등록/수정
+  const handleSaveQnaAnswer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!qnaAnswerTarget) return;
+    if (!qnaAnswerText.trim()) {
+      alert('답변 내용을 입력해 주세요.');
+      return;
+    }
+
+    setIsSavingQnaAnswer(true);
+    try {
+      const res = await fetch(`/api/tenant/${subdomain}/qna/${qnaAnswerTarget.id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          answer: qnaAnswerText.trim(),
+          answeredBy: qnaAnswerAuthor.trim(),
+        }),
+      });
+
+      if (res.ok) {
+        alert('답변이 성공적으로 등록되었습니다.');
+        setQnaAnswerTarget(null);
+        await fetchQnaList();
+      } else {
+        const data = await res.json();
+        alert(data.error || '답변 등록 실패');
+      }
+    } catch (err: any) {
+      alert('답변 등록 중 오류: ' + err.message);
+    } finally {
+      setIsSavingQnaAnswer(false);
+    }
+  };
+
+  // Q&A 삭제
+  const handleDeleteQna = async () => {
+    if (!qnaDeleteTarget) return;
+    try {
+      const res = await fetch(`/api/tenant/${subdomain}/qna/${qnaDeleteTarget.id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+      if (res.ok) {
+        alert('Q&A 게시글이 삭제되었습니다.');
+        setQnaDeleteTarget(null);
+        await fetchQnaList();
+      } else {
+        const data = await res.json();
+        alert(data.error || '삭제 실패');
+      }
+    } catch (err: any) {
+      alert('삭제 중 오류가 발생했습니다: ' + err.message);
     }
   };
 
