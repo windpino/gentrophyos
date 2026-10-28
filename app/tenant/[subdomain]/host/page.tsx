@@ -1817,56 +1817,6 @@ export default function HostDashboardPage({
                 </button>
 
                 {/* 상단 툴바 가로 스크롤 컨트롤러 */}
-                <div style={{ display: 'inline-flex', alignItems: 'center', background: '#f1f5f9', borderRadius: '10px', padding: '3px', border: '1px solid #cbd5e1' }} title="좌우 열 스크롤 이동">
-                  <button
-                    type="button"
-                    onClick={() => handleScrollTable('left')}
-                    disabled={!canScrollLeft}
-                    style={{
-                      border: 'none',
-                      background: canScrollLeft ? '#ffffff' : 'transparent',
-                      padding: '8px 12px',
-                      borderRadius: '7px',
-                      cursor: canScrollLeft ? 'pointer' : 'default',
-                      opacity: canScrollLeft ? 1 : 0.4,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      fontSize: '0.84rem',
-                      fontWeight: '800',
-                      color: '#1e293b',
-                      boxShadow: canScrollLeft ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    <ChevronLeft size={16} strokeWidth={2.5} /> 좌측 열
-                  </button>
-                  <div style={{ width: '1px', height: '18px', background: '#cbd5e1', margin: '0 2px' }} />
-                  <button
-                    type="button"
-                    onClick={() => handleScrollTable('right')}
-                    disabled={!canScrollRight}
-                    style={{
-                      border: 'none',
-                      background: canScrollRight ? '#ffffff' : 'transparent',
-                      padding: '8px 12px',
-                      borderRadius: '7px',
-                      cursor: canScrollRight ? 'pointer' : 'default',
-                      opacity: canScrollRight ? 1 : 0.4,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      fontSize: '0.84rem',
-                      fontWeight: '800',
-                      color: '#1e293b',
-                      boxShadow: canScrollRight ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    우측 열 <ChevronRight size={16} strokeWidth={2.5} />
-                  </button>
-                </div>
-
                 <button
                   className="btn-secondary"
                   onClick={handleAddNewRow}
