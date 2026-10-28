@@ -1314,7 +1314,9 @@ export default function HostDashboardPage({
         <div style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--theme-gold)' }}>
           {activeSection === 'applicants' ? '참가자' : 
            activeSection === 'brackets' ? '대진/조편성' :
-           activeSection === 'tie-breaker' ? '룰설정' : '공시서'}
+           activeSection === 'tie-breaker' ? '룰설정' :
+           activeSection === 'announcements' ? '공지사항' :
+           activeSection === 'qna' ? 'Q&A' : '공시서'}
         </div>
       </div>
 
@@ -1341,6 +1343,8 @@ export default function HostDashboardPage({
                 { id: 'applicants', label: '참가자관리', icon: Users },
                 { id: 'brackets', label: '대진표 및 조 편성표', icon: Layers },
                 { id: 'tie-breaker', label: '동점자 순위 규칙 설정', icon: Award },
+                { id: 'announcements', label: '공지사항(알림) 관리', icon: Bell },
+                { id: 'qna', label: 'Q&A 게시판 관리', icon: MessageSquare },
                 { id: 'notice', label: '개최공시서 업로드', icon: Upload },
               ].map((item) => {
                 const Icon = item.icon;
@@ -1431,6 +1435,8 @@ export default function HostDashboardPage({
             { id: 'applicants', label: '참가자관리', icon: Users },
             { id: 'brackets', label: '대진표 및 조 편성표', icon: Layers },
             { id: 'tie-breaker', label: '동점자 순위 규칙 설정', icon: Award },
+            { id: 'announcements', label: '공지사항(알림) 관리', icon: Bell },
+            { id: 'qna', label: 'Q&A 게시판 관리', icon: MessageSquare },
             { id: 'notice', label: '개최공시서 업로드', icon: Upload },
           ].map((item) => {
             const Icon = item.icon;
@@ -1511,7 +1517,9 @@ export default function HostDashboardPage({
               <h1 style={{ fontSize: 'clamp(1.3rem, 3.5vw, 1.9rem)', fontWeight: '800', margin: 0, marginBottom: '4px' }}>
                 {activeSection === 'applicants' ? '참가자관리' : 
                  activeSection === 'brackets' ? '대진표 및 조 편성표' :
-                 activeSection === 'tie-breaker' ? 'Tie-breaker 가중치 제어기' : '개최공시서 업로드'}
+                 activeSection === 'tie-breaker' ? 'Tie-breaker 가중치 제어기' :
+                 activeSection === 'announcements' ? '공지사항(알림) 관리' :
+                 activeSection === 'qna' ? 'Q&A 질문/답변 게시판 관리' : '개최공시서 업로드'}
               </h1>
               <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.85rem' }}>{activeTournament.title}</p>
             </div>
@@ -2831,6 +2839,376 @@ export default function HostDashboardPage({
           <NoticeEditor tenant={tenant} subdomain={subdomain} onSaveSuccess={fetchInitialData} />
         )}
 
+        {/* SECTION E: 공지사항 (알림) 관리 */}
+        {activeSection === 'announcements' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {/* 상단 헤더 & 액션 */}
+            <div className="glass-panel" style={{ borderTop: '4px solid var(--theme-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+              <div>
+                <h3 style={{ fontSize: '1.35rem', fontWeight: '900', margin: '0 0 6px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <Bell size={24} style={{ color: 'var(--theme-primary)' }} /> 공지사항 및 팝업 알림 관리
+                </h3>
+                <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                  대회 참가자 및 홈페이지 방문객에게 전달할 공지사항을 작성하고, 중요 공지는 팝업창으로 즉시 띄울 수 있습니다.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleOpenAnnouncementModal()}
+                style={{
+                  background: 'var(--theme-primary)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '10px',
+                  padding: '12px 20px',
+                  fontWeight: '800',
+                  fontSize: '0.92rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 4px 12px rgba(2, 132, 199, 0.25)'
+                }}
+              >
+                <Plus size={18} /> 새 공지사항 작성
+              </button>
+            </div>
+
+            {/* 통계 요약 카드 */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+              <div className="glass-panel" style={{ padding: '20px' }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '700' }}>전체 공지글</span>
+                <div style={{ fontSize: '1.8rem', fontWeight: '900', color: 'var(--text-main)', marginTop: '4px' }}>
+                  {announcements.length}건
+                </div>
+              </div>
+              <div className="glass-panel" style={{ padding: '20px', borderLeft: '4px solid #f59e0b' }}>
+                <span style={{ fontSize: '0.85rem', color: '#b45309', fontWeight: '700' }}>🔔 팝업 노출 공지</span>
+                <div style={{ fontSize: '1.8rem', fontWeight: '900', color: '#d97706', marginTop: '4px' }}>
+                  {announcements.filter(a => a.isPopup).length}건
+                </div>
+              </div>
+              <div className="glass-panel" style={{ padding: '20px', borderLeft: '4px solid #10b981' }}>
+                <span style={{ fontSize: '0.85rem', color: '#047857', fontWeight: '700' }}>📌 상단 고정 공지</span>
+                <div style={{ fontSize: '1.8rem', fontWeight: '900', color: '#059669', marginTop: '4px' }}>
+                  {announcements.filter(a => a.isPinned).length}건
+                </div>
+              </div>
+            </div>
+
+            {/* 공지사항 테이블 */}
+            <div className="glass-panel" style={{ padding: 0, overflow: 'hidden' }}>
+              <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '800' }}>등록된 공지사항 목록</h4>
+                <button
+                  type="button"
+                  onClick={fetchAnnouncements}
+                  disabled={loadingAnnouncements}
+                  style={{
+                    background: 'none',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '8px',
+                    padding: '6px 12px',
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer',
+                    fontSize: '0.8rem',
+                    fontWeight: '700',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  <RefreshCw size={14} className={loadingAnnouncements ? 'animate-spin' : ''} /> 새로고침
+                </button>
+              </div>
+
+              {loadingAnnouncements ? (
+                <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <RefreshCw className="animate-spin" size={24} style={{ margin: '0 auto 10px auto' }} />
+                  공지사항을 불러오는 중...
+                </div>
+              ) : announcements.length === 0 ? (
+                <div style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <Bell size={40} style={{ margin: '0 auto 12px auto', opacity: 0.3 }} />
+                  <p style={{ margin: 0, fontWeight: '700', fontSize: '1rem' }}>등록된 공지사항이 없습니다.</p>
+                  <p style={{ margin: '6px 0 0 0', fontSize: '0.85rem' }}>상단의 [새 공지사항 작성] 버튼을 눌러 첫 공지를 등록해 보세요.</p>
+                </div>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
+                    <thead>
+                      <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
+                        <th style={{ padding: '14px 18px', width: '90px' }}>분류</th>
+                        <th style={{ padding: '14px 18px', minWidth: '240px' }}>제목</th>
+                        <th style={{ padding: '14px 18px', width: '110px', textAlign: 'center' }}>팝업 설정</th>
+                        <th style={{ padding: '14px 18px', width: '130px' }}>작성자</th>
+                        <th style={{ padding: '14px 18px', width: '140px' }}>작성일시</th>
+                        <th style={{ padding: '14px 18px', width: '130px', textAlign: 'center' }}>관리</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {announcements.map((item) => (
+                        <tr key={item.id} style={{ borderBottom: '1px solid var(--border-color)', transition: 'background 0.15s' }}>
+                          <td style={{ padding: '14px 18px' }}>
+                            <span style={{
+                              display: 'inline-block',
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              fontSize: '0.75rem',
+                              fontWeight: '800',
+                              background: item.category === '긴급' ? '#fee2e2' : item.category === '대회안내' ? '#eff6ff' : '#f1f5f9',
+                              color: item.category === '긴급' ? '#dc2626' : item.category === '대회안내' ? '#2563eb' : '#475569'
+                            }}>
+                              {item.category || '일반공지'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '14px 18px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              {item.isPinned && <span title="상단 고정">📌</span>}
+                              <span style={{ fontWeight: '800', color: 'var(--text-main)', fontSize: '0.95rem' }}>{item.title}</span>
+                            </div>
+                            <p style={{ margin: '4px 0 0 0', color: 'var(--text-muted)', fontSize: '0.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '420px' }}>
+                              {item.content}
+                            </p>
+                          </td>
+                          <td style={{ padding: '14px 18px', textAlign: 'center' }}>
+                            {item.isPopup ? (
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#fef3c7', color: '#b45309', padding: '4px 8px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '800' }}>
+                                🔔 팝업 활성
+                              </span>
+                            ) : (
+                              <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>일반 목록</span>
+                            )}
+                          </td>
+                          <td style={{ padding: '14px 18px', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+                            {item.author || '-'}
+                          </td>
+                          <td style={{ padding: '14px 18px', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+                            {item.createdAt ? new Date(item.createdAt).toLocaleDateString('ko-KR') : '-'}
+                          </td>
+                          <td style={{ padding: '14px 18px', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', justifyContent: 'center', gap: '6px' }}>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenAnnouncementModal(item)}
+                                style={{
+                                  background: 'rgba(37,99,235,0.1)',
+                                  color: '#3b82f6',
+                                  border: '1px solid rgba(37,99,235,0.2)',
+                                  borderRadius: '6px',
+                                  padding: '5px 10px',
+                                  fontSize: '0.78rem',
+                                  fontWeight: '700',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                수정
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setAnnouncementDeleteTarget(item)}
+                                style={{
+                                  background: 'rgba(239,68,68,0.1)',
+                                  color: '#ef4444',
+                                  border: '1px solid rgba(239,68,68,0.2)',
+                                  borderRadius: '6px',
+                                  padding: '5px 10px',
+                                  fontSize: '0.78rem',
+                                  fontWeight: '700',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                삭제
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* SECTION F: Q&A 게시판 관리 */}
+        {activeSection === 'qna' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {/* 상단 헤더 */}
+            <div className="glass-panel" style={{ borderTop: '4px solid #10b981', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+              <div>
+                <h3 style={{ fontSize: '1.35rem', fontWeight: '900', margin: '0 0 6px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <MessageSquare size={24} style={{ color: '#10b981' }} /> Q&A 질문/답변 게시판 관리
+                </h3>
+                <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                  대회 참가자들의 문의 사항을 확인하고 공식 답변을 등록하거나 부적절한 게시글을 관리합니다.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={fetchQnaList}
+                disabled={loadingQna}
+                style={{
+                  background: 'white',
+                  color: '#0f172a',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '10px',
+                  padding: '10px 16px',
+                  fontWeight: '800',
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <RefreshCw size={16} className={loadingQna ? 'animate-spin' : ''} /> 새로고침
+              </button>
+            </div>
+
+            {/* 통계 요약 카드 */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+              <div className="glass-panel" style={{ padding: '20px' }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '700' }}>전체 문의글</span>
+                <div style={{ fontSize: '1.8rem', fontWeight: '900', color: 'var(--text-main)', marginTop: '4px' }}>
+                  {qnaList.length}건
+                </div>
+              </div>
+              <div className="glass-panel" style={{ padding: '20px', borderLeft: '4px solid #f59e0b' }}>
+                <span style={{ fontSize: '0.85rem', color: '#b45309', fontWeight: '700' }}>⏳ 답변 대기</span>
+                <div style={{ fontSize: '1.8rem', fontWeight: '900', color: '#d97706', marginTop: '4px' }}>
+                  {qnaList.filter(q => !q.isAnswered).length}건
+                </div>
+              </div>
+              <div className="glass-panel" style={{ padding: '20px', borderLeft: '4px solid #10b981' }}>
+                <span style={{ fontSize: '0.85rem', color: '#047857', fontWeight: '700' }}>✅ 답변 완료</span>
+                <div style={{ fontSize: '1.8rem', fontWeight: '900', color: '#059669', marginTop: '4px' }}>
+                  {qnaList.filter(q => q.isAnswered).length}건
+                </div>
+              </div>
+            </div>
+
+            {/* Q&A 질문 목록 */}
+            <div className="glass-panel" style={{ padding: 0, overflow: 'hidden' }}>
+              <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)' }}>
+                <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '800' }}>문의 목록 및 답변 상태</h4>
+              </div>
+
+              {loadingQna ? (
+                <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <RefreshCw className="animate-spin" size={24} style={{ margin: '0 auto 10px auto' }} />
+                  Q&A 목록을 불러오는 중...
+                </div>
+              ) : qnaList.length === 0 ? (
+                <div style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <MessageSquare size={40} style={{ margin: '0 auto 12px auto', opacity: 0.3 }} />
+                  <p style={{ margin: 0, fontWeight: '700', fontSize: '1rem' }}>등록된 Q&A 문의가 없습니다.</p>
+                </div>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
+                    <thead>
+                      <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
+                        <th style={{ padding: '14px 18px', width: '90px' }}>상태</th>
+                        <th style={{ padding: '14px 18px', width: '85px', textAlign: 'center' }}>공개여부</th>
+                        <th style={{ padding: '14px 18px', minWidth: '260px' }}>질문 및 내용</th>
+                        <th style={{ padding: '14px 18px', width: '120px' }}>작성자</th>
+                        <th style={{ padding: '14px 18px', width: '130px' }}>등록일시</th>
+                        <th style={{ padding: '14px 18px', width: '140px', textAlign: 'center' }}>관리</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {qnaList.map((item) => (
+                        <tr key={item.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                          <td style={{ padding: '14px 18px' }}>
+                            {item.isAnswered ? (
+                              <span style={{ display: 'inline-block', background: '#dcfce7', color: '#15803d', padding: '3px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '800' }}>
+                                답변완료
+                              </span>
+                            ) : (
+                              <span style={{ display: 'inline-block', background: '#fef3c7', color: '#b45309', padding: '3px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '800' }}>
+                                답변대기
+                              </span>
+                            )}
+                          </td>
+                          <td style={{ padding: '14px 18px', textAlign: 'center' }}>
+                            {item.isSecret ? (
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', background: '#f1f5f9', color: '#475569', padding: '3px 6px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '700' }}>
+                                🔒 비밀글
+                              </span>
+                            ) : (
+                              <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>공개</span>
+                            )}
+                          </td>
+                          <td style={{ padding: '14px 18px' }}>
+                            <div style={{ fontWeight: '800', color: 'var(--text-main)', fontSize: '0.95rem' }}>
+                              {item.title}
+                            </div>
+                            <p style={{ margin: '4px 0 8px 0', color: 'var(--text-muted)', fontSize: '0.82rem', lineHeight: '1.45', whiteSpace: 'pre-wrap' }}>
+                              {item.content}
+                            </p>
+                            {item.isAnswered && (
+                              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '8px 12px', fontSize: '0.8rem', color: '#166534' }}>
+                                <div style={{ fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '2px' }}>
+                                  💬 공식 답변 ({item.answeredBy || '운영본부'})
+                                </div>
+                                <div style={{ whiteSpace: 'pre-wrap' }}>{item.answer}</div>
+                              </div>
+                            )}
+                          </td>
+                          <td style={{ padding: '14px 18px', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+                            {item.author}
+                          </td>
+                          <td style={{ padding: '14px 18px', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+                            {item.createdAt ? new Date(item.createdAt).toLocaleDateString('ko-KR') : '-'}
+                          </td>
+                          <td style={{ padding: '14px 18px', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', justifyContent: 'center', gap: '6px' }}>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenQnaAnswerModal(item)}
+                                style={{
+                                  background: item.isAnswered ? 'rgba(16,185,129,0.1)' : 'var(--theme-primary)',
+                                  color: item.isAnswered ? '#059669' : 'white',
+                                  border: item.isAnswered ? '1px solid rgba(16,185,129,0.2)' : 'none',
+                                  borderRadius: '6px',
+                                  padding: '6px 12px',
+                                  fontSize: '0.78rem',
+                                  fontWeight: '800',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                {item.isAnswered ? '답변 수정' : '답변 작성'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setQnaDeleteTarget(item)}
+                                style={{
+                                  background: 'rgba(239,68,68,0.1)',
+                                  color: '#ef4444',
+                                  border: '1px solid rgba(239,68,68,0.2)',
+                                  borderRadius: '6px',
+                                  padding: '6px 10px',
+                                  fontSize: '0.78rem',
+                                  fontWeight: '700',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                삭제
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
       </main>
 
       {/* 2.5. 참가자 삭제 확인 대화상자 (모달) */}
@@ -3180,6 +3558,269 @@ export default function HostDashboardPage({
           </div>
         );
       })()}
+
+      {/* ── 공지사항 작성/수정 모달 ── */}
+      {isAnnouncementModalOpen && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '20px'
+        }}>
+          <div style={{ background: 'white', borderRadius: '20px', maxWidth: '580px', width: '100%', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800', color: '#0f172a' }}>
+                {editingAnnouncement ? '공지사항 수정' : '새 공지사항 작성'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsAnnouncementModalOpen(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveAnnouncement} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>분류</label>
+                  <select
+                    value={announcementForm.category}
+                    onChange={(e) => setAnnouncementForm({ ...announcementForm, category: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '0.88rem', fontWeight: '700' }}
+                  >
+                    <option value="일반공지">일반공지</option>
+                    <option value="대회안내">대회안내</option>
+                    <option value="긴급">긴급</option>
+                    <option value="경기규정">경기규정</option>
+                    <option value="결과발표">결과발표</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>작성자</label>
+                  <input
+                    type="text"
+                    value={announcementForm.author}
+                    onChange={(e) => setAnnouncementForm({ ...announcementForm, author: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '0.88rem' }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>제목</label>
+                <input
+                  type="text"
+                  value={announcementForm.title}
+                  onChange={(e) => setAnnouncementForm({ ...announcementForm, title: e.target.value })}
+                  placeholder="공지사항 제목을 입력하세요"
+                  required
+                  style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '0.95rem', fontWeight: '800' }}
+                />
+              </div>
+
+              {/* 팝업 및 고정 옵션 체크박스 */}
+              <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '700', color: '#1e293b' }}>
+                  <input
+                    type="checkbox"
+                    checked={announcementForm.isPopup}
+                    onChange={(e) => setAnnouncementForm({ ...announcementForm, isPopup: e.target.checked })}
+                    style={{ width: '16px', height: '16px', accentColor: 'var(--theme-primary)' }}
+                  />
+                  <span>🔔 팝업 알림으로 노출 (홈페이지 접속 시 모달 팝업으로 자동 안내)</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '700', color: '#1e293b' }}>
+                  <input
+                    type="checkbox"
+                    checked={announcementForm.isPinned}
+                    onChange={(e) => setAnnouncementForm({ ...announcementForm, isPinned: e.target.checked })}
+                    style={{ width: '16px', height: '16px', accentColor: 'var(--theme-primary)' }}
+                  />
+                  <span>📌 공지사항 목록 최상단 고정</span>
+                </label>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>내용</label>
+                <textarea
+                  value={announcementForm.content}
+                  onChange={(e) => setAnnouncementForm({ ...announcementForm, content: e.target.value })}
+                  placeholder="공지할 내용을 상세히 입력하세요."
+                  rows={6}
+                  required
+                  style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '0.9rem', lineHeight: '1.6', resize: 'vertical' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsAnnouncementModalOpen(false)}
+                  style={{ padding: '10px 18px', borderRadius: '10px', border: '1px solid #cbd5e1', background: 'white', color: '#475569', fontWeight: '700', cursor: 'pointer' }}
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingAnnouncement}
+                  style={{ padding: '10px 22px', borderRadius: '10px', border: 'none', background: 'var(--theme-primary)', color: 'white', fontWeight: '800', cursor: isSavingAnnouncement ? 'not-allowed' : 'pointer' }}
+                >
+                  {isSavingAnnouncement ? '저장 중...' : (editingAnnouncement ? '수정 완료' : '등록하기')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── 공지사항 삭제 확인 모달 ── */}
+      {announcementDeleteTarget && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '20px'
+        }}>
+          <div style={{ background: 'white', borderRadius: '18px', maxWidth: '440px', width: '100%', overflow: 'hidden', padding: '24px' }}>
+            <h3 style={{ margin: '0 0 10px 0', fontSize: '1.15rem', fontWeight: '800', color: '#0f172a' }}>
+              공지사항 삭제 확인
+            </h3>
+            <p style={{ margin: '0 0 16px 0', color: '#64748b', fontSize: '0.9rem', lineHeight: '1.5' }}>
+              정말 <strong>'{announcementDeleteTarget.title}'</strong> 공지사항을 삭제하시겠습니까?
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => setAnnouncementDeleteTarget(null)}
+                style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #cbd5e1', background: 'white', color: '#475569', fontWeight: '700', cursor: 'pointer' }}
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteAnnouncement}
+                style={{ padding: '8px 18px', borderRadius: '8px', border: 'none', background: '#ef4444', color: 'white', fontWeight: '800', cursor: 'pointer' }}
+              >
+                삭제하기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Q&A 답변 등록/수정 모달 ── */}
+      {qnaAnswerTarget && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '20px'
+        }}>
+          <div style={{ background: 'white', borderRadius: '20px', maxWidth: '580px', width: '100%', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800', color: '#0f172a' }}>
+                Q&A 공식 답변 등록
+              </h3>
+              <button
+                type="button"
+                onClick={() => setQnaAnswerTarget(null)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveQnaAnswer} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* 질문 원문 박스 */}
+              <div style={{ background: '#f8fafc', padding: '14px 16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#64748b', marginBottom: '4px' }}>
+                  <span>작성자: <strong>{qnaAnswerTarget.author}</strong> {qnaAnswerTarget.isSecret ? '(🔒 비밀글)' : ''}</span>
+                  <span>{qnaAnswerTarget.createdAt ? new Date(qnaAnswerTarget.createdAt).toLocaleDateString('ko-KR') : ''}</span>
+                </div>
+                <div style={{ fontWeight: '800', color: '#0f172a', fontSize: '0.95rem', marginBottom: '4px' }}>
+                  {qnaAnswerTarget.title}
+                </div>
+                <p style={{ margin: 0, fontSize: '0.85rem', color: '#475569', lineHeight: '1.5', whiteSpace: 'pre-wrap' }}>
+                  {qnaAnswerTarget.content}
+                </p>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>답변자 명의</label>
+                <input
+                  type="text"
+                  value={qnaAnswerAuthor}
+                  onChange={(e) => setQnaAnswerAuthor(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '0.88rem' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>공식 답변 내용</label>
+                <textarea
+                  value={qnaAnswerText}
+                  onChange={(e) => setQnaAnswerText(e.target.value)}
+                  placeholder="참가자에게 안내할 공식 답변을 작성하세요."
+                  rows={6}
+                  required
+                  style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '0.9rem', lineHeight: '1.6', resize: 'vertical' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setQnaAnswerTarget(null)}
+                  style={{ padding: '10px 18px', borderRadius: '10px', border: '1px solid #cbd5e1', background: 'white', color: '#475569', fontWeight: '700', cursor: 'pointer' }}
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingQnaAnswer}
+                  style={{ padding: '10px 22px', borderRadius: '10px', border: 'none', background: '#10b981', color: 'white', fontWeight: '800', cursor: isSavingQnaAnswer ? 'not-allowed' : 'pointer' }}
+                >
+                  {isSavingQnaAnswer ? '저장 중...' : '답변 등록 완료'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Q&A 삭제 확인 모달 ── */}
+      {qnaDeleteTarget && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '20px'
+        }}>
+          <div style={{ background: 'white', borderRadius: '18px', maxWidth: '440px', width: '100%', overflow: 'hidden', padding: '24px' }}>
+            <h3 style={{ margin: '0 0 10px 0', fontSize: '1.15rem', fontWeight: '800', color: '#0f172a' }}>
+              Q&A 질문글 삭제 확인
+            </h3>
+            <p style={{ margin: '0 0 16px 0', color: '#64748b', fontSize: '0.9rem', lineHeight: '1.5' }}>
+              정말 <strong>'{qnaDeleteTarget.title}'</strong> 글과 관련 답변을 모두 삭제하시겠습니까?
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => setQnaDeleteTarget(null)}
+                style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #cbd5e1', background: 'white', color: '#475569', fontWeight: '700', cursor: 'pointer' }}
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteQna}
+                style={{ padding: '8px 18px', borderRadius: '8px', border: 'none', background: '#ef4444', color: 'white', fontWeight: '800', cursor: 'pointer' }}
+              >
+                삭제하기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
