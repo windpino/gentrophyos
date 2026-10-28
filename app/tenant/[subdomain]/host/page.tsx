@@ -4229,7 +4229,7 @@ function BibManagementModal({
     orange: [],
   });
 
-  const [numberingStyle, setNumberingStyle] = useState<'continuous' | 'colorPrefix' | 'fullName'>('continuous');
+  const [numberingStyle, setNumberingStyle] = useState<'colorWithNum' | 'colorPrefix' | 'colorShort' | 'numberOnly'>('colorWithNum');
   const [assignScope, setAssignScope] = useState<'all' | 'approved'>('all');
   const [assignOrder, setAssignOrder] = useState<'current' | 'division'>('current');
   const [overwriteExisting, setOverwriteExisting] = useState<boolean>(true);
@@ -4248,7 +4248,13 @@ function BibManagementModal({
               green: Array.isArray(parsed.green) ? parsed.green : [],
               orange: Array.isArray(parsed.orange) ? parsed.orange : [],
             });
-            if (parsed.numberingStyle) setNumberingStyle(parsed.numberingStyle);
+            if (parsed.numberingStyle) {
+              if (['colorWithNum', 'colorPrefix', 'colorShort', 'numberOnly'].includes(parsed.numberingStyle)) {
+                setNumberingStyle(parsed.numberingStyle);
+              } else {
+                setNumberingStyle('colorWithNum');
+              }
+            }
             if (parsed.assignScope) setAssignScope(parsed.assignScope);
             if (parsed.assignOrder) setAssignOrder(parsed.assignOrder);
             if (parsed.overwriteExisting !== undefined) setOverwriteExisting(parsed.overwriteExisting);
@@ -4343,52 +4349,49 @@ function BibManagementModal({
     return true;
   });
 
-  // 표기용 번호 텍스트 생성
-  const getButtonLabel = (color: 'white' | 'green' | 'orange', num: number) => {
-    if (numberingStyle === 'continuous') {
-      if (color === 'white') return String(num);
-      if (color === 'green') return String(num + 50);
-      if (color === 'orange') return String(num + 100);
+  // 배번 텍스트 서식화 (색상별 1~50번 고유 번호 체계)
+  const formatBib = (color: 'white' | 'green' | 'orange', num: number, style: string) => {
+    const colorKr = color === 'white' ? '흰색' : color === 'green' ? '연두' : '오렌지';
+    const prefixKr = color === 'white' ? '흰' : color === 'green' ? '연' : '주';
+
+    if (style === 'colorWithNum') {
+      return `${colorKr} ${num}번`;
     }
-    if (numberingStyle === 'colorPrefix') {
-      if (color === 'white') return `흰${num}`;
-      if (color === 'green') return `연${num}`;
-      if (color === 'orange') return `주${num}`;
+    if (style === 'colorShort') {
+      return `${colorKr} ${num}`;
     }
-    if (color === 'white') return `흰색 ${num}`;
-    if (color === 'green') return `연두 ${num}`;
-    return `오렌지 ${num}`;
+    if (style === 'colorPrefix') {
+      return `${prefixKr}${num}`;
+    }
+    if (style === 'numberOnly') {
+      return String(num);
+    }
+    return `${colorKr} ${num}번`;
   };
 
-  // 배번 자동 순차 배정 실행 함수
+  // 배번 자동 순차 배정 실행 함수 (흰색 1~50, 연두 1~50, 오렌지 1~50)
   const handleExecuteAutoAssignment = () => {
-    // 1. 배정 가능한 배번 목록(비분실 배번) 생성
+    // 1. 배정 가능한 배번 목록(비분실 배번) 생성 - 색상별로 1~50번 순차 추가
     const availablePool: string[] = [];
 
-    // 흰색 (1~50)
+    // 흰색 (1~50번)
     for (let i = 1; i <= 50; i++) {
       if (!lostBibs.white.includes(i)) {
-        if (numberingStyle === 'continuous') availablePool.push(String(i));
-        else if (numberingStyle === 'colorPrefix') availablePool.push(`흰${i}`);
-        else availablePool.push(`흰색 ${i}`);
+        availablePool.push(formatBib('white', i, numberingStyle));
       }
     }
 
-    // 연두색 (1~50)
+    // 연두색 (1~50번)
     for (let i = 1; i <= 50; i++) {
       if (!lostBibs.green.includes(i)) {
-        if (numberingStyle === 'continuous') availablePool.push(String(i + 50));
-        else if (numberingStyle === 'colorPrefix') availablePool.push(`연${i}`);
-        else availablePool.push(`연두 ${i}`);
+        availablePool.push(formatBib('green', i, numberingStyle));
       }
     }
 
-    // 오렌지색 (1~50)
+    // 오렌지색 (1~50번)
     for (let i = 1; i <= 50; i++) {
       if (!lostBibs.orange.includes(i)) {
-        if (numberingStyle === 'continuous') availablePool.push(String(i + 100));
-        else if (numberingStyle === 'colorPrefix') availablePool.push(`주${i}`);
-        else availablePool.push(`오렌지 ${i}`);
+        availablePool.push(formatBib('orange', i, numberingStyle));
       }
     }
 
@@ -4442,7 +4445,7 @@ function BibManagementModal({
     });
 
     const isShortage = targetParticipants.length > availablePool.length;
-    const summaryMsg = `✅ 총 ${assignedCount}명의 참가자에게 분실 배번(${totalLost}개 제외)을 건너뛰고 순차적으로 배번이 자동 입력되었습니다!${
+    const summaryMsg = `✅ 총 ${assignedCount}명의 참가자에게 색상별 1~50번 배번티 중 분실(${totalLost}개 제외)을 건너뛰고 순차적으로 배번이 자동 입력되었습니다!${
       isShortage ? `\n⚠️ (주의: 배번티 수량이 부족하여 ${targetParticipants.length - availablePool.length}명은 미배정되었습니다.)` : ''
     }\n\n화면의 스프레드시트에서 배번을 확인하신 후, [변경 사항 일괄 저장] 버튼을 누르면 최종 데이터베이스에 영구 저장됩니다.`;
 
@@ -4482,7 +4485,7 @@ function BibManagementModal({
               <span>🏷️</span> 배번티 보유 관리 & 분실 제외 자동 배정기
             </h3>
             <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>
-              보유 배번티 150개 (흰색 50개, 연두색 50개, 오렌지색 50개) 중 분실된 번호를 클릭하여 체크하면, 해당 번호를 건너뛰고 참가자들에게 순차적으로 배정합니다.
+              보유 배번티는 색상별 1~50번 (흰색 1~50번, 연두색 1~50번, 오렌지색 1~50번, 총 150개)으로 구성되어 있습니다. 분실된 번호를 클릭하여 체크하면 해당 번호를 건너뛰고 참가자들에게 순차적으로 배정합니다.
             </p>
           </div>
           <button
@@ -4697,7 +4700,7 @@ function BibManagementModal({
               }}>
                 {Array.from({ length: 50 }, (_, i) => i + 1).map(num => {
                   const isLost = lostBibs[activeColorTab].includes(num);
-                  const label = getButtonLabel(activeColorTab, num);
+                  const prefix = activeColorTab === 'white' ? '흰' : activeColorTab === 'green' ? '연' : '주';
 
                   return (
                     <button
@@ -4723,16 +4726,16 @@ function BibManagementModal({
                         boxShadow: isLost ? 'inset 0 0 0 1px #ef4444' : '0 1px 3px rgba(0,0,0,0.04)'
                       }}
                     >
-                      <span style={{ textDecoration: isLost ? 'line-through' : 'none' }}>
-                        {label}
+                      <span style={{ textDecoration: isLost ? 'line-through' : 'none', fontSize: '1rem', fontWeight: '900' }}>
+                        {num}번
                       </span>
                       <span style={{
-                        fontSize: '0.68rem',
+                        fontSize: '0.7rem',
                         fontWeight: '800',
-                        color: isLost ? '#ef4444' : '#10b981',
+                        color: isLost ? '#ef4444' : activeColorTab === 'white' ? '#64748b' : activeColorTab === 'green' ? '#16a34a' : '#ea580c',
                         letterSpacing: '-0.3px'
                       }}>
-                        {isLost ? '❌ 분실' : '정상'}
+                        {isLost ? '❌ 분실' : `${prefix}${num}`}
                       </span>
                     </button>
                   );
@@ -4753,16 +4756,16 @@ function BibManagementModal({
                 <label style={{ fontSize: '0.82rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '8px' }}>
                   1. 배번 표기 형식
                 </label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: '700', color: '#1e293b', cursor: 'pointer' }}>
                     <input
                       type="radio"
                       name="numberingStyle"
-                      checked={numberingStyle === 'continuous'}
-                      onChange={() => setNumberingStyle('continuous')}
+                      checked={numberingStyle === 'colorWithNum'}
+                      onChange={() => setNumberingStyle('colorWithNum')}
                       style={{ accentColor: 'var(--theme-primary)' }}
                     />
-                    <span>연속 번호 (1~150번) <span style={{ fontSize: '0.75rem', color: '#0284c7', fontWeight: '800' }}>[심판 키패드 입력 최적화 추천]</span></span>
+                    <span><strong>색상 + 번호 [권장]</strong>: 흰색 1번~50번, 연두 1번~50번, 오렌지 1번~50번</span>
                   </label>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: '700', color: '#1e293b', cursor: 'pointer' }}>
                     <input
@@ -4772,17 +4775,27 @@ function BibManagementModal({
                       onChange={() => setNumberingStyle('colorPrefix')}
                       style={{ accentColor: 'var(--theme-primary)' }}
                     />
-                    <span>색상 접두사 (흰1~흰50, 연1~연50, 주1~주50)</span>
+                    <span><strong>단축 접두사</strong>: 흰1~흰50, 연1~연50, 주1~주50 <span style={{ fontSize: '0.75rem', color: '#0284c7', fontWeight: '800' }}>[심판 키패드 빠른 입력 최적]</span></span>
                   </label>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: '700', color: '#1e293b', cursor: 'pointer' }}>
                     <input
                       type="radio"
                       name="numberingStyle"
-                      checked={numberingStyle === 'fullName'}
-                      onChange={() => setNumberingStyle('fullName')}
+                      checked={numberingStyle === 'colorShort'}
+                      onChange={() => setNumberingStyle('colorShort')}
                       style={{ accentColor: 'var(--theme-primary)' }}
                     />
-                    <span>색상 풀네임 (흰색 1, 연두 1, 오렌지 1)</span>
+                    <span><strong>색상 + 숫자</strong>: 흰색 1~50, 연두 1~50, 오렌지 1~50</span>
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: '700', color: '#1e293b', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="numberingStyle"
+                      checked={numberingStyle === 'numberOnly'}
+                      onChange={() => setNumberingStyle('numberOnly')}
+                      style={{ accentColor: 'var(--theme-primary)' }}
+                    />
+                    <span><strong>순수 숫자만</strong>: 1~50번 (색상 구분 없이 숫자만 표기)</span>
                   </label>
                 </div>
               </div>

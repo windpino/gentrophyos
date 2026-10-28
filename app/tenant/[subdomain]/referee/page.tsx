@@ -949,6 +949,39 @@ export default function RefereeMobilePage({
     });
   };
 
+  // 배번(티넘버) 스마트 매칭 도우미 (색상별 1~50번 체계 완벽 호환)
+  const isSmartBibMatch = (pBib?: string, pName?: string, query?: string) => {
+    if (!query) return false;
+    const q = query.trim().toLowerCase();
+    if (pName && pName.trim().toLowerCase() === q) return true;
+    if (!pBib) return false;
+
+    const b = pBib.trim().toLowerCase();
+    if (b === q) return true;
+
+    // 정규화: 공백 제거, '번' 제거, 색상 명칭 단축 통일
+    const normalize = (s: string) =>
+      s
+        .replace(/\s+/g, '')
+        .replace(/번$/, '')
+        .replace(/^오렌지|^주황|^오/, '주')
+        .replace(/^연두/, '연')
+        .replace(/^흰색/, '흰');
+
+    const normB = normalize(b);
+    const normQ = normalize(q);
+    if (normB === normQ) return true;
+
+    // 심판이 숫자만 입력했을 때 매칭 (예: '5' 입력 시 '흰5' 또는 '흰색 5번' 매칭)
+    const bDigits = b.replace(/[^0-9]/g, '');
+    const qDigits = q.replace(/[^0-9]/g, '');
+    if (q === qDigits && bDigits === qDigits && qDigits.length > 0) {
+      return true;
+    }
+
+    return false;
+  };
+
   // 배번(티넘버)으로 현재 순위 배정 후 다음 순위로 자동 이동
   const handleAssignBibSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -959,8 +992,7 @@ export default function RefereeMobilePage({
     }
 
     const matched = participants.find(
-      p => (p.bibNumber && p.bibNumber.trim().toLowerCase() === cleanBib.toLowerCase()) ||
-           p.name.trim().toLowerCase() === cleanBib.toLowerCase()
+      p => isSmartBibMatch(p.bibNumber, p.name, cleanBib)
     );
 
     if (matched) {
@@ -1322,8 +1354,7 @@ export default function RefereeMobilePage({
   const currentRankPlayer = participants.find(p => p[selectedRound] === currentRankNum);
   const matchedTypingPlayer = bibInput.trim()
     ? participants.find(
-        p => (p.bibNumber && p.bibNumber.trim().toLowerCase() === bibInput.trim().toLowerCase()) ||
-             p.name.trim() === bibInput.trim()
+        p => isSmartBibMatch(p.bibNumber, p.name, bibInput.trim())
       )
     : null;
 
