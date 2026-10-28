@@ -3111,27 +3111,28 @@ export default function HostDashboardPage({
                 </div>
               ) : (
                 <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
+                  <table style={{ minWidth: '960px', width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
                     <thead>
                       <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
-                        <th style={{ padding: '14px 18px', width: '90px' }}>분류</th>
-                        <th style={{ padding: '14px 18px', minWidth: '240px' }}>제목</th>
-                        <th style={{ padding: '14px 18px', width: '110px', textAlign: 'center' }}>팝업 설정</th>
-                        <th style={{ padding: '14px 18px', width: '130px' }}>작성자</th>
-                        <th style={{ padding: '14px 18px', width: '140px' }}>작성일시</th>
-                        <th style={{ padding: '14px 18px', width: '130px', textAlign: 'center' }}>관리</th>
+                        <th style={{ padding: '14px 18px', width: '110px', whiteSpace: 'nowrap' }}>분류</th>
+                        <th style={{ padding: '14px 18px', minWidth: '280px' }}>제목</th>
+                        <th style={{ padding: '14px 18px', width: '120px', textAlign: 'center', whiteSpace: 'nowrap' }}>팝업 설정</th>
+                        <th style={{ padding: '14px 18px', width: '160px', whiteSpace: 'nowrap' }}>작성자</th>
+                        <th style={{ padding: '14px 18px', width: '120px', whiteSpace: 'nowrap' }}>작성일시</th>
+                        <th style={{ padding: '14px 18px', width: '140px', textAlign: 'center', whiteSpace: 'nowrap' }}>관리</th>
                       </tr>
                     </thead>
                     <tbody>
                       {announcements.map((item) => (
                         <tr key={item.id} style={{ borderBottom: '1px solid var(--border-color)', transition: 'background 0.15s' }}>
-                          <td style={{ padding: '14px 18px' }}>
+                          <td style={{ padding: '14px 18px', whiteSpace: 'nowrap' }}>
                             <span style={{
                               display: 'inline-block',
-                              padding: '3px 8px',
+                              padding: '4px 10px',
                               borderRadius: '6px',
-                              fontSize: '0.75rem',
+                              fontSize: '0.78rem',
                               fontWeight: '800',
+                              whiteSpace: 'nowrap',
                               background: item.category === '긴급' ? '#fee2e2' : item.category === '대회안내' ? '#eff6ff' : '#f1f5f9',
                               color: item.category === '긴급' ? '#dc2626' : item.category === '대회안내' ? '#2563eb' : '#475569'
                             }}>
@@ -3147,23 +3148,23 @@ export default function HostDashboardPage({
                               {item.content}
                             </p>
                           </td>
-                          <td style={{ padding: '14px 18px', textAlign: 'center' }}>
+                          <td style={{ padding: '14px 18px', textAlign: 'center', whiteSpace: 'nowrap' }}>
                             {item.isPopup ? (
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#fef3c7', color: '#b45309', padding: '4px 8px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '800' }}>
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#fef3c7', color: '#b45309', padding: '4px 10px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '800', whiteSpace: 'nowrap' }}>
                                 🔔 팝업 활성
                               </span>
                             ) : (
-                              <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>일반 목록</span>
+                              <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem', whiteSpace: 'nowrap' }}>일반 목록</span>
                             )}
                           </td>
-                          <td style={{ padding: '14px 18px', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+                          <td style={{ padding: '14px 18px', color: 'var(--text-muted)', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
                             {item.author || '-'}
                           </td>
-                          <td style={{ padding: '14px 18px', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+                          <td style={{ padding: '14px 18px', color: 'var(--text-muted)', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
                             {item.createdAt ? new Date(item.createdAt).toLocaleDateString('ko-KR') : '-'}
                           </td>
-                          <td style={{ padding: '14px 18px', textAlign: 'center' }}>
-                            <div style={{ display: 'flex', justifyContent: 'center', gap: '6px' }}>
+                          <td style={{ padding: '14px 18px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', flexWrap: 'nowrap' }}>
                               <button
                                 type="button"
                                 onClick={() => handleOpenAnnouncementModal(item)}
@@ -3172,10 +3173,11 @@ export default function HostDashboardPage({
                                   color: '#3b82f6',
                                   border: '1px solid rgba(37,99,235,0.2)',
                                   borderRadius: '6px',
-                                  padding: '5px 10px',
-                                  fontSize: '0.78rem',
-                                  fontWeight: '700',
-                                  cursor: 'pointer'
+                                  padding: '5px 12px',
+                                  fontSize: '0.8rem',
+                                  fontWeight: '800',
+                                  cursor: 'pointer',
+                                  whiteSpace: 'nowrap'
                                 }}
                               >
                                 수정
@@ -3188,10 +3190,11 @@ export default function HostDashboardPage({
                                   color: '#ef4444',
                                   border: '1px solid rgba(239,68,68,0.2)',
                                   borderRadius: '6px',
-                                  padding: '5px 10px',
-                                  fontSize: '0.78rem',
-                                  fontWeight: '700',
-                                  cursor: 'pointer'
+                                  padding: '5px 12px',
+                                  fontSize: '0.8rem',
+                                  fontWeight: '800',
+                                  cursor: 'pointer',
+                                  whiteSpace: 'nowrap'
                                 }}
                               >
                                 삭제
@@ -3283,38 +3286,38 @@ export default function HostDashboardPage({
                 </div>
               ) : (
                 <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
+                  <table style={{ minWidth: '960px', width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
                     <thead>
                       <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
-                        <th style={{ padding: '14px 18px', width: '90px' }}>상태</th>
-                        <th style={{ padding: '14px 18px', width: '85px', textAlign: 'center' }}>공개여부</th>
-                        <th style={{ padding: '14px 18px', minWidth: '260px' }}>질문 및 내용</th>
-                        <th style={{ padding: '14px 18px', width: '120px' }}>작성자</th>
-                        <th style={{ padding: '14px 18px', width: '130px' }}>등록일시</th>
-                        <th style={{ padding: '14px 18px', width: '140px', textAlign: 'center' }}>관리</th>
+                        <th style={{ padding: '14px 18px', width: '100px', whiteSpace: 'nowrap' }}>상태</th>
+                        <th style={{ padding: '14px 18px', width: '90px', textAlign: 'center', whiteSpace: 'nowrap' }}>공개여부</th>
+                        <th style={{ padding: '14px 18px', minWidth: '280px' }}>질문 및 내용</th>
+                        <th style={{ padding: '14px 18px', width: '150px', whiteSpace: 'nowrap' }}>작성자</th>
+                        <th style={{ padding: '14px 18px', width: '120px', whiteSpace: 'nowrap' }}>등록일시</th>
+                        <th style={{ padding: '14px 18px', width: '160px', textAlign: 'center', whiteSpace: 'nowrap' }}>관리</th>
                       </tr>
                     </thead>
                     <tbody>
                       {qnaList.map((item) => (
                         <tr key={item.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                          <td style={{ padding: '14px 18px' }}>
+                          <td style={{ padding: '14px 18px', whiteSpace: 'nowrap' }}>
                             {item.isAnswered ? (
-                              <span style={{ display: 'inline-block', background: '#dcfce7', color: '#15803d', padding: '3px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '800' }}>
+                              <span style={{ display: 'inline-block', background: '#dcfce7', color: '#15803d', padding: '4px 10px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '800', whiteSpace: 'nowrap' }}>
                                 답변완료
                               </span>
                             ) : (
-                              <span style={{ display: 'inline-block', background: '#fef3c7', color: '#b45309', padding: '3px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '800' }}>
+                              <span style={{ display: 'inline-block', background: '#fef3c7', color: '#b45309', padding: '4px 10px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '800', whiteSpace: 'nowrap' }}>
                                 답변대기
                               </span>
                             )}
                           </td>
-                          <td style={{ padding: '14px 18px', textAlign: 'center' }}>
+                          <td style={{ padding: '14px 18px', textAlign: 'center', whiteSpace: 'nowrap' }}>
                             {item.isSecret ? (
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', background: '#f1f5f9', color: '#475569', padding: '3px 6px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '700' }}>
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', background: '#f1f5f9', color: '#475569', padding: '4px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '700', whiteSpace: 'nowrap' }}>
                                 🔒 비밀글
                               </span>
                             ) : (
-                              <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>공개</span>
+                              <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>공개</span>
                             )}
                           </td>
                           <td style={{ padding: '14px 18px' }}>
@@ -3333,14 +3336,14 @@ export default function HostDashboardPage({
                               </div>
                             )}
                           </td>
-                          <td style={{ padding: '14px 18px', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+                          <td style={{ padding: '14px 18px', color: 'var(--text-muted)', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
                             {item.author}
                           </td>
-                          <td style={{ padding: '14px 18px', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+                          <td style={{ padding: '14px 18px', color: 'var(--text-muted)', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
                             {item.createdAt ? new Date(item.createdAt).toLocaleDateString('ko-KR') : '-'}
                           </td>
-                          <td style={{ padding: '14px 18px', textAlign: 'center' }}>
-                            <div style={{ display: 'flex', justifyContent: 'center', gap: '6px' }}>
+                          <td style={{ padding: '14px 18px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', flexWrap: 'nowrap' }}>
                               <button
                                 type="button"
                                 onClick={() => handleOpenQnaAnswerModal(item)}
@@ -3349,10 +3352,11 @@ export default function HostDashboardPage({
                                   color: item.isAnswered ? '#059669' : 'white',
                                   border: item.isAnswered ? '1px solid rgba(16,185,129,0.2)' : 'none',
                                   borderRadius: '6px',
-                                  padding: '6px 12px',
-                                  fontSize: '0.78rem',
+                                  padding: '5px 12px',
+                                  fontSize: '0.8rem',
                                   fontWeight: '800',
-                                  cursor: 'pointer'
+                                  cursor: 'pointer',
+                                  whiteSpace: 'nowrap'
                                 }}
                               >
                                 {item.isAnswered ? '답변 수정' : '답변 작성'}
@@ -3365,10 +3369,11 @@ export default function HostDashboardPage({
                                   color: '#ef4444',
                                   border: '1px solid rgba(239,68,68,0.2)',
                                   borderRadius: '6px',
-                                  padding: '6px 10px',
-                                  fontSize: '0.78rem',
-                                  fontWeight: '700',
-                                  cursor: 'pointer'
+                                  padding: '5px 12px',
+                                  fontSize: '0.8rem',
+                                  fontWeight: '800',
+                                  cursor: 'pointer',
+                                  whiteSpace: 'nowrap'
                                 }}
                               >
                                 삭제
