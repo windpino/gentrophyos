@@ -4141,38 +4141,38 @@ export default function TenantPortalPage({
 
           {/* ── 공지사항 (알림) 섹션 ── */}
           {activeTab === 'announcements' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '30px', maxWidth: '960px', margin: '0 auto', width: '100%' }} className="animate-fade-in">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', maxWidth: '960px', margin: '0 auto', width: '100%' }} className="animate-fade-in">
                 {/* 헤더 배너 */}
-                <div className="glass-panel" style={{ background: 'white', padding: '35px 30px', borderTop: '4px solid var(--theme-primary)', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '60px', height: '60px', background: 'rgba(31, 111, 139, 0.1)', borderRadius: '50%', color: 'var(--theme-primary)', marginBottom: '4px' }}>
-                    <Bell size={28} />
+                <div className="glass-panel" style={{ background: 'white', padding: '22px 20px', borderTop: '4px solid var(--theme-primary)', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '48px', height: '48px', background: 'rgba(31, 111, 139, 0.1)', borderRadius: '50%', color: 'var(--theme-primary)', marginBottom: '2px' }}>
+                    <Bell size={24} />
                   </div>
-                  <h2 style={{ fontSize: '1.8rem', fontWeight: '900', color: 'var(--text-main)', margin: 0 }}>
+                  <h2 style={{ fontSize: '1.5rem', fontWeight: '900', color: 'var(--text-main)', margin: 0 }}>
                     대회 공지사항 및 공식 알림
                   </h2>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', margin: 0, maxWidth: '600px' }}>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0, maxWidth: '600px' }}>
                     {tenant?.name || '제20회 이순신장군배 전국윈드서핑대회'}의 공식 안내, 긴급 공지, 경기 변경 사항 등을 실시간으로 전해드립니다.
                   </p>
                 </div>
 
                 {/* 검색 및 카테고리 필터 바 */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
-                  <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                  <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
                     {['전체', '일반공지', '경기안내', '긴급공지', '결과안내'].map(cat => (
                       <button
                         key={cat}
                         type="button"
                         onClick={() => setSelectedAnnouncementCategory(cat)}
                         style={{
-                          padding: '8px 16px',
+                          padding: '6px 14px',
                           borderRadius: '20px',
                           border: 'none',
-                          fontSize: '0.85rem',
+                          fontSize: '0.82rem',
                           fontWeight: '700',
                           cursor: 'pointer',
                           background: selectedAnnouncementCategory === cat ? 'var(--theme-primary)' : 'white',
                           color: selectedAnnouncementCategory === cat ? 'white' : 'var(--text-muted)',
-                          boxShadow: selectedAnnouncementCategory === cat ? '0 4px 10px rgba(31, 111, 139, 0.25)' : '0 1px 3px rgba(0,0,0,0.05)',
+                          boxShadow: selectedAnnouncementCategory === cat ? '0 3px 8px rgba(31, 111, 139, 0.25)' : '0 1px 3px rgba(0,0,0,0.05)',
                           transition: 'all 0.2s',
                           whiteSpace: 'nowrap'
                         }}
@@ -4196,22 +4196,22 @@ export default function TenantPortalPage({
 
                 {/* 공지사항 카드 리스트 */}
                 {loadingAnnouncements ? (
-                  <div style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                    <RefreshCw className="animate-spin" size={26} style={{ margin: '0 auto 12px' }} />
-                    <p style={{ margin: 0, fontWeight: '700' }}>공지사항을 불러오는 중입니다...</p>
+                  <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                    <RefreshCw className="animate-spin" size={24} style={{ margin: '0 auto 10px' }} />
+                    <p style={{ margin: 0, fontWeight: '700', fontSize: '0.9rem' }}>공지사항을 불러오는 중입니다...</p>
                   </div>
                 ) : filteredAnnouncements.length === 0 ? (
-                  <div className="glass-panel" style={{ padding: '60px 20px', textAlign: 'center', background: 'white' }}>
-                    <Bell size={40} style={{ margin: '0 auto 14px', opacity: 0.25, color: 'var(--text-muted)' }} />
-                    <p style={{ margin: '0 0 6px', fontWeight: '800', fontSize: '1.1rem', color: 'var(--text-main)' }}>
+                  <div className="glass-panel" style={{ padding: '40px 20px', textAlign: 'center', background: 'white' }}>
+                    <Bell size={36} style={{ margin: '0 auto 12px', opacity: 0.25, color: 'var(--text-muted)' }} />
+                    <p style={{ margin: '0 0 4px', fontWeight: '800', fontSize: '1rem', color: 'var(--text-main)' }}>
                       등록된 공지사항이 없습니다.
                     </p>
-                    <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                    <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                       새로운 공지가 등록되면 이곳에 즉시 표시됩니다.
                     </p>
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {filteredAnnouncements.map((item, idx) => {
                       const isExpanded = selectedAnnouncement?.id === item.id;
                       const dateStr = item.createdAt ? new Date(item.createdAt).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }) : '-';
@@ -4222,67 +4222,67 @@ export default function TenantPortalPage({
                           className="glass-panel"
                           style={{
                             background: 'white',
-                            borderRadius: '16px',
+                            borderRadius: '10px',
                             border: item.isPinned ? '2px solid rgba(31, 111, 139, 0.35)' : '1px solid var(--border-color)',
                             overflow: 'hidden',
-                            transition: 'all 0.2s ease',
-                            boxShadow: item.isPinned ? '0 6px 18px rgba(31, 111, 139, 0.08)' : '0 2px 8px rgba(0,0,0,0.03)'
+                            transition: 'all 0.15s ease',
+                            boxShadow: item.isPinned ? '0 4px 12px rgba(31, 111, 139, 0.08)' : '0 1px 4px rgba(0,0,0,0.03)'
                           }}
                         >
                           <div
                             onClick={() => setSelectedAnnouncement(isExpanded ? null : item)}
                             style={{
-                              padding: '20px 24px',
+                              padding: '12px 18px',
                               cursor: 'pointer',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'space-between',
-                              gap: '16px',
+                              gap: '12px',
                               background: item.isPinned ? 'rgba(31, 111, 139, 0.03)' : 'white'
                             }}
                           >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
                               {item.isPinned && (
-                                <span style={{ padding: '4px 8px', borderRadius: '6px', background: 'rgba(197, 168, 128, 0.2)', color: '#b39366', fontWeight: '800', fontSize: '0.75rem', flexShrink: 0 }}>
+                                <span style={{ padding: '3px 7px', borderRadius: '5px', background: 'rgba(197, 168, 128, 0.2)', color: '#b39366', fontWeight: '800', fontSize: '0.72rem', flexShrink: 0 }}>
                                   📌 중요
                                 </span>
                               )}
                               <span style={{
-                                padding: '4px 10px',
-                                borderRadius: '6px',
+                                padding: '3px 8px',
+                                borderRadius: '5px',
                                 background: item.category === '긴급공지' ? '#fee2e2' : '#f1f5f9',
                                 color: item.category === '긴급공지' ? '#dc2626' : '#475569',
                                 fontWeight: '700',
-                                fontSize: '0.78rem',
+                                fontSize: '0.75rem',
                                 flexShrink: 0
                               }}>
                                 {item.category || '일반공지'}
                               </span>
-                              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '800', color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              <h3 style={{ margin: 0, fontSize: '0.96rem', fontWeight: '800', color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {item.title}
                               </h3>
                               {item.isPopup && (
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '2px 8px', borderRadius: '12px', background: '#fef2f2', color: '#dc2626', fontSize: '0.72rem', fontWeight: '800', flexShrink: 0 }}>
-                                  <Bell size={10} /> 팝업알림
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '2px 7px', borderRadius: '10px', background: '#fef2f2', color: '#dc2626', fontSize: '0.7rem', fontWeight: '800', flexShrink: 0 }}>
+                                  <Bell size={9} /> 팝업알림
                                 </span>
                               )}
                             </div>
 
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0 }}>
-                              <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{dateStr}</span>
-                              <span style={{ fontSize: '0.85rem', color: 'var(--theme-primary)', fontWeight: '700' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+                              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{dateStr}</span>
+                              <span style={{ fontSize: '0.82rem', color: 'var(--theme-primary)', fontWeight: '700' }}>
                                 {isExpanded ? '접기 ▲' : '보기 ▼'}
                               </span>
                             </div>
                           </div>
 
                           {isExpanded && (
-                            <div style={{ padding: '20px 24px', borderTop: '1px solid #f1f5f9', background: '#fafbfc' }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                            <div style={{ padding: '14px 18px', borderTop: '1px solid #f1f5f9', background: '#fafbfc' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                                 <span>작성: <strong>{item.author || '대회운영본부'}</strong></span>
                                 <span>등록일: {new Date(item.createdAt).toLocaleString('ko-KR')}</span>
                               </div>
-                              <div style={{ fontSize: '0.95rem', color: '#334155', lineHeight: '1.75', whiteSpace: 'pre-wrap', padding: '16px', background: 'white', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                              <div style={{ fontSize: '0.93rem', color: '#334155', lineHeight: '1.65', whiteSpace: 'pre-wrap', padding: '12px 14px', background: 'white', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                                 {item.content}
                               </div>
                             </div>
@@ -4297,69 +4297,69 @@ export default function TenantPortalPage({
 
           {/* ── Q&A 문의 게시판 섹션 ── */}
           {activeTab === 'qna' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '30px', maxWidth: '960px', margin: '0 auto', width: '100%' }} className="animate-fade-in">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', maxWidth: '960px', margin: '0 auto', width: '100%' }} className="animate-fade-in">
                 {/* 헤더 배너 */}
-                <div className="glass-panel" style={{ background: 'white', padding: '35px 30px', borderTop: '4px solid var(--theme-primary)', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '60px', height: '60px', background: 'rgba(31, 111, 139, 0.1)', borderRadius: '50%', color: 'var(--theme-primary)', marginBottom: '4px' }}>
-                    <MessageSquare size={28} />
+                <div className="glass-panel" style={{ background: 'white', padding: '22px 20px', borderTop: '4px solid var(--theme-primary)', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '48px', height: '48px', background: 'rgba(31, 111, 139, 0.1)', borderRadius: '50%', color: 'var(--theme-primary)', marginBottom: '2px' }}>
+                    <MessageSquare size={24} />
                   </div>
-                  <h2 style={{ fontSize: '1.8rem', fontWeight: '900', color: 'var(--text-main)', margin: 0 }}>
+                  <h2 style={{ fontSize: '1.5rem', fontWeight: '900', color: 'var(--text-main)', margin: 0 }}>
                     Q&A 참가자 문의 및 안내
                   </h2>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', margin: 0, maxWidth: '600px' }}>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0, maxWidth: '600px' }}>
                     대회 참가 신청, 경기 규정, 장비 계측, 일정 등 궁금한 점을 질문해 주세요. 이름과 비밀번호로 간편하게 글을 작성할 수 있습니다.
                   </p>
                 </div>
 
                 {/* 툴바 (질문 작성 버튼 & 검색) */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                   <button
                     type="button"
                     onClick={() => setIsQnaWriteModalOpen(true)}
                     className="btn-primary"
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 22px', fontSize: '0.95rem', borderRadius: '12px', boxShadow: '0 4px 12px rgba(31, 111, 139, 0.25)' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', fontSize: '0.9rem', borderRadius: '10px', boxShadow: '0 4px 12px rgba(31, 111, 139, 0.25)' }}
                   >
-                    <Plus size={18} /> 질문 작성하기
+                    <Plus size={16} /> 질문 작성하기
                   </button>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'white', border: '1px solid var(--border-color)', borderRadius: '20px', padding: '8px 16px', width: '280px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'white', border: '1px solid var(--border-color)', borderRadius: '20px', padding: '6px 14px', width: '280px' }}>
                     <Search size={16} style={{ color: 'var(--text-muted)' }} />
                     <input
                       type="text"
                       placeholder="질문 제목 또는 작성자 검색..."
                       value={qnaSearch}
                       onChange={(e) => setQnaSearch(e.target.value)}
-                      style={{ border: 'none', outline: 'none', background: 'transparent', width: '100%', fontSize: '0.88rem' }}
+                      style={{ border: 'none', outline: 'none', background: 'transparent', width: '100%', fontSize: '0.85rem' }}
                     />
                   </div>
                 </div>
 
                 {/* Q&A 카드 리스트 */}
                 {loadingQna ? (
-                  <div style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                    <RefreshCw className="animate-spin" size={26} style={{ margin: '0 auto 12px' }} />
-                    <p style={{ margin: 0, fontWeight: '700' }}>Q&A 목록을 불러오는 중입니다...</p>
+                  <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                    <RefreshCw className="animate-spin" size={24} style={{ margin: '0 auto 10px' }} />
+                    <p style={{ margin: 0, fontWeight: '700', fontSize: '0.9rem' }}>Q&A 목록을 불러오는 중입니다...</p>
                   </div>
                 ) : filteredQna.length === 0 ? (
-                  <div className="glass-panel" style={{ padding: '60px 20px', textAlign: 'center', background: 'white' }}>
-                    <HelpCircle size={40} style={{ margin: '0 auto 14px', opacity: 0.25, color: 'var(--text-muted)' }} />
-                    <p style={{ margin: '0 0 8px', fontWeight: '800', fontSize: '1.1rem', color: 'var(--text-main)' }}>
+                  <div className="glass-panel" style={{ padding: '40px 20px', textAlign: 'center', background: 'white' }}>
+                    <HelpCircle size={36} style={{ margin: '0 auto 12px', opacity: 0.25, color: 'var(--text-muted)' }} />
+                    <p style={{ margin: '0 0 6px', fontWeight: '800', fontSize: '1rem', color: 'var(--text-main)' }}>
                       등록된 Q&A 문의글이 없습니다.
                     </p>
-                    <p style={{ margin: '0 0 16px', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                    <p style={{ margin: '0 0 14px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                       대회에 대해 궁금하신 점이 있으시면 언제든지 첫 번째 질문을 남겨주세요!
                     </p>
                     <button
                       type="button"
                       onClick={() => setIsQnaWriteModalOpen(true)}
                       className="btn-primary"
-                      style={{ padding: '10px 20px', fontSize: '0.9rem', borderRadius: '10px' }}
+                      style={{ padding: '8px 16px', fontSize: '0.85rem', borderRadius: '8px' }}
                     >
                       질문 작성하기
                     </button>
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {filteredQna.map((item, idx) => {
                       const isAnswered = item.status === 'ANSWERED' || Boolean(item.answer);
                       const isUnlocked = unlockedQnaPosts[item.id];
@@ -4373,66 +4373,67 @@ export default function TenantPortalPage({
                           className="glass-panel"
                           style={{
                             background: 'white',
-                            borderRadius: '16px',
+                            borderRadius: '10px',
                             border: isAnswered ? '1px solid rgba(5, 150, 105, 0.2)' : '1px solid var(--border-color)',
                             overflow: 'hidden',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
+                            transition: 'all 0.15s ease',
+                            boxShadow: '0 1px 4px rgba(0,0,0,0.03)'
                           }}
                         >
                           <div
                             onClick={() => handleOpenQnaItem(item)}
                             style={{
-                              padding: '20px 24px',
+                              padding: '12px 18px',
                               cursor: 'pointer',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'space-between',
-                              gap: '16px'
+                              gap: '12px'
                             }}
                           >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
-                              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '700', minWidth: '32px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
+                              <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: '700', minWidth: '30px' }}>
                                 #{filteredQna.length - idx}
                               </span>
 
                               {isAnswered ? (
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '4px 8px', borderRadius: '20px', background: '#ecfdf5', color: '#059669', fontSize: '0.75rem', fontWeight: '800', flexShrink: 0 }}>
-                                  <CheckCircle2 size={11} /> 답변완료
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '3px 7px', borderRadius: '16px', background: '#ecfdf5', color: '#059669', fontSize: '0.72rem', fontWeight: '800', flexShrink: 0 }}>
+                                  <CheckCircle2 size={10} /> 답변완료
                                 </span>
                               ) : (
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '4px 8px', borderRadius: '20px', background: '#fffbeb', color: '#d97706', fontSize: '0.75rem', fontWeight: '800', flexShrink: 0 }}>
-                                  <Clock size={11} /> 답변대기
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '3px 7px', borderRadius: '16px', background: '#fffbeb', color: '#d97706', fontSize: '0.72rem', fontWeight: '800', flexShrink: 0 }}>
+                                  <Clock size={10} /> 답변대기
                                 </span>
                               )}
 
                               {item.isSecret && (
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '3px 7px', borderRadius: '4px', background: '#fef2f2', color: '#dc2626', fontSize: '0.75rem', fontWeight: '800', flexShrink: 0 }}>
-                                  <Lock size={11} /> 비밀글
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '2px 6px', borderRadius: '4px', background: '#fef2f2', color: '#dc2626', fontSize: '0.72rem', fontWeight: '800', flexShrink: 0 }}>
+                                  <Lock size={10} /> 비밀글
                                 </span>
                               )}
 
-                              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '800', color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              <h3 style={{ margin: 0, fontSize: '0.96rem', fontWeight: '800', color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {item.title}
                               </h3>
                             </div>
 
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0 }}>
-                              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{item.authorName}</span>
-                              <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{dateStr}</span>
-                              <span style={{ fontSize: '0.85rem', color: 'var(--theme-primary)', fontWeight: '700' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+                              <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{item.authorName}</span>
+                              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{dateStr}</span>
+                              <span style={{ fontSize: '0.82rem', color: 'var(--theme-primary)', fontWeight: '700' }}>
                                 {item.isSecret && !isUnlocked ? '🔒 열람' : (isExpanded ? '접기 ▲' : '보기 ▼')}
                               </span>
                             </div>
                           </div>
 
                           {isExpanded && (!item.isSecret || isUnlocked) && (
-                            <div style={{ padding: '22px 24px', borderTop: '1px solid #f1f5f9', background: '#fafbfc' }}>
+                            <div style={{ padding: '14px 18px', borderTop: '1px solid #f1f5f9', background: '#fafbfc' }}>
                               {/* 질문 본문 */}
-                              <div style={{ marginBottom: '18px' }}>
-                                <div style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                              <div style={{ marginBottom: '12px' }}>
+                                <div style={{ fontSize: '0.78rem', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '6px' }}>
                                   Q. 질문 내용 ({new Date(item.createdAt).toLocaleString('ko-KR')})
                                 </div>
-                                <div style={{ fontSize: '0.95rem', color: '#1e293b', lineHeight: '1.7', whiteSpace: 'pre-wrap', padding: '16px', background: 'white', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                                <div style={{ fontSize: '0.93rem', color: '#1e293b', lineHeight: '1.65', whiteSpace: 'pre-wrap', padding: '12px 14px', background: 'white', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                                   {displayItem.content}
                                 </div>
                               </div>
