@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { db as firestore } from '@/src/lib/firebase';
 import { collection, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
 import { authenticateApiRequest } from '@/src/lib/auth';
+import { getCachedQnaList, setCachedQnaList, invalidateQnaCache } from '@/src/lib/boardCache';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -19,7 +20,7 @@ function maskName(name: string): string {
   return `${trimmed[0]}${'*'.repeat(trimmed.length - 2)}${trimmed[trimmed.length - 1]}`;
 }
 
-// Q&A 목록 조회
+// Q&A 목록 조회 (초고속 인메모리 캐시 적용)
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ subdomain: string }> }
@@ -29,6 +30,13 @@ export async function GET(
     const auth = authenticateApiRequest(req, ['admin']);
     const isAdmin = auth.authorized;
 
+    // 1. 인메모리 캐시 확인 (0ms 즉시 반환)
+    const cached = getCachedQnaList(subdomain, isAdmin);
+    if (cached) {
+      return NextResponse.json({ qnaList: cached });
+    }
+
+    // 2. 캐시 미스 시 Firestore 조회
     const q = query(
       collection(firestore, 'qna'),
       where('subdomain', '==', subdomain)
@@ -79,6 +87,9 @@ export async function GET(
       const timeB = new Date(b.createdAt || 0).getTime();
       return timeB - timeA;
     });
+
+    // 캐시 저장
+    setCachedQnaList(subdomain, isAdmin, qnaList);
 
     return NextResponse.json({ qnaList });
   } catch (error: any) {
@@ -131,6 +142,9 @@ export async function POST(
     };
 
     await setDoc(newDocRef, newQna);
+
+    // Q&A 캐시 무효화
+    invalidateQnaCache(subdomain);
 
     return NextResponse.json({
       success: true,

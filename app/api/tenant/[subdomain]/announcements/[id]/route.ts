@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db as firestore } from '@/src/lib/firebase';
 import { doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { authenticateApiRequest } from '@/src/lib/auth';
+import { invalidateAnnouncementsCache } from '@/src/lib/boardCache';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -17,7 +18,7 @@ export async function PUT(
       return auth.errorResponse!;
     }
 
-    const { id } = await params;
+    const { subdomain, id } = await params;
     const body = await req.json();
     const { title, content, author, category, isPopup, isPinned } = body;
 
@@ -41,6 +42,9 @@ export async function PUT(
 
     await updateDoc(docRef, updateData);
 
+    // 공지사항 캐시 무효화
+    invalidateAnnouncementsCache(subdomain);
+
     return NextResponse.json({ success: true, message: '공지사항이 성공적으로 수정되었습니다.' });
   } catch (error: any) {
     console.error('Error updating announcement:', error);
@@ -59,7 +63,7 @@ export async function DELETE(
       return auth.errorResponse!;
     }
 
-    const { id } = await params;
+    const { subdomain, id } = await params;
     const docRef = doc(firestore, 'announcements', id);
     const snap = await getDoc(docRef);
 
@@ -68,6 +72,9 @@ export async function DELETE(
     }
 
     await deleteDoc(docRef);
+
+    // 공지사항 캐시 무효화
+    invalidateAnnouncementsCache(subdomain);
 
     return NextResponse.json({ success: true, message: '공지사항이 성공적으로 삭제되었습니다.' });
   } catch (error: any) {

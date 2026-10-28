@@ -324,6 +324,11 @@ export default function HostDashboardPage({
           setActiveTournament(ongoing);
           await loadSectionData(ongoing.id);
         }
+
+        // [최적화] ERP 진입 시 공지사항과 Q&A를 백그라운드 병렬 사전 로드(Prefetch)하여
+        // 주최자가 공지사항/Q&A 탭 클릭 시 0ms(즉시 표시)로 열리도록 처리
+        fetchAnnouncements(false);
+        fetchQnaList(false);
       }
     } catch (e) {
       console.error(e);
@@ -332,11 +337,13 @@ export default function HostDashboardPage({
     }
   };
 
-  // 공지사항 데이터 불러오기
-  const fetchAnnouncements = async () => {
-    setLoadingAnnouncements(true);
+  // 공지사항 데이터 불러오기 (Stale-While-Revalidate: 데이터가 이미 있으면 블로킹 스피너 없이 즉시 표시)
+  const fetchAnnouncements = async (forceSpinner = false) => {
+    if (forceSpinner || announcements.length === 0) {
+      setLoadingAnnouncements(true);
+    }
     try {
-      const res = await fetch(`/api/tenant/${subdomain}/announcements?_t=${Date.now()}`, {
+      const res = await fetch(`/api/tenant/${subdomain}/announcements`, {
         headers: getAuthHeaders(),
       });
       const data = await res.json();
@@ -350,11 +357,13 @@ export default function HostDashboardPage({
     }
   };
 
-  // Q&A 데이터 불러오기
-  const fetchQnaList = async () => {
-    setLoadingQna(true);
+  // Q&A 데이터 불러오기 (Stale-While-Revalidate: 데이터가 이미 있으면 블로킹 스피너 없이 즉시 표시)
+  const fetchQnaList = async (forceSpinner = false) => {
+    if (forceSpinner || qnaList.length === 0) {
+      setLoadingQna(true);
+    }
     try {
-      const res = await fetch(`/api/tenant/${subdomain}/qna?_t=${Date.now()}`, {
+      const res = await fetch(`/api/tenant/${subdomain}/qna`, {
         headers: getAuthHeaders(),
       });
       const data = await res.json();
@@ -370,9 +379,9 @@ export default function HostDashboardPage({
 
   useEffect(() => {
     if (activeSection === 'announcements') {
-      fetchAnnouncements();
+      fetchAnnouncements(false);
     } else if (activeSection === 'qna') {
-      fetchQnaList();
+      fetchQnaList(false);
     }
   }, [activeSection, subdomain]);
 
@@ -2876,7 +2885,7 @@ export default function HostDashboardPage({
                 <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '800' }}>등록된 공지사항 목록</h4>
                 <button
                   type="button"
-                  onClick={fetchAnnouncements}
+                  onClick={() => fetchAnnouncements(true)}
                   disabled={loadingAnnouncements}
                   style={{
                     background: 'none',
@@ -3021,7 +3030,7 @@ export default function HostDashboardPage({
               </div>
               <button
                 type="button"
-                onClick={fetchQnaList}
+                onClick={() => fetchQnaList(true)}
                 disabled={loadingQna}
                 style={{
                   background: 'white',

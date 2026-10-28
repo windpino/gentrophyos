@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db as firestore } from '@/src/lib/firebase';
 import { collection, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
 import { authenticateApiRequest } from '@/src/lib/auth';
+import { getCachedAnnouncements, setCachedAnnouncements, invalidateAnnouncementsCache } from '@/src/lib/boardCache';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-// 공지사항 목록 조회 (방문자 & 관리자 공용)
+// 공지사항 목록 조회 (방문자 & 관리자 공용 - 초고속 인메모리 캐싱 적용)
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ subdomain: string }> }
@@ -14,6 +15,13 @@ export async function GET(
   try {
     const { subdomain } = await params;
 
+    // 1. 인메모리 캐시 확인 (0ms 즉시 응답)
+    const cached = getCachedAnnouncements(subdomain);
+    if (cached) {
+      return NextResponse.json({ announcements: cached });
+    }
+
+    // 2. 캐시 미스 시 Firestore 조회
     const q = query(
       collection(firestore, 'announcements'),
       where('subdomain', '==', subdomain)
@@ -33,6 +41,9 @@ export async function GET(
       const timeB = new Date(b.createdAt || 0).getTime();
       return timeB - timeA;
     });
+
+    // 캐시에 저장
+    setCachedAnnouncements(subdomain, announcements);
 
     return NextResponse.json({ announcements });
   } catch (error: any) {
@@ -82,6 +93,9 @@ export async function POST(
     };
 
     await setDoc(newDocRef, newAnnouncement);
+
+    // 공지사항 캐시 무효화
+    invalidateAnnouncementsCache(subdomain);
 
     return NextResponse.json({ success: true, announcement: newAnnouncement });
   } catch (error: any) {

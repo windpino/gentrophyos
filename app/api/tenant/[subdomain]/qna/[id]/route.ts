@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { db as firestore } from '@/src/lib/firebase';
 import { doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { authenticateApiRequest } from '@/src/lib/auth';
+import { invalidateQnaCache } from '@/src/lib/boardCache';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -20,7 +21,7 @@ export async function PUT(
     const auth = authenticateApiRequest(req, ['admin']);
     const isAdmin = auth.authorized;
 
-    const { id } = await params;
+    const { subdomain, id } = await params;
     const body = await req.json();
     const { title, content, isSecret, password, answer, answeredBy } = body;
 
@@ -58,6 +59,9 @@ export async function PUT(
 
     await updateDoc(docRef, updateData);
 
+    // Q&A 캐시 무효화
+    invalidateQnaCache(subdomain);
+
     return NextResponse.json({ success: true, message: '성공적으로 처리되었습니다.' });
   } catch (error: any) {
     console.error('Error updating Q&A:', error);
@@ -74,7 +78,7 @@ export async function DELETE(
     const auth = authenticateApiRequest(req, ['admin']);
     const isAdmin = auth.authorized;
 
-    const { id } = await params;
+    const { subdomain, id } = await params;
     const body = await req.json().catch(() => ({}));
     const { password } = body;
 
@@ -94,6 +98,9 @@ export async function DELETE(
     }
 
     await deleteDoc(docRef);
+
+    // Q&A 캐시 무효화
+    invalidateQnaCache(subdomain);
 
     return NextResponse.json({ success: true, message: 'Q&A 게시글이 성공적으로 삭제되었습니다.' });
   } catch (error: any) {
