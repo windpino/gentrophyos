@@ -202,6 +202,9 @@ export default function HostDashboardPage({
   const [isSavingQnaAnswer, setIsSavingQnaAnswer] = useState(false);
   const [qnaDeleteTarget, setQnaDeleteTarget] = useState<any | null>(null);
 
+  // 배번티 보유 및 분실 관리 모달 상태
+  const [isBibModalOpen, setIsBibModalOpen] = useState(false);
+
   const [authChecking, setAuthChecking] = useState(true);
 
   // Dual-channel 인증 토큰 헤더 헬퍼
@@ -1677,7 +1680,30 @@ export default function HostDashboardPage({
                 )}
               </div>
 
-              <div style={{ display: 'flex', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsBibModalOpen(true)}
+                  style={{
+                    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '10px',
+                    padding: '10px 18px',
+                    fontSize: '0.9rem',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 2px 8px rgba(217, 119, 6, 0.25)',
+                    whiteSpace: 'nowrap'
+                  }}
+                  title="흰색 50개, 연두색 50개, 오렌지색 50개 배번티의 분실 번호를 체크하여 제외하고 참가자들에게 순차적으로 자동 배번을 부여합니다."
+                >
+                  🏷️ 배번티 관리 & 자동 배정
+                </button>
+
                 <button
                   className="btn-secondary"
                   onClick={handleAddNewRow}
@@ -2218,6 +2244,27 @@ export default function HostDashboardPage({
                     title="혼합오픈 및 펀&포뮬러 남자부 참가자를 생년월일 1/3 균등분할 기준으로 청년부·중년부·장년부로 재편성합니다."
                   >
                     🎂 생년월일(1/3) 청년·중년·장년부 재편성
+                  </button>
+
+                  <button
+                    onClick={() => setIsBibModalOpen(true)}
+                    type="button"
+                    style={{
+                      padding: '12px 16px',
+                      fontSize: '0.86rem',
+                      fontWeight: '800',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      borderRadius: '10px',
+                      border: '1px solid #f59e0b',
+                      background: '#fffbeb',
+                      color: '#b45309',
+                      cursor: 'pointer'
+                    }}
+                    title="흰색/연두색/오렌지색 배번티 중 분실 번호를 체크하고 참가자들에게 자동 배번을 부여합니다."
+                  >
+                    🏷️ 배번티 관리 & 자동 배정
                   </button>
 
                   <button
@@ -3629,6 +3676,19 @@ export default function HostDashboardPage({
         </div>
       )}
 
+      {/* ── 배번티 관리 & 분실 제외 자동 배정 모달 ── */}
+      <BibManagementModal
+        isOpen={isBibModalOpen}
+        onClose={() => setIsBibModalOpen(false)}
+        gridData={gridData}
+        subdomain={subdomain}
+        onApplyBibs={(updatedGrid, summaryMsg) => {
+          setGridData(updatedGrid);
+          setIsBibModalOpen(false);
+          alert(summaryMsg);
+        }}
+      />
+
     </div>
   );
 }
@@ -4141,3 +4201,730 @@ function QnaAnswerModal({ targetItem, isSaving, onClose, onSave }: QnaAnswerModa
     </div>
   );
 }
+
+// ── 독립형 배번티 보유 관리 & 분실 제외 자동 배정 모달 ──
+interface BibManagementModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  gridData: GridRow[];
+  subdomain: string;
+  onApplyBibs: (updatedGrid: GridRow[], summaryMsg: string) => void;
+}
+
+function BibManagementModal({
+  isOpen,
+  onClose,
+  gridData,
+  subdomain,
+  onApplyBibs,
+}: BibManagementModalProps) {
+  const [activeColorTab, setActiveColorTab] = useState<'white' | 'green' | 'orange'>('white');
+  const [lostBibs, setLostBibs] = useState<{
+    white: number[];
+    green: number[];
+    orange: number[];
+  }>({
+    white: [],
+    green: [],
+    orange: [],
+  });
+
+  const [numberingStyle, setNumberingStyle] = useState<'continuous' | 'colorPrefix' | 'fullName'>('continuous');
+  const [assignScope, setAssignScope] = useState<'all' | 'approved'>('all');
+  const [assignOrder, setAssignOrder] = useState<'current' | 'division'>('current');
+  const [overwriteExisting, setOverwriteExisting] = useState<boolean>(true);
+  const [directInputText, setDirectInputText] = useState('');
+
+  // LocalStorage에서 저장된 분실 배번 설정 복원
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(`gentrophy_lost_bibs_${subdomain}`);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed && typeof parsed === 'object') {
+            setLostBibs({
+              white: Array.isArray(parsed.white) ? parsed.white : [],
+              green: Array.isArray(parsed.green) ? parsed.green : [],
+              orange: Array.isArray(parsed.orange) ? parsed.orange : [],
+            });
+            if (parsed.numberingStyle) setNumberingStyle(parsed.numberingStyle);
+            if (parsed.assignScope) setAssignScope(parsed.assignScope);
+            if (parsed.assignOrder) setAssignOrder(parsed.assignOrder);
+            if (parsed.overwriteExisting !== undefined) setOverwriteExisting(parsed.overwriteExisting);
+          }
+        } catch (e) {
+          console.error('분실 배번 불러오기 오류:', e);
+        }
+      }
+    }
+  }, [subdomain, isOpen]);
+
+  // 분실 배번 변경 시 LocalStorage에 즉시 자동 보존
+  const updateLostBibs = (newLost: typeof lostBibs) => {
+    setLostBibs(newLost);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(`gentrophy_lost_bibs_${subdomain}`, JSON.stringify({
+          ...newLost,
+          numberingStyle,
+          assignScope,
+          assignOrder,
+          overwriteExisting,
+        }));
+      } catch (e) {}
+    }
+  };
+
+  // 번호 클릭 시 분실 토글
+  const toggleLostNumber = (color: 'white' | 'green' | 'orange', num: number) => {
+    const list = lostBibs[color];
+    const isLost = list.includes(num);
+    const updated = isLost ? list.filter(n => n !== num) : [...list, num].sort((a, b) => a - b);
+    updateLostBibs({
+      ...lostBibs,
+      [color]: updated,
+    });
+  };
+
+  // 직접 입력창으로 분실 배번 일괄 등록 (예: "3, 7, 12")
+  const handleDirectAdd = () => {
+    if (!directInputText.trim()) return;
+    const nums = directInputText
+      .split(/[,\s]+/)
+      .map(s => parseInt(s.trim(), 10))
+      .filter(n => !isNaN(n) && n >= 1 && n <= 50);
+
+    if (nums.length === 0) {
+      alert('1부터 50 사이의 숫자를 입력해 주세요. (쉼표로 구분 가능)');
+      return;
+    }
+
+    const currentList = lostBibs[activeColorTab];
+    const merged = Array.from(new Set([...currentList, ...nums])).sort((a, b) => a - b);
+    updateLostBibs({
+      ...lostBibs,
+      [activeColorTab]: merged,
+    });
+    setDirectInputText('');
+  };
+
+  // 현재 색상의 분실 배번 전체 초기화 (모두 정상 상태로 복구)
+  const handleResetCurrentColor = () => {
+    updateLostBibs({
+      ...lostBibs,
+      [activeColorTab]: [],
+    });
+  };
+
+  // 배번 전체 초기화 (참가자들의 배번을 공란으로 제거)
+  const handleClearAllAssignedBibs = () => {
+    if (confirm('정말 모든 참가자의 배번티 번호를 공란으로 초기화하시겠습니까?')) {
+      const cleared = gridData.map(r => ({
+        ...r,
+        bibNumber: '',
+        isEdited: true,
+      }));
+      onApplyBibs(cleared, '✅ 모든 참가자의 배번이 초기화(공란 처리)되었습니다. [변경 사항 일괄 저장]을 눌러 데이터베이스에 반영해주세요.');
+    }
+  };
+
+  // 통계 계산
+  const whiteCount = 50 - lostBibs.white.length;
+  const greenCount = 50 - lostBibs.green.length;
+  const orangeCount = 50 - lostBibs.orange.length;
+  const totalAvailable = whiteCount + greenCount + orangeCount;
+  const totalLost = lostBibs.white.length + lostBibs.green.length + lostBibs.orange.length;
+
+  const targetParticipants = gridData.filter(r => {
+    if (assignScope === 'approved') {
+      return r.paymentStatus === 'APPROVED' || r.status === 'APPROVED';
+    }
+    return true;
+  });
+
+  // 표기용 번호 텍스트 생성
+  const getButtonLabel = (color: 'white' | 'green' | 'orange', num: number) => {
+    if (numberingStyle === 'continuous') {
+      if (color === 'white') return String(num);
+      if (color === 'green') return String(num + 50);
+      if (color === 'orange') return String(num + 100);
+    }
+    if (numberingStyle === 'colorPrefix') {
+      if (color === 'white') return `흰${num}`;
+      if (color === 'green') return `연${num}`;
+      if (color === 'orange') return `주${num}`;
+    }
+    if (color === 'white') return `흰색 ${num}`;
+    if (color === 'green') return `연두 ${num}`;
+    return `오렌지 ${num}`;
+  };
+
+  // 배번 자동 순차 배정 실행 함수
+  const handleExecuteAutoAssignment = () => {
+    // 1. 배정 가능한 배번 목록(비분실 배번) 생성
+    const availablePool: string[] = [];
+
+    // 흰색 (1~50)
+    for (let i = 1; i <= 50; i++) {
+      if (!lostBibs.white.includes(i)) {
+        if (numberingStyle === 'continuous') availablePool.push(String(i));
+        else if (numberingStyle === 'colorPrefix') availablePool.push(`흰${i}`);
+        else availablePool.push(`흰색 ${i}`);
+      }
+    }
+
+    // 연두색 (1~50)
+    for (let i = 1; i <= 50; i++) {
+      if (!lostBibs.green.includes(i)) {
+        if (numberingStyle === 'continuous') availablePool.push(String(i + 50));
+        else if (numberingStyle === 'colorPrefix') availablePool.push(`연${i}`);
+        else availablePool.push(`연두 ${i}`);
+      }
+    }
+
+    // 오렌지색 (1~50)
+    for (let i = 1; i <= 50; i++) {
+      if (!lostBibs.orange.includes(i)) {
+        if (numberingStyle === 'continuous') availablePool.push(String(i + 100));
+        else if (numberingStyle === 'colorPrefix') availablePool.push(`주${i}`);
+        else availablePool.push(`오렌지 ${i}`);
+      }
+    }
+
+    // 2. 대상 참가자 정렬
+    const sortedTargets = [...targetParticipants];
+    if (assignOrder === 'division') {
+      const divPriority = ['윈드포일', '윙포일', '혼합오픈', '펀&포뮬러', '단체전'];
+      sortedTargets.sort((a, b) => {
+        const idxA = divPriority.findIndex(d => (a.division || '').includes(d));
+        const idxB = divPriority.findIndex(d => (b.division || '').includes(d));
+        const pA = idxA === -1 ? 99 : idxA;
+        const pB = idxB === -1 ? 99 : idxB;
+        if (pA !== pB) return pA - pB;
+        return (a.name || '').localeCompare(b.name || '', 'ko');
+      });
+    }
+
+    // 3. 배번 순차 매핑
+    const assignmentMap = new Map<string, string>();
+    let bibIdx = 0;
+    let assignedCount = 0;
+
+    for (const player of sortedTargets) {
+      if (!overwriteExisting && player.bibNumber && player.bibNumber.trim()) {
+        continue; // 기존 배번 유지
+      }
+      if (bibIdx < availablePool.length) {
+        assignmentMap.set(player.id, availablePool[bibIdx]);
+        bibIdx++;
+        assignedCount++;
+      } else {
+        break; // 가용 배번 소진
+      }
+    }
+
+    if (assignedCount === 0) {
+      alert('배정할 참가자가 없거나 대상 참가자에게 이미 배번이 있습니다.');
+      return;
+    }
+
+    // 4. gridData에 반영
+    const updatedGrid = gridData.map(row => {
+      if (assignmentMap.has(row.id)) {
+        return {
+          ...row,
+          bibNumber: assignmentMap.get(row.id)!,
+          isEdited: true,
+        };
+      }
+      return row;
+    });
+
+    const isShortage = targetParticipants.length > availablePool.length;
+    const summaryMsg = `✅ 총 ${assignedCount}명의 참가자에게 분실 배번(${totalLost}개 제외)을 건너뛰고 순차적으로 배번이 자동 입력되었습니다!${
+      isShortage ? `\n⚠️ (주의: 배번티 수량이 부족하여 ${targetParticipants.length - availablePool.length}명은 미배정되었습니다.)` : ''
+    }\n\n화면의 스프레드시트에서 배번을 확인하신 후, [변경 사항 일괄 저장] 버튼을 누르면 최종 데이터베이스에 영구 저장됩니다.`;
+
+    onApplyBibs(updatedGrid, summaryMsg);
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      backgroundColor: 'rgba(15, 23, 42, 0.75)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '20px'
+    }}>
+      <div style={{
+        background: 'white',
+        borderRadius: '24px',
+        maxWidth: '920px',
+        width: '100%',
+        maxHeight: '92vh',
+        overflow: 'hidden',
+        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.3)',
+        display: 'flex',
+        flexDirection: 'column'
+      }}>
+        {/* 모달 헤더 */}
+        <div style={{
+          padding: '20px 24px',
+          borderBottom: '1px solid var(--border-color)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          background: '#f8fafc'
+        }}>
+          <div>
+            <h3 style={{ margin: '0 0 4px 0', fontSize: '1.25rem', fontWeight: '900', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>🏷️</span> 배번티 보유 관리 & 분실 제외 자동 배정기
+            </h3>
+            <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>
+              보유 배번티 150개 (흰색 50개, 연두색 50개, 오렌지색 50개) 중 분실된 번호를 클릭하여 체크하면, 해당 번호를 건너뛰고 참가자들에게 순차적으로 배정합니다.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: '6px' }}
+          >
+            <X size={22} />
+          </button>
+        </div>
+
+        {/* 모달 본문 (스크롤) */}
+        <div style={{ padding: '24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          
+          {/* 상단 통계 카드 */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+            <div style={{ background: '#f8fafc', padding: '14px 16px', borderRadius: '14px', border: '2px solid #cbd5e1' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: '800', color: '#334155' }}>⚪ 흰색 배번티</span>
+                <span style={{ fontSize: '0.75rem', padding: '2px 6px', borderRadius: '6px', background: lostBibs.white.length > 0 ? '#fee2e2' : '#e2e8f0', color: lostBibs.white.length > 0 ? '#ef4444' : '#64748b', fontWeight: '700' }}>
+                  분실 {lostBibs.white.length}개
+                </span>
+              </div>
+              <div style={{ fontSize: '1.4rem', fontWeight: '900', color: '#0f172a' }}>
+                {whiteCount} <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#64748b' }}>/ 50개 보유</span>
+              </div>
+            </div>
+
+            <div style={{ background: '#f0fdf4', padding: '14px 16px', borderRadius: '14px', border: '2px solid #86efac' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: '800', color: '#166534' }}>🟢 연두색 배번티</span>
+                <span style={{ fontSize: '0.75rem', padding: '2px 6px', borderRadius: '6px', background: lostBibs.green.length > 0 ? '#fee2e2' : '#dcfce7', color: lostBibs.green.length > 0 ? '#ef4444' : '#15803d', fontWeight: '700' }}>
+                  분실 {lostBibs.green.length}개
+                </span>
+              </div>
+              <div style={{ fontSize: '1.4rem', fontWeight: '900', color: '#14532d' }}>
+                {greenCount} <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#15803d' }}>/ 50개 보유</span>
+              </div>
+            </div>
+
+            <div style={{ background: '#fff7ed', padding: '14px 16px', borderRadius: '14px', border: '2px solid #fdba74' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: '800', color: '#9a3412' }}>🟠 오렌지색 배번티</span>
+                <span style={{ fontSize: '0.75rem', padding: '2px 6px', borderRadius: '6px', background: lostBibs.orange.length > 0 ? '#fee2e2' : '#ffedd5', color: lostBibs.orange.length > 0 ? '#ef4444' : '#c2410c', fontWeight: '700' }}>
+                  분실 {lostBibs.orange.length}개
+                </span>
+              </div>
+              <div style={{ fontSize: '1.4rem', fontWeight: '900', color: '#7c2d12' }}>
+                {orangeCount} <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#c2410c' }}>/ 50개 보유</span>
+              </div>
+            </div>
+
+            <div style={{ background: totalAvailable >= targetParticipants.length ? '#f0f9ff' : '#fef2f2', padding: '14px 16px', borderRadius: '14px', border: `2px solid ${totalAvailable >= targetParticipants.length ? '#7dd3fc' : '#fca5a5'}` }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: '800', color: '#0369a1' }}>📊 배정 가용 현황</span>
+                <span style={{ fontSize: '0.75rem', padding: '2px 6px', borderRadius: '6px', background: totalAvailable >= targetParticipants.length ? '#e0f2fe' : '#fee2e2', color: totalAvailable >= targetParticipants.length ? '#0284c7' : '#dc2626', fontWeight: '800' }}>
+                  {totalAvailable >= targetParticipants.length ? '수량 충분' : '수량 부족'}
+                </span>
+              </div>
+              <div style={{ fontSize: '1.3rem', fontWeight: '900', color: '#0f172a' }}>
+                {totalAvailable}개 <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#64748b' }}>/ 대상 {targetParticipants.length}명</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 색상 탭 선택기 */}
+          <div>
+            <div style={{ display: 'flex', gap: '8px', borderBottom: '2px solid #e2e8f0', paddingBottom: '2px' }}>
+              <button
+                type="button"
+                onClick={() => setActiveColorTab('white')}
+                style={{
+                  padding: '10px 18px',
+                  borderRadius: '10px 10px 0 0',
+                  border: 'none',
+                  fontSize: '0.92rem',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  background: activeColorTab === 'white' ? '#0f172a' : '#f1f5f9',
+                  color: activeColorTab === 'white' ? '#ffffff' : '#64748b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.15s'
+                }}
+              >
+                <span>⚪</span> 흰색 배번티 (1~50번)
+                <span style={{ padding: '2px 6px', borderRadius: '10px', fontSize: '0.75rem', background: activeColorTab === 'white' ? 'rgba(255,255,255,0.2)' : '#e2e8f0', color: activeColorTab === 'white' ? 'white' : '#64748b' }}>
+                  가용 {whiteCount}개
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveColorTab('green')}
+                style={{
+                  padding: '10px 18px',
+                  borderRadius: '10px 10px 0 0',
+                  border: 'none',
+                  fontSize: '0.92rem',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  background: activeColorTab === 'green' ? '#15803d' : '#f1f5f9',
+                  color: activeColorTab === 'green' ? '#ffffff' : '#64748b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.15s'
+                }}
+              >
+                <span>🟢</span> 연두색 배번티 (1~50번)
+                <span style={{ padding: '2px 6px', borderRadius: '10px', fontSize: '0.75rem', background: activeColorTab === 'green' ? 'rgba(255,255,255,0.2)' : '#e2e8f0', color: activeColorTab === 'green' ? 'white' : '#64748b' }}>
+                  가용 {greenCount}개
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveColorTab('orange')}
+                style={{
+                  padding: '10px 18px',
+                  borderRadius: '10px 10px 0 0',
+                  border: 'none',
+                  fontSize: '0.92rem',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  background: activeColorTab === 'orange' ? '#c2410c' : '#f1f5f9',
+                  color: activeColorTab === 'orange' ? '#ffffff' : '#64748b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.15s'
+                }}
+              >
+                <span>🟠</span> 오렌지색 배번티 (1~50번)
+                <span style={{ padding: '2px 6px', borderRadius: '10px', fontSize: '0.75rem', background: activeColorTab === 'orange' ? 'rgba(255,255,255,0.2)' : '#e2e8f0', color: activeColorTab === 'orange' ? 'white' : '#64748b' }}>
+                  가용 {orangeCount}개
+                </span>
+              </button>
+            </div>
+
+            {/* 현재 색상 탭 내용 */}
+            <div style={{
+              background: activeColorTab === 'white' ? '#f8fafc' : activeColorTab === 'green' ? '#f0fdf4' : '#fff7ed',
+              borderRadius: '0 0 16px 16px',
+              padding: '20px',
+              border: `1px solid ${activeColorTab === 'white' ? '#cbd5e1' : activeColorTab === 'green' ? '#86efac' : '#fdba74'}`,
+              borderTop: 'none'
+            }}>
+              {/* 분실 번호 빠른 추가 툴바 */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+                <div style={{ fontSize: '0.9rem', color: '#1e293b' }}>
+                  💡 <strong>번호 버튼을 클릭</strong>하면 <span style={{ color: '#ef4444', fontWeight: '800' }}>[❌ 분실]</span> 처리되어 배정에서 자동 제외됩니다.
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <input
+                    type="text"
+                    placeholder="번호 직접 입력 (예: 3, 7, 12)"
+                    value={directInputText}
+                    onChange={(e) => setDirectInputText(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleDirectAdd(); } }}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '0.85rem',
+                      width: '200px',
+                      background: 'white'
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleDirectAdd}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      background: '#ef4444',
+                      color: 'white',
+                      fontWeight: '800',
+                      fontSize: '0.82rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    분실 등록
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleResetCurrentColor}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid #cbd5e1',
+                      background: 'white',
+                      color: '#475569',
+                      fontWeight: '700',
+                      fontSize: '0.82rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    이 색상 전체 정상 복구
+                  </button>
+                </div>
+              </div>
+
+              {/* 50개 배번티 그리드 체크 버튼 */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(10, 1fr)',
+                gap: '8px',
+                userSelect: 'none'
+              }}>
+                {Array.from({ length: 50 }, (_, i) => i + 1).map(num => {
+                  const isLost = lostBibs[activeColorTab].includes(num);
+                  const label = getButtonLabel(activeColorTab, num);
+
+                  return (
+                    <button
+                      key={num}
+                      type="button"
+                      onClick={() => toggleLostNumber(activeColorTab, num)}
+                      style={{
+                        padding: '10px 4px',
+                        borderRadius: '10px',
+                        border: isLost ? '2px solid #ef4444' : '1px solid #cbd5e1',
+                        background: isLost ? '#fee2e2' : 'white',
+                        color: isLost ? '#b91c1c' : '#0f172a',
+                        fontWeight: '900',
+                        fontSize: '0.92rem',
+                        cursor: 'pointer',
+                        textAlign: 'center',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '2px',
+                        transition: 'all 0.12s',
+                        boxShadow: isLost ? 'inset 0 0 0 1px #ef4444' : '0 1px 3px rgba(0,0,0,0.04)'
+                      }}
+                    >
+                      <span style={{ textDecoration: isLost ? 'line-through' : 'none' }}>
+                        {label}
+                      </span>
+                      <span style={{
+                        fontSize: '0.68rem',
+                        fontWeight: '800',
+                        color: isLost ? '#ef4444' : '#10b981',
+                        letterSpacing: '-0.3px'
+                      }}>
+                        {isLost ? '❌ 분실' : '정상'}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* 자동 배정 상세 설정 카드 */}
+          <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+            <h4 style={{ margin: '0 0 14px 0', fontSize: '0.98rem', fontWeight: '900', color: '#0f172a' }}>
+              ⚙️ 자동 배번 부여 옵션 설정
+            </h4>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
+              {/* 1. 표기 형식 */}
+              <div>
+                <label style={{ fontSize: '0.82rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '8px' }}>
+                  1. 배번 표기 형식
+                </label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: '700', color: '#1e293b', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="numberingStyle"
+                      checked={numberingStyle === 'continuous'}
+                      onChange={() => setNumberingStyle('continuous')}
+                      style={{ accentColor: 'var(--theme-primary)' }}
+                    />
+                    <span>연속 번호 (1~150번) <span style={{ fontSize: '0.75rem', color: '#0284c7', fontWeight: '800' }}>[심판 키패드 입력 최적화 추천]</span></span>
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: '700', color: '#1e293b', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="numberingStyle"
+                      checked={numberingStyle === 'colorPrefix'}
+                      onChange={() => setNumberingStyle('colorPrefix')}
+                      style={{ accentColor: 'var(--theme-primary)' }}
+                    />
+                    <span>색상 접두사 (흰1~흰50, 연1~연50, 주1~주50)</span>
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: '700', color: '#1e293b', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="numberingStyle"
+                      checked={numberingStyle === 'fullName'}
+                      onChange={() => setNumberingStyle('fullName')}
+                      style={{ accentColor: 'var(--theme-primary)' }}
+                    />
+                    <span>색상 풀네임 (흰색 1, 연두 1, 오렌지 1)</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* 2. 배정 순서 */}
+              <div>
+                <label style={{ fontSize: '0.82rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '8px' }}>
+                  2. 배번 부여 순서
+                </label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: '700', color: '#1e293b', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="assignOrder"
+                      checked={assignOrder === 'current'}
+                      onChange={() => setAssignOrder('current')}
+                      style={{ accentColor: 'var(--theme-primary)' }}
+                    />
+                    <span>현재 테이블 정렬 순서대로 (이름순/생년월일순 등)</span>
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: '700', color: '#1e293b', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="assignOrder"
+                      checked={assignOrder === 'division'}
+                      onChange={() => setAssignOrder('division')}
+                      style={{ accentColor: 'var(--theme-primary)' }}
+                    />
+                    <span>참가 종목/부서별 순서대로 (윈드포일→윙포일→혼합→펀→단체)</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* 3. 대상 참가자 & 덮어쓰기 */}
+              <div>
+                <label style={{ fontSize: '0.82rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '8px' }}>
+                  3. 배정 대상 & 덮어쓰기
+                </label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: '700', color: '#1e293b', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="assignScope"
+                      checked={assignScope === 'all'}
+                      onChange={() => setAssignScope('all')}
+                      style={{ accentColor: 'var(--theme-primary)' }}
+                    />
+                    <span>전체 참가자 대상 ({gridData.length}명)</span>
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: '700', color: '#1e293b', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="assignScope"
+                      checked={assignScope === 'approved'}
+                      onChange={() => setAssignScope('approved')}
+                      style={{ accentColor: 'var(--theme-primary)' }}
+                    />
+                    <span>승인(결제 완료) 참가자만 대상 ({gridData.filter(r => r.paymentStatus === 'APPROVED' || r.status === 'APPROVED').length}명)</span>
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: '700', color: '#1e293b', cursor: 'pointer', marginTop: '4px' }}>
+                    <input
+                      type="checkbox"
+                      checked={overwriteExisting}
+                      onChange={(e) => setOverwriteExisting(e.target.checked)}
+                      style={{ accentColor: 'var(--theme-primary)' }}
+                    />
+                    <span>기존에 입력된 배번이 있어도 전체 새로 덮어쓰기</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        {/* 모달 푸터 */}
+        <div style={{
+          padding: '16px 24px',
+          borderTop: '1px solid var(--border-color)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          background: '#f8fafc'
+        }}>
+          <button
+            type="button"
+            onClick={handleClearAllAssignedBibs}
+            style={{
+              padding: '8px 14px',
+              borderRadius: '8px',
+              border: '1px solid #fecaca',
+              background: '#fee2e2',
+              color: '#dc2626',
+              fontWeight: '800',
+              fontSize: '0.82rem',
+              cursor: 'pointer'
+            }}
+          >
+            배번 전체 초기화 (공란화)
+          </button>
+
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                padding: '10px 18px',
+                borderRadius: '10px',
+                border: '1px solid #cbd5e1',
+                background: 'white',
+                color: '#475569',
+                fontWeight: '700',
+                cursor: 'pointer'
+              }}
+            >
+              닫기
+            </button>
+            <button
+              type="button"
+              onClick={handleExecuteAutoAssignment}
+              style={{
+                padding: '10px 24px',
+                borderRadius: '10px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                color: 'white',
+                fontWeight: '900',
+                fontSize: '0.95rem',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(217, 119, 6, 0.35)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <span>⚡</span> 자동 배번 순차 배정 실행 ({totalAvailable}개 가용)
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
