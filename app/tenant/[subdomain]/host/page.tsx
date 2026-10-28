@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, use } from 'react';
+import React, { useState, useEffect, use, useMemo } from 'react';
 import { Award, Check, X, Menu, Upload, Download, Plus, Trash2, ArrowUp, ArrowDown, Users, FileText, Settings, Layers, Calendar, RefreshCw, Save, Search, Eye, ExternalLink, Clock, ShieldAlert, AlertCircle, CheckCircle2, Bell, MessageSquare, Megaphone, Lock, Unlock, Edit3, HelpCircle } from 'lucide-react';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '@/src/lib/firebase';
@@ -192,14 +192,6 @@ export default function HostDashboardPage({
   const [loadingAnnouncements, setLoadingAnnouncements] = useState(false);
   const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState(false);
   const [editingAnnouncement, setEditingAnnouncement] = useState<any | null>(null);
-  const [announcementForm, setAnnouncementForm] = useState({
-    title: '',
-    content: '',
-    author: '통영윈드서핑협회 대회운영본부',
-    category: '일반공지',
-    isPopup: false,
-    isPinned: false,
-  });
   const [isSavingAnnouncement, setIsSavingAnnouncement] = useState(false);
   const [announcementDeleteTarget, setAnnouncementDeleteTarget] = useState<any | null>(null);
 
@@ -207,8 +199,6 @@ export default function HostDashboardPage({
   const [qnaList, setQnaList] = useState<any[]>([]);
   const [loadingQna, setLoadingQna] = useState(false);
   const [qnaAnswerTarget, setQnaAnswerTarget] = useState<any | null>(null);
-  const [qnaAnswerText, setQnaAnswerText] = useState('');
-  const [qnaAnswerAuthor, setQnaAnswerAuthor] = useState('통영윈드서핑협회 대회운영본부');
   const [isSavingQnaAnswer, setIsSavingQnaAnswer] = useState(false);
   const [qnaDeleteTarget, setQnaDeleteTarget] = useState<any | null>(null);
 
@@ -388,38 +378,24 @@ export default function HostDashboardPage({
 
   // 공지사항 작성/수정 모달 열기
   const handleOpenAnnouncementModal = (item?: any) => {
-    if (item) {
-      setEditingAnnouncement(item);
-      setAnnouncementForm({
-        title: item.title || '',
-        content: item.content || '',
-        author: item.author || '통영윈드서핑협회 대회운영본부',
-        category: item.category || '일반공지',
-        isPopup: Boolean(item.isPopup),
-        isPinned: Boolean(item.isPinned),
-      });
-    } else {
-      setEditingAnnouncement(null);
-      setAnnouncementForm({
-        title: '',
-        content: '',
-        author: '통영윈드서핑협회 대회운영본부',
-        category: '일반공지',
-        isPopup: false,
-        isPinned: false,
-      });
-    }
+    setEditingAnnouncement(item || null);
     setIsAnnouncementModalOpen(true);
   };
 
   // 공지사항 저장
-  const handleSaveAnnouncement = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!announcementForm.title.trim()) {
+  const handleSaveAnnouncement = async (formData: {
+    title: string;
+    content: string;
+    author: string;
+    category: string;
+    isPopup: boolean;
+    isPinned: boolean;
+  }) => {
+    if (!formData.title.trim()) {
       alert('공지사항 제목을 입력해 주세요.');
       return;
     }
-    if (!announcementForm.content.trim()) {
+    if (!formData.content.trim()) {
       alert('공지사항 내용을 입력해 주세요.');
       return;
     }
@@ -434,12 +410,13 @@ export default function HostDashboardPage({
       const res = await fetch(url, {
         method,
         headers: getAuthHeaders(),
-        body: JSON.stringify(announcementForm),
+        body: JSON.stringify(formData),
       });
 
       if (res.ok) {
         alert(editingAnnouncement ? '공지사항이 수정되었습니다.' : '새 공지사항이 등록되었습니다.');
         setIsAnnouncementModalOpen(false);
+        setEditingAnnouncement(null);
         await fetchAnnouncements();
       } else {
         const data = await res.json();
@@ -476,15 +453,12 @@ export default function HostDashboardPage({
   // Q&A 답변 모달 열기
   const handleOpenQnaAnswerModal = (item: any) => {
     setQnaAnswerTarget(item);
-    setQnaAnswerText(item.answer || '');
-    setQnaAnswerAuthor(item.answeredBy || '통영윈드서핑협회 대회운영본부');
   };
 
   // Q&A 답변 등록/수정
-  const handleSaveQnaAnswer = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveQnaAnswer = async (answer: string, answeredBy: string) => {
     if (!qnaAnswerTarget) return;
-    if (!qnaAnswerText.trim()) {
+    if (!answer.trim()) {
       alert('답변 내용을 입력해 주세요.');
       return;
     }
@@ -495,8 +469,8 @@ export default function HostDashboardPage({
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify({
-          answer: qnaAnswerText.trim(),
-          answeredBy: qnaAnswerAuthor.trim(),
+          answer: answer.trim(),
+          answeredBy: answeredBy.trim(),
         }),
       });
 
@@ -1054,8 +1028,8 @@ export default function HostDashboardPage({
     alert('✅ 월드세일링 RRS(부록 A8) 국제 표준 동점자 우선순위(1. 상대 전적 → 2. 상위 성적 횟수 비교 → 3. 가장 최근 레이스 성적 비교 → 4. 최하위 성적 제외 후 재산정)로 설정되었습니다.');
   };
 
-  // 실시간 검색 및 필터링 기능 (이름/전화번호 통합 검색 및 카테고리 필터링/정렬)
-  const filteredGridData = (() => {
+  // 실시간 검색 및 필터링 기능 (이름/전화번호 통합 검색 및 카테고리 필터링/정렬 - useMemo 캐싱)
+  const filteredGridData = useMemo(() => {
     let result = [...gridData];
 
     // 1. 검색어 필터링
@@ -1169,7 +1143,7 @@ export default function HostDashboardPage({
     }
 
     return result;
-  })();
+  }, [gridData, searchQuery, searchCategory, filterSortCategory, subFilterValue, sortField, sortOrder]);
 
   // 2) 인증 후 데이터 로딩 중: null 반환으로 깜빡임 방지
   if (isAuthenticated && !tenant) {
@@ -3219,8 +3193,7 @@ export default function HostDashboardPage({
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: 'rgba(15, 23, 42, 0.65)',
-          backdropFilter: 'blur(4px)',
+          backgroundColor: 'rgba(15, 23, 42, 0.75)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -3350,7 +3323,6 @@ export default function HostDashboardPage({
             right: 0,
             bottom: 0,
             background: 'rgba(15, 23, 42, 0.75)',
-            backdropFilter: 'blur(4px)',
             zIndex: 9999,
             display: 'flex',
             justifyContent: 'center',
@@ -3560,125 +3532,23 @@ export default function HostDashboardPage({
       })()}
 
       {/* ── 공지사항 작성/수정 모달 ── */}
-      {isAnnouncementModalOpen && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(4px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '20px'
-        }}>
-          <div style={{ background: 'white', borderRadius: '20px', maxWidth: '580px', width: '100%', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
-            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800', color: '#0f172a' }}>
-                {editingAnnouncement ? '공지사항 수정' : '새 공지사항 작성'}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setIsAnnouncementModalOpen(false)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveAnnouncement} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', gap: '12px' }}>
-                <div>
-                  <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>분류</label>
-                  <select
-                    value={announcementForm.category}
-                    onChange={(e) => setAnnouncementForm({ ...announcementForm, category: e.target.value })}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '0.88rem', fontWeight: '700' }}
-                  >
-                    <option value="일반공지">일반공지</option>
-                    <option value="대회안내">대회안내</option>
-                    <option value="긴급">긴급</option>
-                    <option value="경기규정">경기규정</option>
-                    <option value="결과발표">결과발표</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>작성자</label>
-                  <input
-                    type="text"
-                    value={announcementForm.author}
-                    onChange={(e) => setAnnouncementForm({ ...announcementForm, author: e.target.value })}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '0.88rem' }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>제목</label>
-                <input
-                  type="text"
-                  value={announcementForm.title}
-                  onChange={(e) => setAnnouncementForm({ ...announcementForm, title: e.target.value })}
-                  placeholder="공지사항 제목을 입력하세요"
-                  required
-                  style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '0.95rem', fontWeight: '800' }}
-                />
-              </div>
-
-              {/* 팝업 및 고정 옵션 체크박스 */}
-              <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '700', color: '#1e293b' }}>
-                  <input
-                    type="checkbox"
-                    checked={announcementForm.isPopup}
-                    onChange={(e) => setAnnouncementForm({ ...announcementForm, isPopup: e.target.checked })}
-                    style={{ width: '16px', height: '16px', accentColor: 'var(--theme-primary)' }}
-                  />
-                  <span>🔔 팝업 알림으로 노출 (홈페이지 접속 시 모달 팝업으로 자동 안내)</span>
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '700', color: '#1e293b' }}>
-                  <input
-                    type="checkbox"
-                    checked={announcementForm.isPinned}
-                    onChange={(e) => setAnnouncementForm({ ...announcementForm, isPinned: e.target.checked })}
-                    style={{ width: '16px', height: '16px', accentColor: 'var(--theme-primary)' }}
-                  />
-                  <span>📌 공지사항 목록 최상단 고정</span>
-                </label>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>내용</label>
-                <textarea
-                  value={announcementForm.content}
-                  onChange={(e) => setAnnouncementForm({ ...announcementForm, content: e.target.value })}
-                  placeholder="공지할 내용을 상세히 입력하세요."
-                  rows={6}
-                  required
-                  style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '0.9rem', lineHeight: '1.6', resize: 'vertical' }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-                <button
-                  type="button"
-                  onClick={() => setIsAnnouncementModalOpen(false)}
-                  style={{ padding: '10px 18px', borderRadius: '10px', border: '1px solid #cbd5e1', background: 'white', color: '#475569', fontWeight: '700', cursor: 'pointer' }}
-                >
-                  취소
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSavingAnnouncement}
-                  style={{ padding: '10px 22px', borderRadius: '10px', border: 'none', background: 'var(--theme-primary)', color: 'white', fontWeight: '800', cursor: isSavingAnnouncement ? 'not-allowed' : 'pointer' }}
-                >
-                  {isSavingAnnouncement ? '저장 중...' : (editingAnnouncement ? '수정 완료' : '등록하기')}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* ── 공지사항 작성/수정 모달 (독립 컴포넌트화로 타이핑 렉 0ms 달성) ── */}
+      <AnnouncementModal
+        isOpen={isAnnouncementModalOpen}
+        initialData={editingAnnouncement}
+        isSaving={isSavingAnnouncement}
+        onClose={() => {
+          setIsAnnouncementModalOpen(false);
+          setEditingAnnouncement(null);
+        }}
+        onSave={handleSaveAnnouncement}
+      />
 
       {/* ── 공지사항 삭제 확인 모달 ── */}
       {announcementDeleteTarget && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)',
+          backgroundColor: 'rgba(15, 23, 42, 0.75)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '20px'
         }}>
           <div style={{ background: 'white', borderRadius: '18px', maxWidth: '440px', width: '100%', overflow: 'hidden', padding: '24px' }}>
@@ -3708,90 +3578,19 @@ export default function HostDashboardPage({
         </div>
       )}
 
-      {/* ── Q&A 답변 등록/수정 모달 ── */}
-      {qnaAnswerTarget && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(4px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '20px'
-        }}>
-          <div style={{ background: 'white', borderRadius: '20px', maxWidth: '580px', width: '100%', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
-            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800', color: '#0f172a' }}>
-                Q&A 공식 답변 등록
-              </h3>
-              <button
-                type="button"
-                onClick={() => setQnaAnswerTarget(null)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveQnaAnswer} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {/* 질문 원문 박스 */}
-              <div style={{ background: '#f8fafc', padding: '14px 16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#64748b', marginBottom: '4px' }}>
-                  <span>작성자: <strong>{qnaAnswerTarget.author}</strong> {qnaAnswerTarget.isSecret ? '(🔒 비밀글)' : ''}</span>
-                  <span>{qnaAnswerTarget.createdAt ? new Date(qnaAnswerTarget.createdAt).toLocaleDateString('ko-KR') : ''}</span>
-                </div>
-                <div style={{ fontWeight: '800', color: '#0f172a', fontSize: '0.95rem', marginBottom: '4px' }}>
-                  {qnaAnswerTarget.title}
-                </div>
-                <p style={{ margin: 0, fontSize: '0.85rem', color: '#475569', lineHeight: '1.5', whiteSpace: 'pre-wrap' }}>
-                  {qnaAnswerTarget.content}
-                </p>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>답변자 명의</label>
-                <input
-                  type="text"
-                  value={qnaAnswerAuthor}
-                  onChange={(e) => setQnaAnswerAuthor(e.target.value)}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '0.88rem' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>공식 답변 내용</label>
-                <textarea
-                  value={qnaAnswerText}
-                  onChange={(e) => setQnaAnswerText(e.target.value)}
-                  placeholder="참가자에게 안내할 공식 답변을 작성하세요."
-                  rows={6}
-                  required
-                  style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '0.9rem', lineHeight: '1.6', resize: 'vertical' }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-                <button
-                  type="button"
-                  onClick={() => setQnaAnswerTarget(null)}
-                  style={{ padding: '10px 18px', borderRadius: '10px', border: '1px solid #cbd5e1', background: 'white', color: '#475569', fontWeight: '700', cursor: 'pointer' }}
-                >
-                  취소
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSavingQnaAnswer}
-                  style={{ padding: '10px 22px', borderRadius: '10px', border: 'none', background: '#10b981', color: 'white', fontWeight: '800', cursor: isSavingQnaAnswer ? 'not-allowed' : 'pointer' }}
-                >
-                  {isSavingQnaAnswer ? '저장 중...' : '답변 등록 완료'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* ── Q&A 답변 등록/수정 모달 (독립 컴포넌트화로 타이핑 렉 0ms 달성) ── */}
+      <QnaAnswerModal
+        targetItem={qnaAnswerTarget}
+        isSaving={isSavingQnaAnswer}
+        onClose={() => setQnaAnswerTarget(null)}
+        onSave={handleSaveQnaAnswer}
+      />
 
       {/* ── Q&A 삭제 확인 모달 ── */}
       {qnaDeleteTarget && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)',
+          backgroundColor: 'rgba(15, 23, 42, 0.75)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '20px'
         }}>
           <div style={{ background: 'white', borderRadius: '18px', maxWidth: '440px', width: '100%', overflow: 'hidden', padding: '24px' }}>
@@ -4064,6 +3863,271 @@ function NoticeEditor({ tenant, subdomain, onSaveSuccess }: NoticeEditorProps) {
               )}
             </div>
           </div>
+      </div>
+    </div>
+  );
+}
+
+// ── 독립형 공지사항 작성/수정 모달 (폼 입력을 격리하여 ERP 전체 리렌더링 및 렉 원천 차단) ──
+interface AnnouncementModalProps {
+  isOpen: boolean;
+  initialData: any | null;
+  isSaving: boolean;
+  onClose: () => void;
+  onSave: (formData: {
+    title: string;
+    content: string;
+    author: string;
+    category: string;
+    isPopup: boolean;
+    isPinned: boolean;
+  }) => Promise<void>;
+}
+
+function AnnouncementModal({ isOpen, initialData, isSaving, onClose, onSave }: AnnouncementModalProps) {
+  const [form, setForm] = useState({
+    title: '',
+    content: '',
+    author: '통영윈드서핑협회 대회운영본부',
+    category: '일반공지',
+    isPopup: false,
+    isPinned: false,
+  });
+
+  useEffect(() => {
+    if (initialData) {
+      setForm({
+        title: initialData.title || '',
+        content: initialData.content || '',
+        author: initialData.author || '통영윈드서핑협회 대회운영본부',
+        category: initialData.category || '일반공지',
+        isPopup: Boolean(initialData.isPopup),
+        isPinned: Boolean(initialData.isPinned),
+      });
+    } else {
+      setForm({
+        title: '',
+        content: '',
+        author: '통영윈드서핑협회 대회운영본부',
+        category: '일반공지',
+        isPopup: false,
+        isPinned: false,
+      });
+    }
+  }, [initialData, isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      backgroundColor: 'rgba(15, 23, 42, 0.75)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '20px'
+    }}>
+      <div style={{ background: 'white', borderRadius: '20px', maxWidth: '580px', width: '100%', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800', color: '#0f172a' }}>
+            {initialData ? '공지사항 수정' : '새 공지사항 작성'}
+          </h3>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <form onSubmit={(e) => { e.preventDefault(); onSave(form); }} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', gap: '12px' }}>
+            <div>
+              <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>분류</label>
+              <select
+                value={form.category}
+                onChange={(e) => setForm({ ...form, category: e.target.value })}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '0.88rem', fontWeight: '700' }}
+              >
+                <option value="일반공지">일반공지</option>
+                <option value="대회안내">대회안내</option>
+                <option value="긴급">긴급</option>
+                <option value="경기규정">경기규정</option>
+                <option value="결과발표">결과발표</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>작성자</label>
+              <input
+                type="text"
+                value={form.author}
+                onChange={(e) => setForm({ ...form, author: e.target.value })}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '0.88rem' }}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>제목</label>
+            <input
+              type="text"
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              placeholder="공지사항 제목을 입력하세요"
+              required
+              style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '0.95rem', fontWeight: '800' }}
+            />
+          </div>
+
+          {/* 팝업 및 고정 옵션 체크박스 */}
+          <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '700', color: '#1e293b' }}>
+              <input
+                type="checkbox"
+                checked={form.isPopup}
+                onChange={(e) => setForm({ ...form, isPopup: e.target.checked })}
+                style={{ width: '16px', height: '16px', accentColor: 'var(--theme-primary)' }}
+              />
+              <span>🔔 팝업 알림으로 노출 (홈페이지 접속 시 모달 팝업으로 자동 안내)</span>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: '700', color: '#1e293b' }}>
+              <input
+                type="checkbox"
+                checked={form.isPinned}
+                onChange={(e) => setForm({ ...form, isPinned: e.target.checked })}
+                style={{ width: '16px', height: '16px', accentColor: 'var(--theme-primary)' }}
+              />
+              <span>📌 공지사항 목록 최상단 고정</span>
+            </label>
+          </div>
+
+          <div>
+            <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>내용</label>
+            <textarea
+              value={form.content}
+              onChange={(e) => setForm({ ...form, content: e.target.value })}
+              placeholder="공지할 내용을 상세히 입력하세요."
+              rows={6}
+              required
+              style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '0.9rem', lineHeight: '1.6', resize: 'vertical' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{ padding: '10px 18px', borderRadius: '10px', border: '1px solid #cbd5e1', background: 'white', color: '#475569', fontWeight: '700', cursor: 'pointer' }}
+            >
+              취소
+            </button>
+            <button
+              type="submit"
+              disabled={isSaving}
+              style={{ padding: '10px 22px', borderRadius: '10px', border: 'none', background: 'var(--theme-primary)', color: 'white', fontWeight: '800', cursor: isSaving ? 'not-allowed' : 'pointer' }}
+            >
+              {isSaving ? '저장 중...' : (initialData ? '수정 완료' : '등록하기')}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ── 독립형 Q&A 답변 등록 모달 (답변 타이핑 시 부모 컴포넌트 렉 원천 차단) ──
+interface QnaAnswerModalProps {
+  targetItem: any | null;
+  isSaving: boolean;
+  onClose: () => void;
+  onSave: (answer: string, author: string) => Promise<void>;
+}
+
+function QnaAnswerModal({ targetItem, isSaving, onClose, onSave }: QnaAnswerModalProps) {
+  const [answerAuthor, setAnswerAuthor] = useState('통영윈드서핑협회 대회운영본부');
+  const [answerText, setAnswerText] = useState('');
+
+  useEffect(() => {
+    if (targetItem) {
+      setAnswerAuthor(targetItem.answeredBy || '통영윈드서핑협회 대회운영본부');
+      setAnswerText(targetItem.answer || '');
+    }
+  }, [targetItem]);
+
+  if (!targetItem) return null;
+
+  return (
+    <div style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      backgroundColor: 'rgba(15, 23, 42, 0.75)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '20px'
+    }}>
+      <div style={{ background: 'white', borderRadius: '20px', maxWidth: '580px', width: '100%', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800', color: '#0f172a' }}>
+            Q&A 공식 답변 등록
+          </h3>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <form onSubmit={(e) => { e.preventDefault(); onSave(answerText, answerAuthor); }} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* 질문 원문 박스 */}
+          <div style={{ background: '#f8fafc', padding: '14px 16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#64748b', marginBottom: '4px' }}>
+              <span>작성자: <strong>{targetItem.author}</strong> {targetItem.isSecret ? '(🔒 비밀글)' : ''}</span>
+              <span>{targetItem.createdAt ? new Date(targetItem.createdAt).toLocaleDateString('ko-KR') : ''}</span>
+            </div>
+            <div style={{ fontWeight: '800', color: '#0f172a', fontSize: '0.95rem', marginBottom: '4px' }}>
+              {targetItem.title}
+            </div>
+            <p style={{ margin: 0, fontSize: '0.85rem', color: '#475569', lineHeight: '1.5', whiteSpace: 'pre-wrap' }}>
+              {targetItem.content}
+            </p>
+          </div>
+
+          <div>
+            <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>답변자 명의</label>
+            <input
+              type="text"
+              value={answerAuthor}
+              onChange={(e) => setAnswerAuthor(e.target.value)}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '0.88rem' }}
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>공식 답변 내용</label>
+            <textarea
+              value={answerText}
+              onChange={(e) => setAnswerText(e.target.value)}
+              placeholder="참가자에게 안내할 공식 답변을 작성하세요."
+              rows={6}
+              required
+              style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '0.9rem', lineHeight: '1.6', resize: 'vertical' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{ padding: '10px 18px', borderRadius: '10px', border: '1px solid #cbd5e1', background: 'white', color: '#475569', fontWeight: '700', cursor: 'pointer' }}
+            >
+              취소
+            </button>
+            <button
+              type="submit"
+              disabled={isSaving}
+              style={{ padding: '10px 22px', borderRadius: '10px', border: 'none', background: '#10b981', color: 'white', fontWeight: '800', cursor: isSaving ? 'not-allowed' : 'pointer' }}
+            >
+              {isSaving ? '저장 중...' : '답변 등록 완료'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

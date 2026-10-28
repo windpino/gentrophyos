@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, use } from 'react';
+import React, { useState, useEffect, use, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Award, Calendar, Layers, FileText, CheckCircle2, User, UserPlus, RefreshCw, Archive, Search, Compass, MapPin, Phone, Sparkles, Trophy, Smartphone, ShieldCheck, X, AlertTriangle, Menu, Copy, Check, ExternalLink, Bell, MessageSquare, Megaphone, Lock, Unlock, HelpCircle, Edit3, Trash2, Plus, Clock } from 'lucide-react';
 
@@ -293,28 +293,9 @@ export default function TenantPortalPage({
   const [loadingQna, setLoadingQna] = useState(false);
   const [qnaSearch, setQnaSearch] = useState('');
   const [isQnaWriteModalOpen, setIsQnaWriteModalOpen] = useState(false);
-  const [qnaWriteForm, setQnaWriteForm] = useState({
-    title: '',
-    content: '',
-    authorName: '',
-    password: '',
-    isSecret: false,
-  });
   const [isSubmittingQna, setIsSubmittingQna] = useState(false);
   const [selectedQna, setSelectedQna] = useState<any | null>(null);
-  const [qnaPasswordModal, setQnaPasswordModal] = useState<{
-    open: boolean;
-    targetItem: any | null;
-    inputPassword: string;
-    error: string;
-    isVerifying: boolean;
-  }>({
-    open: false,
-    targetItem: null,
-    inputPassword: '',
-    error: '',
-    isVerifying: false,
-  });
+  const [qnaPasswordTarget, setQnaPasswordTarget] = useState<any | null>(null);
   const [unlockedQnaPosts, setUnlockedQnaPosts] = useState<Record<string, any>>({});
 
   // 공지사항 조회 및 팝업 공지 체크
@@ -375,21 +356,26 @@ export default function TenantPortalPage({
     setActivePopupAnnouncement(null);
   };
 
-  const handleCreateQna = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!qnaWriteForm.authorName.trim()) {
+  const handleCreateQna = async (formData: {
+    authorName: string;
+    password: string;
+    title: string;
+    content: string;
+    isSecret: boolean;
+  }) => {
+    if (!formData.authorName.trim()) {
       alert('작성자 이름을 입력해 주세요.');
       return;
     }
-    if (!qnaWriteForm.password.trim() || qnaWriteForm.password.trim().length < 4) {
+    if (!formData.password.trim() || formData.password.trim().length < 4) {
       alert('비밀번호를 4자리 이상 입력해 주세요 (글 수정/삭제 및 비밀글 열람용).');
       return;
     }
-    if (!qnaWriteForm.title.trim()) {
+    if (!formData.title.trim()) {
       alert('질문 제목을 입력해 주세요.');
       return;
     }
-    if (!qnaWriteForm.content.trim()) {
+    if (!formData.content.trim()) {
       alert('질문 내용을 입력해 주세요.');
       return;
     }
@@ -399,19 +385,12 @@ export default function TenantPortalPage({
       const res = await fetch(`/api/tenant/${subdomain}/qna`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(qnaWriteForm),
+        body: JSON.stringify(formData),
       });
 
       if (res.ok) {
         alert('Q&A 질문이 성공적으로 등록되었습니다.');
         setIsQnaWriteModalOpen(false);
-        setQnaWriteForm({
-          title: '',
-          content: '',
-          authorName: '',
-          password: '',
-          isSecret: false,
-        });
         await fetchPublicQnaList();
       } else {
         const data = await res.json();
@@ -424,22 +403,14 @@ export default function TenantPortalPage({
     }
   };
 
-  const handleVerifyQnaPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!qnaPasswordModal.targetItem) return;
-    if (!qnaPasswordModal.inputPassword.trim()) {
-      setQnaPasswordModal(prev => ({ ...prev, error: '비밀번호를 입력해 주세요.' }));
-      return;
-    }
-
-    setQnaPasswordModal(prev => ({ ...prev, isVerifying: true, error: '' }));
+  const handleVerifyQnaPassword = async (targetItem: any, password: string): Promise<boolean> => {
     try {
       const res = await fetch(`/api/tenant/${subdomain}/qna/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: qnaPasswordModal.targetItem.id,
-          password: qnaPasswordModal.inputPassword.trim(),
+          id: targetItem.id,
+          password: password.trim(),
         }),
       });
 
@@ -447,12 +418,12 @@ export default function TenantPortalPage({
       if (res.ok && data.success) {
         setUnlockedQnaPosts(prev => ({ ...prev, [data.qna.id]: data.qna }));
         setSelectedQna(data.qna);
-        setQnaPasswordModal({ open: false, targetItem: null, inputPassword: '', error: '', isVerifying: false });
-      } else {
-        setQnaPasswordModal(prev => ({ ...prev, error: data.error || '비밀번호가 일치하지 않습니다.', isVerifying: false }));
+        setQnaPasswordTarget(null);
+        return true;
       }
+      return false;
     } catch (err: any) {
-      setQnaPasswordModal(prev => ({ ...prev, error: '검증 중 오류가 발생했습니다.', isVerifying: false }));
+      return false;
     }
   };
 
@@ -465,13 +436,7 @@ export default function TenantPortalPage({
       setSelectedQna(unlockedQnaPosts[item.id]);
       return;
     }
-    setQnaPasswordModal({
-      open: true,
-      targetItem: item,
-      inputPassword: '',
-      error: '',
-      isVerifying: false,
-    });
+    setQnaPasswordTarget(item);
   };
 
   // 대진표 데이터
@@ -789,7 +754,32 @@ export default function TenantPortalPage({
     return '윈드포일';
   };
 
-  const filteredMatches = matches.filter((match) => getMatchDivision(match) === activeDivisionTab);
+  // 대진표 필터링 (useMemo로 불필요한 반복 파싱 완전 제거)
+  const filteredMatches = useMemo(() => {
+    return matches.filter((match) => getMatchDivision(match) === activeDivisionTab);
+  }, [matches, activeDivisionTab]);
+
+  // 공지사항 필터링 (useMemo로 렉 없는 즉각 검색)
+  const filteredAnnouncements = useMemo(() => {
+    return announcements.filter(item => {
+      const matchesCategory = selectedAnnouncementCategory === '전체' || item.category === selectedAnnouncementCategory;
+      const matchesSearch = !announcementSearch.trim() ||
+        (item.title && item.title.toLowerCase().includes(announcementSearch.toLowerCase())) ||
+        (item.content && item.content.toLowerCase().includes(announcementSearch.toLowerCase()));
+      return matchesCategory && matchesSearch;
+    });
+  }, [announcements, selectedAnnouncementCategory, announcementSearch]);
+
+  // Q&A 목록 필터링 (useMemo로 렉 없는 즉각 검색)
+  const filteredQna = useMemo(() => {
+    return qnaList.filter(item => {
+      if (!qnaSearch.trim()) return true;
+      const q = qnaSearch.toLowerCase();
+      return (item.title && item.title.toLowerCase().includes(q)) ||
+        (item.content && item.content.toLowerCase().includes(q)) ||
+        (item.authorName && item.authorName.toLowerCase().includes(q));
+    });
+  }, [qnaList, qnaSearch]);
 
   const fetchArchiveData = async (archivedId: string) => {
     setArchiveLoading(true);
@@ -4046,16 +4036,7 @@ export default function TenantPortalPage({
           )}
 
           {/* ── 공지사항 (알림) 섹션 ── */}
-          {activeTab === 'announcements' && (() => {
-            const filteredAnnouncements = announcements.filter(item => {
-              const matchesCategory = selectedAnnouncementCategory === '전체' || item.category === selectedAnnouncementCategory;
-              const matchesSearch = !announcementSearch.trim() ||
-                (item.title && item.title.toLowerCase().includes(announcementSearch.toLowerCase())) ||
-                (item.content && item.content.toLowerCase().includes(announcementSearch.toLowerCase()));
-              return matchesCategory && matchesSearch;
-            });
-
-            return (
+          {activeTab === 'announcements' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '30px', maxWidth: '960px', margin: '0 auto', width: '100%' }} className="animate-fade-in">
                 {/* 헤더 배너 */}
                 <div className="glass-panel" style={{ background: 'white', padding: '35px 30px', borderTop: '4px solid var(--theme-primary)', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
@@ -4208,19 +4189,10 @@ export default function TenantPortalPage({
                   </div>
                 )}
               </div>
-            );
-          })()}
+          )}
 
           {/* ── Q&A 문의 게시판 섹션 ── */}
-          {activeTab === 'qna' && (() => {
-            const filteredQna = qnaList.filter(item => {
-              if (!qnaSearch.trim()) return true;
-              const q = qnaSearch.toLowerCase();
-              return (item.title && item.title.toLowerCase().includes(q)) ||
-                     (item.authorName && item.authorName.toLowerCase().includes(q));
-            });
-
-            return (
+          {activeTab === 'qna' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '30px', maxWidth: '960px', margin: '0 auto', width: '100%' }} className="animate-fade-in">
                 {/* 헤더 배너 */}
                 <div className="glass-panel" style={{ background: 'white', padding: '35px 30px', borderTop: '4px solid var(--theme-primary)', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
@@ -4395,8 +4367,7 @@ export default function TenantPortalPage({
                   </div>
                 )}
               </div>
-            );
-          })()}
+          )}
 
         </main>
       </div>
@@ -4563,8 +4534,7 @@ export default function TenantPortalPage({
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: 'rgba(15, 23, 42, 0.7)',
-          backdropFilter: 'blur(5px)',
+          backgroundColor: 'rgba(15, 23, 42, 0.75)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -4688,234 +4658,339 @@ export default function TenantPortalPage({
         </div>
       )}
 
-      {/* ── Q&A 질문 작성 모달 ── */}
-      {isQnaWriteModalOpen && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(15, 23, 42, 0.65)',
-          backdropFilter: 'blur(4px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 100000,
-          padding: '20px'
-        }}>
-          <div style={{
-            background: 'white',
-            borderRadius: '20px',
-            maxWidth: '560px',
-            width: '100%',
-            overflow: 'hidden',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-            maxHeight: '90vh',
-            display: 'flex',
-            flexDirection: 'column'
-          }}>
-            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <MessageSquare size={20} style={{ color: 'var(--theme-primary)' }} />
-                Q&A 질문 작성하기
-              </h3>
-              <button
-                type="button"
-                onClick={() => setIsQnaWriteModalOpen(false)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
-              >
-                <X size={20} />
-              </button>
-            </div>
+      {/* ── Q&A 질문 작성 모달 (독립 컴포넌트로 분리하여 입력 렉 완전 제거) ── */}
+      <QnaWriteModal
+        isOpen={isQnaWriteModalOpen}
+        isSubmitting={isSubmittingQna}
+        onClose={() => setIsQnaWriteModalOpen(false)}
+        onSubmit={handleCreateQna}
+      />
 
-            <form onSubmit={handleCreateQna} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', marginBottom: '6px', color: 'var(--text-main)' }}>
-                    작성자 성명 <span style={{ color: '#ef4444' }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="실명 입력"
-                    value={qnaWriteForm.authorName}
-                    onChange={(e) => setQnaWriteForm({ ...qnaWriteForm, authorName: e.target.value })}
-                    style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1px solid var(--border-color)', fontSize: '0.9rem', outline: 'none' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', marginBottom: '6px', color: 'var(--text-main)' }}>
-                    비밀번호 (4자리 이상) <span style={{ color: '#ef4444' }}>*</span>
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    placeholder="수정/삭제/비밀글용"
-                    value={qnaWriteForm.password}
-                    onChange={(e) => setQnaWriteForm({ ...qnaWriteForm, password: e.target.value })}
-                    style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1px solid var(--border-color)', fontSize: '0.9rem', outline: 'none' }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', marginBottom: '6px', color: 'var(--text-main)' }}>
-                  질문 제목 <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="질문 제목을 입력해 주세요."
-                  value={qnaWriteForm.title}
-                  onChange={(e) => setQnaWriteForm({ ...qnaWriteForm, title: e.target.value })}
-                  style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1px solid var(--border-color)', fontSize: '0.9rem', outline: 'none' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', marginBottom: '6px', color: 'var(--text-main)' }}>
-                  질문 내용 <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <textarea
-                  required
-                  rows={6}
-                  placeholder="문의하실 내용을 자세하게 남겨주시면 주최측에서 신속히 공식 답변을 드립니다."
-                  value={qnaWriteForm.content}
-                  onChange={(e) => setQnaWriteForm({ ...qnaWriteForm, content: e.target.value })}
-                  style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-color)', fontSize: '0.9rem', outline: 'none', resize: 'vertical', lineHeight: '1.6' }}
-                />
-              </div>
-
-              {/* 비밀글 체크박스 */}
-              <div style={{ padding: '12px 16px', background: '#f8fafc', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', userSelect: 'none' }}>
-                  <input
-                    type="checkbox"
-                    checked={qnaWriteForm.isSecret}
-                    onChange={(e) => setQnaWriteForm({ ...qnaWriteForm, isSecret: e.target.checked })}
-                    style={{ width: '18px', height: '18px', accentColor: 'var(--theme-primary)' }}
-                  />
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ fontSize: '0.88rem', fontWeight: '700', color: 'var(--text-main)' }}>
-                      🔒 비밀글로 등록하기
-                    </span>
-                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                      비밀글로 설정 시 작성자(비밀번호 입력 시)와 대회 관리자만 내용을 열람할 수 있습니다.
-                    </span>
-                  </div>
-                </label>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
-                <button
-                  type="button"
-                  onClick={() => setIsQnaWriteModalOpen(false)}
-                  disabled={isSubmittingQna}
-                  className="btn-secondary"
-                  style={{ padding: '10px 18px', fontSize: '0.9rem' }}
-                >
-                  취소
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmittingQna}
-                  className="btn-primary"
-                  style={{ padding: '10px 24px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}
-                >
-                  {isSubmittingQna ? <RefreshCw className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
-                  {isSubmittingQna ? '등록 중...' : '질문 등록'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ── Q&A 비밀번호 확인 모달 (비밀글 열람용) ── */}
-      {qnaPasswordModal.open && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(15, 23, 42, 0.65)',
-          backdropFilter: 'blur(4px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 100000,
-          padding: '20px'
-        }}>
-          <div style={{
-            background: 'white',
-            borderRadius: '20px',
-            maxWidth: '420px',
-            width: '100%',
-            overflow: 'hidden',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-            border: '1px solid rgba(226, 232, 240, 0.8)'
-          }}>
-            <div style={{ padding: '24px 24px 16px', display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
-              <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#fee2e2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Lock size={22} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '800', color: '#1e293b' }}>
-                  비밀글 본인 확인
-                </h3>
-                <p style={{ margin: '6px 0 0', fontSize: '0.85rem', color: '#64748b', lineHeight: '1.5' }}>
-                  작성 시 설정하신 4자리 이상의 비밀번호를 입력해 주세요.
-                </p>
-              </div>
-            </div>
-
-            <form onSubmit={handleVerifyQnaPassword} style={{ padding: '0 24px 20px' }}>
-              <div style={{ marginBottom: '14px' }}>
-                <input
-                  type="password"
-                  required
-                  autoFocus
-                  placeholder="비밀번호 입력"
-                  value={qnaPasswordModal.inputPassword}
-                  onChange={(e) => setQnaPasswordModal({ ...qnaPasswordModal, inputPassword: e.target.value, error: '' })}
-                  style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-color)', fontSize: '0.95rem', outline: 'none' }}
-                />
-                {qnaPasswordModal.error && (
-                  <p style={{ margin: '6px 0 0', fontSize: '0.82rem', color: '#ef4444', fontWeight: '700' }}>
-                    {qnaPasswordModal.error}
-                  </p>
-                )}
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button
-                  type="button"
-                  onClick={() => setQnaPasswordModal({ open: false, targetItem: null, inputPassword: '', error: '', isVerifying: false })}
-                  className="btn-secondary"
-                  style={{ padding: '9px 16px', fontSize: '0.88rem' }}
-                >
-                  취소
-                </button>
-                <button
-                  type="submit"
-                  disabled={qnaPasswordModal.isVerifying}
-                  className="btn-primary"
-                  style={{ padding: '9px 20px', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '6px' }}
-                >
-                  {qnaPasswordModal.isVerifying ? <RefreshCw className="animate-spin" size={14} /> : <Unlock size={14} />}
-                  확인 및 열람
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* ── Q&A 비밀번호 확인 모달 (비밀글 열람용 - 독립 컴포넌트화) ── */}
+      <QnaPasswordModal
+        isOpen={!!qnaPasswordTarget}
+        targetItem={qnaPasswordTarget}
+        onClose={() => setQnaPasswordTarget(null)}
+        onVerify={handleVerifyQnaPassword}
+      />
 
       {/* 참가 신청 완료 안내 팝업 모달 */}
       {renderSuccessModal()}
+    </div>
+  );
+}
+
+// ── 독립형 Q&A 질문 작성 모달 (자체 로컬 상태로 홈페이지 전체 리렌더링 및 입력 렉 완전 제거) ──
+interface QnaWriteModalProps {
+  isOpen: boolean;
+  isSubmitting: boolean;
+  onClose: () => void;
+  onSubmit: (data: { authorName: string; password: string; title: string; content: string; isSecret: boolean }) => Promise<void>;
+}
+
+function QnaWriteModal({ isOpen, isSubmitting, onClose, onSubmit }: QnaWriteModalProps) {
+  const [form, setForm] = useState({
+    authorName: '',
+    password: '',
+    title: '',
+    content: '',
+    isSecret: false,
+  });
+
+  useEffect(() => {
+    if (isOpen) {
+      setForm({
+        authorName: '',
+        password: '',
+        title: '',
+        content: '',
+        isSecret: false,
+      });
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit(form);
+  };
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(15, 23, 42, 0.75)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 100000,
+      padding: '20px'
+    }}>
+      <div style={{
+        background: 'white',
+        borderRadius: '20px',
+        maxWidth: '560px',
+        width: '100%',
+        overflow: 'hidden',
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+        maxHeight: '90vh',
+        display: 'flex',
+        flexDirection: 'column'
+      }}>
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <MessageSquare size={20} style={{ color: 'var(--theme-primary)' }} />
+            Q&A 질문 작성하기
+          </h3>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', marginBottom: '6px', color: 'var(--text-main)' }}>
+                작성자 성명 <span style={{ color: '#ef4444' }}>*</span>
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="실명 입력"
+                value={form.authorName}
+                onChange={(e) => setForm({ ...form, authorName: e.target.value })}
+                style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1px solid var(--border-color)', fontSize: '0.9rem', outline: 'none' }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', marginBottom: '6px', color: 'var(--text-main)' }}>
+                비밀번호 (4자리 이상) <span style={{ color: '#ef4444' }}>*</span>
+              </label>
+              <input
+                type="password"
+                required
+                placeholder="수정/삭제/비밀글용"
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1px solid var(--border-color)', fontSize: '0.9rem', outline: 'none' }}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', marginBottom: '6px', color: 'var(--text-main)' }}>
+              질문 제목 <span style={{ color: '#ef4444' }}>*</span>
+            </label>
+            <input
+              type="text"
+              required
+              placeholder="질문 제목을 입력해 주세요."
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1px solid var(--border-color)', fontSize: '0.9rem', outline: 'none' }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', marginBottom: '6px', color: 'var(--text-main)' }}>
+              질문 내용 <span style={{ color: '#ef4444' }}>*</span>
+            </label>
+            <textarea
+              required
+              rows={6}
+              placeholder="문의하실 내용을 자세하게 남겨주시면 주최측에서 신속히 공식 답변을 드립니다."
+              value={form.content}
+              onChange={(e) => setForm({ ...form, content: e.target.value })}
+              style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border-color)', fontSize: '0.9rem', outline: 'none', resize: 'vertical', lineHeight: '1.6' }}
+            />
+          </div>
+
+          {/* 비밀글 체크박스 */}
+          <div style={{ padding: '12px 16px', background: '#f8fafc', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', userSelect: 'none' }}>
+              <input
+                type="checkbox"
+                checked={form.isSecret}
+                onChange={(e) => setForm({ ...form, isSecret: e.target.checked })}
+                style={{ width: '18px', height: '18px', accentColor: 'var(--theme-primary)' }}
+              />
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: '0.88rem', fontWeight: '700', color: 'var(--text-main)' }}>
+                  🔒 비밀글로 등록하기
+                </span>
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                  비밀글로 설정 시 작성자(비밀번호 입력 시)와 대회 관리자만 내용을 열람할 수 있습니다.
+                </span>
+              </div>
+            </label>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="btn-secondary"
+              style={{ padding: '10px 18px', fontSize: '0.9rem' }}
+            >
+              취소
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="btn-primary"
+              style={{ padding: '10px 24px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              {isSubmitting ? <RefreshCw className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
+              {isSubmitting ? '등록 중...' : '질문 등록'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ── 독립형 Q&A 비밀번호 확인 모달 (비밀글 열람용) ──
+interface QnaPasswordModalProps {
+  isOpen: boolean;
+  targetItem: any | null;
+  onClose: () => void;
+  onVerify: (targetItem: any, password: string) => Promise<boolean>;
+}
+
+function QnaPasswordModal({ isOpen, targetItem, onClose, onVerify }: QnaPasswordModalProps) {
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setPassword('');
+      setError('');
+      setIsVerifying(false);
+    }
+  }, [isOpen]);
+
+  if (!isOpen || !targetItem) return null;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!password.trim()) {
+      setError('비밀번호를 입력해 주세요.');
+      return;
+    }
+    setIsVerifying(true);
+    setError('');
+    const success = await onVerify(targetItem, password.trim());
+    setIsVerifying(false);
+    if (!success) {
+      setError('비밀번호가 일치하지 않습니다. 다시 확인해 주세요.');
+    }
+  };
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(15, 23, 42, 0.75)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 100000,
+      padding: '20px'
+    }}>
+      <div style={{
+        background: 'white',
+        borderRadius: '20px',
+        maxWidth: '420px',
+        width: '100%',
+        padding: '24px',
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+        animation: 'modalSlideUp 0.2s ease-out'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#dc2626' }}>
+              <Lock size={18} />
+            </div>
+            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-main)' }}>
+              비밀글 본인 확인
+            </h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <p style={{ margin: '0 0 16px', fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
+          작성 시 설정하신 <strong>4자리 이상 비밀번호</strong>를 입력하시면 비밀글의 질문과 주최자 답변을 열람하실 수 있습니다.
+        </p>
+
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: '14px' }}>
+            <input
+              type="password"
+              required
+              autoFocus
+              placeholder="비밀번호 입력"
+              value={password}
+              onChange={(e) => { setPassword(e.target.value); setError(''); }}
+              style={{
+                width: '100%',
+                padding: '12px 14px',
+                borderRadius: '10px',
+                border: error ? '2px solid #ef4444' : '1px solid var(--border-color)',
+                fontSize: '0.95rem',
+                outline: 'none',
+                letterSpacing: '2px'
+              }}
+            />
+            {error && (
+              <p style={{ margin: '6px 0 0', fontSize: '0.82rem', color: '#ef4444', fontWeight: '700' }}>
+                {error}
+              </p>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isVerifying}
+              className="btn-secondary"
+              style={{ padding: '9px 16px', fontSize: '0.88rem' }}
+            >
+              취소
+            </button>
+            <button
+              type="submit"
+              disabled={isVerifying}
+              className="btn-primary"
+              style={{ padding: '9px 20px', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              {isVerifying ? <RefreshCw className="animate-spin" size={14} /> : <Unlock size={14} />}
+              {isVerifying ? '확인 중...' : '확인 및 열람'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
