@@ -51,6 +51,78 @@ interface Match {
   }>;
 }
 
+// 배번티 색상(흰색, 연두색, 오렌지색)에 맞춘 배경 뱃지 스타일 도우미
+export function getBibBadgeStyle(bibNumber?: string) {
+  const bib = (bibNumber || '').trim();
+  if (!bib || bib === '-') {
+    return {
+      background: '#f8fafc',
+      color: '#94a3b8',
+      borderColor: '#e2e8f0',
+      boxShadow: 'none',
+      icon: '🏷️',
+      text: '배번 미배정',
+      isAssigned: false,
+    };
+  }
+
+  const lower = bib.toLowerCase();
+
+  // 1. 연두색 (연두, 연, green)
+  if (bib.includes('연두') || /^연\d+/.test(bib) || lower.includes('green')) {
+    return {
+      background: '#dcfce7',
+      color: '#14532d',
+      borderColor: '#86efac',
+      boxShadow: '0 1px 3px rgba(22, 101, 52, 0.1)',
+      icon: '🟢',
+      text: bib.startsWith('배번') ? bib : `배번 ${bib}`,
+      isAssigned: true,
+      colorName: '연두색',
+    };
+  }
+
+  // 2. 오렌지색 / 주황색 (오렌지, 주황, 주, 오, orange)
+  if (bib.includes('오렌지') || bib.includes('주황') || /^주\d+/.test(bib) || /^오\d+/.test(bib) || lower.includes('orange')) {
+    return {
+      background: '#ffedd5',
+      color: '#9a3412',
+      borderColor: '#fdba74',
+      boxShadow: '0 1px 3px rgba(154, 52, 18, 0.12)',
+      icon: '🟠',
+      text: bib.startsWith('배번') ? bib : `배번 ${bib}`,
+      isAssigned: true,
+      colorName: '오렌지색',
+    };
+  }
+
+  // 3. 흰색 (흰색, 흰, white)
+  if (bib.includes('흰색') || /^흰\d+/.test(bib) || lower.includes('white')) {
+    return {
+      background: '#ffffff',
+      color: '#0f172a',
+      borderColor: '#94a3b8',
+      boxShadow: '0 1px 4px rgba(0, 0, 0, 0.08)',
+      icon: '⚪',
+      text: bib.startsWith('배번') ? bib : `배번 ${bib}`,
+      isAssigned: true,
+      colorName: '흰색',
+    };
+  }
+
+  // 4. 일반 숫자만 있는 경우
+  return {
+    background: '#f0f9ff',
+    color: '#0284c7',
+    borderColor: '#bae6fd',
+    boxShadow: 'none',
+    icon: '🏷️',
+    text: bib.startsWith('배번') ? bib : `배번 ${bib}`,
+    isAssigned: true,
+    colorName: '일반',
+  };
+}
+
 // 한글 초성 추출 및 초성 검색 유틸리티
 const CHOSEONG_LIST = [
   'ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ', 'ㅅ', 
@@ -2598,7 +2670,29 @@ export default function TenantPortalPage({
                                       </span>
                                     </td>
                                     <td style={{ fontWeight: '800' }}>{row.name}</td>
-                                    <td>{row.bibNumber || '-'}</td>
+                                    <td>
+                                      {row.bibNumber ? (() => {
+                                        const badge = getBibBadgeStyle(row.bibNumber);
+                                        return (
+                                          <span style={{
+                                            fontWeight: '800',
+                                            color: badge.color,
+                                            background: badge.background,
+                                            border: `1px solid ${badge.borderColor}`,
+                                            padding: '2px 8px',
+                                            borderRadius: '6px',
+                                            fontSize: '0.8rem',
+                                            whiteSpace: 'nowrap',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '4px'
+                                          }}>
+                                            <span>{badge.icon}</span>
+                                            <span>{row.bibNumber}</span>
+                                          </span>
+                                        );
+                                      })() : '-'}
+                                    </td>
                                     <td>{formatMaskedBirthDate(row.birth)}</td>
                                     {activeRoundKeys.map((rKey, idx) => {
                                       const rawVal = row[rKey];
@@ -3012,18 +3106,28 @@ export default function TenantPortalPage({
 
                                                 {/* 우측: 배번티 번호 강조 */}
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                  <span style={{
-                                                    fontWeight: '900',
-                                                    color: '#0284c7',
-                                                    background: '#f0f9ff',
-                                                    border: '1px solid #bae6fd',
-                                                    padding: '3px 10px',
-                                                    borderRadius: '6px',
-                                                    fontSize: '0.84rem',
-                                                    whiteSpace: 'nowrap'
-                                                  }}>
-                                                    배번티 {player.bibNumber || '-'}
-                                                  </span>
+                                                  {(() => {
+                                                    const badge = getBibBadgeStyle(player.bibNumber);
+                                                    return (
+                                                      <span style={{
+                                                        fontWeight: '900',
+                                                        color: badge.color,
+                                                        background: badge.background,
+                                                        border: `1.5px solid ${badge.borderColor}`,
+                                                        boxShadow: badge.boxShadow || 'none',
+                                                        padding: '3px 10px',
+                                                        borderRadius: '8px',
+                                                        fontSize: '0.84rem',
+                                                        whiteSpace: 'nowrap',
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: '4px'
+                                                      }}>
+                                                        <span>{badge.icon}</span>
+                                                        <span>{badge.text}</span>
+                                                      </span>
+                                                    );
+                                                  })()}
                                                 </div>
                                               </div>
                                             ))}

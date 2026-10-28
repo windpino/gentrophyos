@@ -33,6 +33,145 @@ interface GridRow {
   isNew?: boolean;
 }
 
+// 생년월일(YYYYMMDD 또는 YYMMDD)을 비교 가능한 8자리 숫자(YYYYMMDD)로 변환
+export const parseBirthComparable = (birthStr?: string): number => {
+  if (!birthStr) return 0;
+  const digits = String(birthStr).trim().replace(/[^0-9]/g, '');
+  if (digits.length === 8) return parseInt(digits, 10) || 0;
+  if (digits.length === 6) {
+    const yy = parseInt(digits.substring(0, 2), 10);
+    const prefix = yy <= 26 ? '20' : '19';
+    return parseInt(`${prefix}${digits}`, 10) || 0;
+  }
+  if (digits.length === 4) return parseInt(`${digits}0101`, 10) || 0;
+  return parseInt(digits, 10) || 0;
+};
+
+export const getRootDivisionName = (div?: string): string => {
+  const d = div || '윈드포일';
+  if (d.includes('윈드포일')) return '윈드포일';
+  if (d.includes('윙포일')) return '윙포일';
+  if (d.includes('혼합오픈')) return '혼합오픈';
+  if (d.includes('펀엔포뮬러') || d.includes('펀&포뮬러')) return '펀&포뮬러';
+  return d;
+};
+
+// 혼합오픈 및 펀&포뮬러 종목(남자부) 참가자를 생년월일 기준 1/3 균등분할하여 청년부·중년부·장년부로 계산
+export const computeAgeSplitSubclasses = (rows: GridRow[]): Record<string, '청년부' | '중년부' | '장년부'> => {
+  const result: Record<string, '청년부' | '중년부' | '장년부'> = {};
+  const targetDivisions = ['혼합오픈', '펀&포뮬러'];
+
+  targetDivisions.forEach((targetDiv) => {
+    const groupPlayers = rows.filter((r) => {
+      const rootDiv = getRootDivisionName(r.division);
+      const isMale = !r.gender || r.gender.includes('남자') || (!r.gender.includes('여자') && !String(r.division).includes('여자'));
+      return rootDiv === targetDiv && isMale;
+    });
+
+    if (groupPlayers.length === 0) return;
+
+    // 출생연월일 내림차순 정렬 (최근 출생 = 가장 젊은 선수 = 청년부 우선)
+    const sorted = [...groupPlayers].sort((a, b) => {
+      const birthA = parseBirthComparable(a.birth);
+      const birthB = parseBirthComparable(b.birth);
+      if (birthA !== birthB) {
+        if (birthA === 0) return 1;
+        if (birthB === 0) return -1;
+        return birthB - birthA;
+      }
+      return (a.name || '').localeCompare(b.name || '', 'ko');
+    });
+
+    const total = sorted.length;
+    const youthLimit = Math.ceil(total / 3);
+    const middleLimit = Math.ceil((2 * total) / 3);
+
+    sorted.forEach((p, idx) => {
+      if (idx < youthLimit) {
+        result[p.id] = '청년부';
+      } else if (idx < middleLimit) {
+        result[p.id] = '중년부';
+      } else {
+        result[p.id] = '장년부';
+      }
+    });
+  });
+
+  return result;
+};
+
+// 배번티 색상(흰색, 연두색, 오렌지색)에 맞춘 배경 뱃지 스타일 도우미
+export function getBibBadgeStyle(bibNumber?: string) {
+  const bib = (bibNumber || '').trim();
+  if (!bib || bib === '-') {
+    return {
+      background: '#f8fafc',
+      color: '#94a3b8',
+      borderColor: '#e2e8f0',
+      boxShadow: 'none',
+      icon: '🏷️',
+      text: '배번 미배정',
+      isAssigned: false,
+    };
+  }
+
+  const lower = bib.toLowerCase();
+
+  // 1. 연두색 (연두, 연, green)
+  if (bib.includes('연두') || /^연\d+/.test(bib) || lower.includes('green')) {
+    return {
+      background: '#dcfce7',
+      color: '#14532d',
+      borderColor: '#86efac',
+      boxShadow: '0 1px 3px rgba(22, 101, 52, 0.1)',
+      icon: '🟢',
+      text: bib.startsWith('배번') ? bib : `배번 ${bib}`,
+      isAssigned: true,
+      colorName: '연두색',
+    };
+  }
+
+  // 2. 오렌지색 / 주황색 (오렌지, 주황, 주, 오, orange)
+  if (bib.includes('오렌지') || bib.includes('주황') || /^주\d+/.test(bib) || /^오\d+/.test(bib) || lower.includes('orange')) {
+    return {
+      background: '#ffedd5',
+      color: '#9a3412',
+      borderColor: '#fdba74',
+      boxShadow: '0 1px 3px rgba(154, 52, 18, 0.12)',
+      icon: '🟠',
+      text: bib.startsWith('배번') ? bib : `배번 ${bib}`,
+      isAssigned: true,
+      colorName: '오렌지색',
+    };
+  }
+
+  // 3. 흰색 (흰색, 흰, white)
+  if (bib.includes('흰색') || /^흰\d+/.test(bib) || lower.includes('white')) {
+    return {
+      background: '#ffffff',
+      color: '#0f172a',
+      borderColor: '#94a3b8',
+      boxShadow: '0 1px 4px rgba(0, 0, 0, 0.08)',
+      icon: '⚪',
+      text: bib.startsWith('배번') ? bib : `배번 ${bib}`,
+      isAssigned: true,
+      colorName: '흰색',
+    };
+  }
+
+  // 4. 일반 숫자만 있는 경우
+  return {
+    background: '#f0f9ff',
+    color: '#0284c7',
+    borderColor: '#bae6fd',
+    boxShadow: 'none',
+    icon: '🏷️',
+    text: bib.startsWith('배번') ? bib : `배번 ${bib}`,
+    isAssigned: true,
+    colorName: '일반',
+  };
+}
+
 interface TieBreakerRule {
   id: string;
   priority: number;
@@ -584,72 +723,7 @@ export default function HostDashboardPage({
     }
   };
 
-  // 생년월일(YYYYMMDD 또는 YYMMDD)을 비교 가능한 8자리 숫자(YYYYMMDD)로 변환 (숫자가 클수록 나이가 젊음 = 청년부)
-  const parseBirthComparable = (birthStr?: string): number => {
-    if (!birthStr) return 0;
-    const digits = String(birthStr).trim().replace(/[^0-9]/g, '');
-    if (digits.length === 8) return parseInt(digits, 10) || 0;
-    if (digits.length === 6) {
-      const yy = parseInt(digits.substring(0, 2), 10);
-      const prefix = yy <= 26 ? '20' : '19';
-      return parseInt(`${prefix}${digits}`, 10) || 0;
-    }
-    if (digits.length === 4) return parseInt(`${digits}0101`, 10) || 0;
-    return parseInt(digits, 10) || 0;
-  };
 
-  const getRootDivisionName = (div?: string): string => {
-    const d = div || '윈드포일';
-    if (d.includes('윈드포일')) return '윈드포일';
-    if (d.includes('윙포일')) return '윙포일';
-    if (d.includes('혼합오픈')) return '혼합오픈';
-    if (d.includes('펀엔포뮬러') || d.includes('펀&포뮬러')) return '펀&포뮬러';
-    return d;
-  };
-
-  // 혼합오픈 및 펀&포뮬러 종목(남자부) 참가자를 생년월일 기준 1/3 균등분할하여 청년부·중년부·장년부로 계산 (참가확정 전 신청자도 포함)
-  const computeAgeSplitSubclasses = (rows: GridRow[]): Record<string, '청년부' | '중년부' | '장년부'> => {
-    const result: Record<string, '청년부' | '중년부' | '장년부'> = {};
-    const targetDivisions = ['혼합오픈', '펀&포뮬러'];
-
-    targetDivisions.forEach((targetDiv) => {
-      const groupPlayers = rows.filter((r) => {
-        const rootDiv = getRootDivisionName(r.division);
-        const isMale = !r.gender || r.gender.includes('남자') || (!r.gender.includes('여자') && !String(r.division).includes('여자'));
-        return rootDiv === targetDiv && isMale;
-      });
-
-      if (groupPlayers.length === 0) return;
-
-      // 출생연월일 내림차순 정렬 (최근 출생 = 가장 젊은 선수 = 청년부 우선)
-      const sorted = [...groupPlayers].sort((a, b) => {
-        const birthA = parseBirthComparable(a.birth);
-        const birthB = parseBirthComparable(b.birth);
-        if (birthA !== birthB) {
-          if (birthA === 0) return 1;
-          if (birthB === 0) return -1;
-          return birthB - birthA;
-        }
-        return (a.name || '').localeCompare(b.name || '', 'ko');
-      });
-
-      const total = sorted.length;
-      const youthLimit = Math.ceil(total / 3);
-      const middleLimit = Math.ceil((2 * total) / 3);
-
-      sorted.forEach((p, idx) => {
-        if (idx < youthLimit) {
-          result[p.id] = '청년부';
-        } else if (idx < middleLimit) {
-          result[p.id] = '중년부';
-        } else {
-          result[p.id] = '장년부';
-        }
-      });
-    });
-
-    return result;
-  };
 
   const handleAutoAssignAgeSubclasses = () => {
     const targetPool = bracketStatusFilter === 'approved'
@@ -2625,18 +2699,28 @@ export default function HostDashboardPage({
                                                       <option key={opt} value={opt}>{opt}</option>
                                                     ))}
                                                   </select>
-                                                  <span style={{
-                                                    fontWeight: '900',
-                                                    color: '#0284c7',
-                                                    background: '#f0f9ff',
-                                                    border: '1px solid #bae6fd',
-                                                    padding: '3px 8px',
-                                                    borderRadius: '6px',
-                                                    fontSize: '0.8rem',
-                                                    whiteSpace: 'nowrap'
-                                                  }}>
-                                                    배번 {player.bibNumber || '-'}
-                                                  </span>
+                                                  {(() => {
+                                                    const badge = getBibBadgeStyle(player.bibNumber);
+                                                    return (
+                                                      <span style={{
+                                                        fontWeight: '900',
+                                                        color: badge.color,
+                                                        background: badge.background,
+                                                        border: `1.5px solid ${badge.borderColor}`,
+                                                        boxShadow: badge.boxShadow || 'none',
+                                                        padding: '3px 10px',
+                                                        borderRadius: '8px',
+                                                        fontSize: '0.82rem',
+                                                        whiteSpace: 'nowrap',
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: '4px'
+                                                      }}>
+                                                        <span>{badge.icon}</span>
+                                                        <span>{badge.text}</span>
+                                                      </span>
+                                                    );
+                                                  })()}
                                                 </div>
                                               </div>
                                             );
@@ -3682,9 +3766,31 @@ export default function HostDashboardPage({
         onClose={() => setIsBibModalOpen(false)}
         gridData={gridData}
         subdomain={subdomain}
-        onApplyBibs={(updatedGrid, summaryMsg) => {
+        onApplyBibs={async (updatedGrid, summaryMsg) => {
           setGridData(updatedGrid);
           setIsBibModalOpen(false);
+
+          // 변경된 배번 목록 데이터베이스 즉시 일괄 영구 저장
+          const updatedList = updatedGrid.filter(r => r.isEdited && !r.isNew);
+          if (activeTournament && updatedList.length > 0) {
+            try {
+              const res = await fetch(`/api/tenant/${subdomain}/registrations/bulk-update`, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({
+                  tournamentId: activeTournament.id,
+                  updatedList,
+                }),
+              });
+              if (res.ok) {
+                await loadSectionData(activeTournament.id);
+                alert(`${summaryMsg}\n\n💾 변경된 배번이 데이터베이스에 즉시 영구 저장 완료되었습니다!`);
+                return;
+              }
+            } catch (e) {
+              console.error('배번 자동 저장 오류:', e);
+            }
+          }
           alert(summaryMsg);
         }}
       />
@@ -4208,7 +4314,7 @@ interface BibManagementModalProps {
   onClose: () => void;
   gridData: GridRow[];
   subdomain: string;
-  onApplyBibs: (updatedGrid: GridRow[], summaryMsg: string) => void;
+  onApplyBibs: (updatedGrid: GridRow[], summaryMsg: string) => Promise<void> | void;
 }
 
 function BibManagementModal({
@@ -4231,13 +4337,14 @@ function BibManagementModal({
 
   const [numberingStyle, setNumberingStyle] = useState<'colorWithNum' | 'colorPrefix' | 'colorShort' | 'numberOnly'>('colorWithNum');
   const [assignScope, setAssignScope] = useState<'all' | 'approved'>('all');
-  const [assignOrder, setAssignOrder] = useState<'current' | 'division'>('current');
+  const [assignOrder, setAssignOrder] = useState<'bracket' | 'name' | 'regOrder'>('bracket');
   const [overwriteExisting, setOverwriteExisting] = useState<boolean>(true);
   const [directInputText, setDirectInputText] = useState('');
+  const [isApplying, setIsApplying] = useState<boolean>(false);
 
   // LocalStorage에서 저장된 분실 배번 설정 복원
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && isOpen) {
       const saved = localStorage.getItem(`gentrophy_lost_bibs_${subdomain}`);
       if (saved) {
         try {
@@ -4255,9 +4362,15 @@ function BibManagementModal({
                 setNumberingStyle('colorWithNum');
               }
             }
-            if (parsed.assignScope) setAssignScope(parsed.assignScope);
-            if (parsed.assignOrder) setAssignOrder(parsed.assignOrder);
-            if (parsed.overwriteExisting !== undefined) setOverwriteExisting(parsed.overwriteExisting);
+            if (parsed.assignScope && ['all', 'approved'].includes(parsed.assignScope)) {
+              setAssignScope(parsed.assignScope);
+            }
+            if (parsed.assignOrder && ['bracket', 'name', 'regOrder'].includes(parsed.assignOrder)) {
+              setAssignOrder(parsed.assignOrder);
+            }
+            if (parsed.overwriteExisting !== undefined) {
+              setOverwriteExisting(Boolean(parsed.overwriteExisting));
+            }
           }
         } catch (e) {
           console.error('분실 배번 불러오기 오류:', e);
@@ -4266,18 +4379,26 @@ function BibManagementModal({
     }
   }, [subdomain, isOpen]);
 
-  // 분실 배번 변경 시 LocalStorage에 즉시 자동 보존
-  const updateLostBibs = (newLost: typeof lostBibs) => {
-    setLostBibs(newLost);
+  // 분실 배번 및 옵션 변경 시 LocalStorage에 즉시 자동 보존
+  const saveAllSettings = (overrides?: {
+    lost?: typeof lostBibs;
+    style?: 'colorWithNum' | 'colorPrefix' | 'colorShort' | 'numberOnly';
+    scope?: 'all' | 'approved';
+    order?: 'bracket' | 'name' | 'regOrder';
+    overwrite?: boolean;
+  }) => {
     if (typeof window !== 'undefined') {
       try {
-        localStorage.setItem(`gentrophy_lost_bibs_${subdomain}`, JSON.stringify({
-          ...newLost,
-          numberingStyle,
-          assignScope,
-          assignOrder,
-          overwriteExisting,
-        }));
+        const payload = {
+          white: overrides?.lost?.white ?? lostBibs.white,
+          green: overrides?.lost?.green ?? lostBibs.green,
+          orange: overrides?.lost?.orange ?? lostBibs.orange,
+          numberingStyle: overrides?.style ?? numberingStyle,
+          assignScope: overrides?.scope ?? assignScope,
+          assignOrder: overrides?.order ?? assignOrder,
+          overwriteExisting: overrides?.overwrite !== undefined ? overrides.overwrite : overwriteExisting,
+        };
+        localStorage.setItem(`gentrophy_lost_bibs_${subdomain}`, JSON.stringify(payload));
       } catch (e) {}
     }
   };
@@ -4287,10 +4408,12 @@ function BibManagementModal({
     const list = lostBibs[color];
     const isLost = list.includes(num);
     const updated = isLost ? list.filter(n => n !== num) : [...list, num].sort((a, b) => a - b);
-    updateLostBibs({
+    const newLost = {
       ...lostBibs,
       [color]: updated,
-    });
+    };
+    setLostBibs(newLost);
+    saveAllSettings({ lost: newLost });
   };
 
   // 직접 입력창으로 분실 배번 일괄 등록 (예: "3, 7, 12")
@@ -4308,30 +4431,39 @@ function BibManagementModal({
 
     const currentList = lostBibs[activeColorTab];
     const merged = Array.from(new Set([...currentList, ...nums])).sort((a, b) => a - b);
-    updateLostBibs({
+    const newLost = {
       ...lostBibs,
       [activeColorTab]: merged,
-    });
+    };
+    setLostBibs(newLost);
+    saveAllSettings({ lost: newLost });
     setDirectInputText('');
   };
 
   // 현재 색상의 분실 배번 전체 초기화 (모두 정상 상태로 복구)
   const handleResetCurrentColor = () => {
-    updateLostBibs({
+    const newLost = {
       ...lostBibs,
       [activeColorTab]: [],
-    });
+    };
+    setLostBibs(newLost);
+    saveAllSettings({ lost: newLost });
   };
 
   // 배번 전체 초기화 (참가자들의 배번을 공란으로 제거)
-  const handleClearAllAssignedBibs = () => {
+  const handleClearAllAssignedBibs = async () => {
     if (confirm('정말 모든 참가자의 배번티 번호를 공란으로 초기화하시겠습니까?')) {
       const cleared = gridData.map(r => ({
         ...r,
         bibNumber: '',
         isEdited: true,
       }));
-      onApplyBibs(cleared, '✅ 모든 참가자의 배번이 초기화(공란 처리)되었습니다. [변경 사항 일괄 저장]을 눌러 데이터베이스에 반영해주세요.');
+      setIsApplying(true);
+      try {
+        await onApplyBibs(cleared, '✅ 모든 참가자의 배번이 초기화(공란 처리)되었습니다.');
+      } finally {
+        setIsApplying(false);
+      }
     }
   };
 
@@ -4349,7 +4481,7 @@ function BibManagementModal({
     return true;
   });
 
-  // 배번 텍스트 서식화 (색상별 1~50번 고유 번호 체계)
+  // 배번 텍스트 서식화 (선택된 numberingStyle 옵션 엄격 적용)
   const formatBib = (color: 'white' | 'green' | 'orange', num: number, style: string) => {
     const colorKr = color === 'white' ? '흰색' : color === 'green' ? '연두' : '오렌지';
     const prefixKr = color === 'white' ? '흰' : color === 'green' ? '연' : '주';
@@ -4369,9 +4501,9 @@ function BibManagementModal({
     return `${colorKr} ${num}번`;
   };
 
-  // 배번 자동 순차 배정 실행 함수 (흰색 1~50, 연두 1~50, 오렌지 1~50)
-  const handleExecuteAutoAssignment = () => {
-    // 1. 배정 가능한 배번 목록(비분실 배번) 생성 - 색상별로 1~50번 순차 추가
+  // 배번 자동 순차 배정 실행 함수 (흰색 1~50, 연두 1~50, 오렌지 1~50 순)
+  const handleExecuteAutoAssignment = async () => {
+    // 1. 배정 가능한 배번 목록(비분실 배번) 생성
     const availablePool: string[] = [];
 
     // 흰색 (1~50번)
@@ -4395,21 +4527,65 @@ function BibManagementModal({
       }
     }
 
-    // 2. 대상 참가자 정렬
-    const sortedTargets = [...targetParticipants];
-    if (assignOrder === 'division') {
+    // 2. 대상 참가자 선별
+    const targetCandidates = gridData.filter(r => {
+      if (assignScope === 'approved') {
+        return r.paymentStatus === 'APPROVED' || r.status === 'APPROVED';
+      }
+      return true;
+    });
+
+    // 3. 정렬 순서 적용 (옵션 엄격 적용)
+    const sortedTargets = [...targetCandidates];
+    if (assignOrder === 'bracket') {
+      // 대진표 및 조 편성표와 100% 동일한 순서 (종목 -> 성별 -> 청년/중년/장년부)
       const divPriority = ['윈드포일', '윙포일', '혼합오픈', '펀&포뮬러', '단체전'];
+      const subPriority = ['청년부', '중년부', '장년부', '통합부', 'A조', 'B조', 'C조', 'D조', '1조', '2조', '3조', '4조', '마스터즈'];
+      const ageMap = computeAgeSplitSubclasses(gridData);
+
       sortedTargets.sort((a, b) => {
-        const idxA = divPriority.findIndex(d => (a.division || '').includes(d));
-        const idxB = divPriority.findIndex(d => (b.division || '').includes(d));
+        // (1) 종목 우선순위
+        const divA = getRootDivisionName(a.division);
+        const divB = getRootDivisionName(b.division);
+        const idxA = divPriority.findIndex(d => divA.includes(d));
+        const idxB = divPriority.findIndex(d => divB.includes(d));
         const pA = idxA === -1 ? 99 : idxA;
         const pB = idxB === -1 ? 99 : idxB;
         if (pA !== pB) return pA - pB;
+
+        // (2) 성별 우선순위 (남자부 -> 여자부)
+        const gA = (a.gender || '').includes('여') ? 1 : 0;
+        const gB = (b.gender || '').includes('여') ? 1 : 0;
+        if (gA !== gB) return gA - gB;
+
+        // (3) 조 편성 우선순위 (청년부 -> 중년부 -> 장년부)
+        const subA = a.subclass || ageMap[a.id] || '통합부';
+        const subB = b.subclass || ageMap[b.id] || '통합부';
+        const sIdxA = subPriority.indexOf(subA);
+        const sIdxB = subPriority.indexOf(subB);
+        const spA = sIdxA === -1 ? 99 : sIdxA;
+        const spB = sIdxB === -1 ? 99 : sIdxB;
+        if (spA !== spB) return spA - spB;
+
+        // (4) 생년월일 (연장자순) / 이름순
+        const bA = parseBirthComparable(a.birth);
+        const bB = parseBirthComparable(b.birth);
+        if (bA !== bB) {
+          if (bA === 0) return 1;
+          if (bB === 0) return -1;
+          return bB - bA;
+        }
         return (a.name || '').localeCompare(b.name || '', 'ko');
       });
+    } else if (assignOrder === 'name') {
+      // 선수 이름 가나다순
+      sortedTargets.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
+    } else if (assignOrder === 'regOrder') {
+      // 접수 등록순 (createdAt ASC)
+      sortedTargets.sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
     }
 
-    // 3. 배번 순차 매핑
+    // 4. 배번 순차 매핑
     const assignmentMap = new Map<string, string>();
     let bibIdx = 0;
     let assignedCount = 0;
@@ -4432,7 +4608,7 @@ function BibManagementModal({
       return;
     }
 
-    // 4. gridData에 반영
+    // 5. gridData에 반영
     const updatedGrid = gridData.map(row => {
       if (assignmentMap.has(row.id)) {
         return {
@@ -4444,12 +4620,27 @@ function BibManagementModal({
       return row;
     });
 
-    const isShortage = targetParticipants.length > availablePool.length;
-    const summaryMsg = `✅ 총 ${assignedCount}명의 참가자에게 색상별 1~50번 배번티 중 분실(${totalLost}개 제외)을 건너뛰고 순차적으로 배번이 자동 입력되었습니다!${
-      isShortage ? `\n⚠️ (주의: 배번티 수량이 부족하여 ${targetParticipants.length - availablePool.length}명은 미배정되었습니다.)` : ''
-    }\n\n화면의 스프레드시트에서 배번을 확인하신 후, [변경 사항 일괄 저장] 버튼을 누르면 최종 데이터베이스에 영구 저장됩니다.`;
+    const isShortage = targetCandidates.length > availablePool.length;
+    const styleLabel =
+      numberingStyle === 'colorWithNum' ? '색상 + 번호 [예: 흰색 1번]' :
+      numberingStyle === 'colorPrefix' ? '단축 접두사 [예: 흰1]' :
+      numberingStyle === 'colorShort' ? '색상 + 숫자 [예: 흰색 1]' :
+      '순수 숫자만 [1~50]';
 
-    onApplyBibs(updatedGrid, summaryMsg);
+    const orderLabel =
+      assignOrder === 'bracket' ? '대진표 및 조 편성 순서' :
+      assignOrder === 'name' ? '선수 이름 가나다순' : '신청서 접수 등록순';
+
+    const summaryMsg = `✅ 총 ${assignedCount}명의 참가자에게 [${styleLabel} / ${orderLabel}] 옵션으로 분실 배번(${totalLost}개 제외)을 건너뛰고 순차 배정되었습니다!${
+      isShortage ? `\n⚠️ (주의: 가용 배번티(${availablePool.length}개)보다 참가자(${targetCandidates.length}명)가 많아 ${targetCandidates.length - availablePool.length}명은 미배정되었습니다.)` : ''
+    }`;
+
+    setIsApplying(true);
+    try {
+      await onApplyBibs(updatedGrid, summaryMsg);
+    } finally {
+      setIsApplying(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -4730,12 +4921,16 @@ function BibManagementModal({
                         {num}번
                       </span>
                       <span style={{
-                        fontSize: '0.7rem',
+                        fontSize: '0.68rem',
                         fontWeight: '800',
-                        color: isLost ? '#ef4444' : activeColorTab === 'white' ? '#64748b' : activeColorTab === 'green' ? '#16a34a' : '#ea580c',
-                        letterSpacing: '-0.3px'
+                        color: isLost ? '#ef4444' : activeColorTab === 'white' ? '#475569' : activeColorTab === 'green' ? '#16a34a' : '#ea580c',
+                        letterSpacing: '-0.3px',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        maxWidth: '100%'
                       }}>
-                        {isLost ? '❌ 분실' : `${prefix}${num}`}
+                        {isLost ? '❌ 분실' : formatBib(activeColorTab, num, numberingStyle)}
                       </span>
                     </button>
                   );
@@ -4762,7 +4957,10 @@ function BibManagementModal({
                       type="radio"
                       name="numberingStyle"
                       checked={numberingStyle === 'colorWithNum'}
-                      onChange={() => setNumberingStyle('colorWithNum')}
+                      onChange={() => {
+                        setNumberingStyle('colorWithNum');
+                        saveAllSettings({ style: 'colorWithNum' });
+                      }}
                       style={{ accentColor: 'var(--theme-primary)' }}
                     />
                     <span><strong>색상 + 번호 [권장]</strong>: 흰색 1번~50번, 연두 1번~50번, 오렌지 1번~50번</span>
@@ -4772,17 +4970,23 @@ function BibManagementModal({
                       type="radio"
                       name="numberingStyle"
                       checked={numberingStyle === 'colorPrefix'}
-                      onChange={() => setNumberingStyle('colorPrefix')}
+                      onChange={() => {
+                        setNumberingStyle('colorPrefix');
+                        saveAllSettings({ style: 'colorPrefix' });
+                      }}
                       style={{ accentColor: 'var(--theme-primary)' }}
                     />
-                    <span><strong>단축 접두사</strong>: 흰1~흰50, 연1~연50, 주1~주50 <span style={{ fontSize: '0.75rem', color: '#0284c7', fontWeight: '800' }}>[심판 키패드 빠른 입력 최적]</span></span>
+                    <span><strong>단축 접두사</strong>: 흰1~흰50, 연1~연50, 주1~주50 <span style={{ fontSize: '0.75rem', color: '#0284c7', fontWeight: '800' }}>[심판 빠른 입력 최적]</span></span>
                   </label>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: '700', color: '#1e293b', cursor: 'pointer' }}>
                     <input
                       type="radio"
                       name="numberingStyle"
                       checked={numberingStyle === 'colorShort'}
-                      onChange={() => setNumberingStyle('colorShort')}
+                      onChange={() => {
+                        setNumberingStyle('colorShort');
+                        saveAllSettings({ style: 'colorShort' });
+                      }}
                       style={{ accentColor: 'var(--theme-primary)' }}
                     />
                     <span><strong>색상 + 숫자</strong>: 흰색 1~50, 연두 1~50, 오렌지 1~50</span>
@@ -4792,7 +4996,10 @@ function BibManagementModal({
                       type="radio"
                       name="numberingStyle"
                       checked={numberingStyle === 'numberOnly'}
-                      onChange={() => setNumberingStyle('numberOnly')}
+                      onChange={() => {
+                        setNumberingStyle('numberOnly');
+                        saveAllSettings({ style: 'numberOnly' });
+                      }}
                       style={{ accentColor: 'var(--theme-primary)' }}
                     />
                     <span><strong>순수 숫자만</strong>: 1~50번 (색상 구분 없이 숫자만 표기)</span>
@@ -4805,26 +5012,45 @@ function BibManagementModal({
                 <label style={{ fontSize: '0.82rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '8px' }}>
                   2. 배번 부여 순서
                 </label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: '700', color: '#1e293b', cursor: 'pointer' }}>
                     <input
                       type="radio"
                       name="assignOrder"
-                      checked={assignOrder === 'current'}
-                      onChange={() => setAssignOrder('current')}
+                      checked={assignOrder === 'bracket'}
+                      onChange={() => {
+                        setAssignOrder('bracket');
+                        saveAllSettings({ order: 'bracket' });
+                      }}
                       style={{ accentColor: 'var(--theme-primary)' }}
                     />
-                    <span>현재 테이블 정렬 순서대로 (이름순/생년월일순 등)</span>
+                    <span><strong>대진표 및 조 편성 순서대로 [권장]</strong> (종목→성별→청년/중년/장년부)</span>
                   </label>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: '700', color: '#1e293b', cursor: 'pointer' }}>
                     <input
                       type="radio"
                       name="assignOrder"
-                      checked={assignOrder === 'division'}
-                      onChange={() => setAssignOrder('division')}
+                      checked={assignOrder === 'name'}
+                      onChange={() => {
+                        setAssignOrder('name');
+                        saveAllSettings({ order: 'name' });
+                      }}
                       style={{ accentColor: 'var(--theme-primary)' }}
                     />
-                    <span>참가 종목/부서별 순서대로 (윈드포일→윙포일→혼합→펀→단체)</span>
+                    <span><strong>선수 이름 가나다순</strong> (이름순으로 순차 부여)</span>
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: '700', color: '#1e293b', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="assignOrder"
+                      checked={assignOrder === 'regOrder'}
+                      onChange={() => {
+                        setAssignOrder('regOrder');
+                        saveAllSettings({ order: 'regOrder' });
+                      }}
+                      style={{ accentColor: 'var(--theme-primary)' }}
+                    />
+                    <span><strong>참가 신청 접수 등록순</strong> (선착순 접수 순서대로 부여)</span>
                   </label>
                 </div>
               </div>
@@ -4834,35 +5060,44 @@ function BibManagementModal({
                 <label style={{ fontSize: '0.82rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '8px' }}>
                   3. 배정 대상 & 덮어쓰기
                 </label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: '700', color: '#1e293b', cursor: 'pointer' }}>
                     <input
                       type="radio"
                       name="assignScope"
                       checked={assignScope === 'all'}
-                      onChange={() => setAssignScope('all')}
+                      onChange={() => {
+                        setAssignScope('all');
+                        saveAllSettings({ scope: 'all' });
+                      }}
                       style={{ accentColor: 'var(--theme-primary)' }}
                     />
-                    <span>전체 참가자 대상 ({gridData.length}명)</span>
+                    <span><strong>전체 신청자 대상 ({gridData.length}명)</strong> (확정전 포함)</span>
                   </label>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: '700', color: '#1e293b', cursor: 'pointer' }}>
                     <input
                       type="radio"
                       name="assignScope"
                       checked={assignScope === 'approved'}
-                      onChange={() => setAssignScope('approved')}
+                      onChange={() => {
+                        setAssignScope('approved');
+                        saveAllSettings({ scope: 'approved' });
+                      }}
                       style={{ accentColor: 'var(--theme-primary)' }}
                     />
-                    <span>승인(결제 완료) 참가자만 대상 ({gridData.filter(r => r.paymentStatus === 'APPROVED' || r.status === 'APPROVED').length}명)</span>
+                    <span><strong>승인(결제 완료) 참가자만 대상</strong> ({gridData.filter(r => r.paymentStatus === 'APPROVED' || r.status === 'APPROVED').length}명)</span>
                   </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: '700', color: '#1e293b', cursor: 'pointer', marginTop: '4px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: '700', color: '#1e293b', cursor: 'pointer', marginTop: '4px', background: '#e0f2fe', padding: '6px 10px', borderRadius: '8px' }}>
                     <input
                       type="checkbox"
                       checked={overwriteExisting}
-                      onChange={(e) => setOverwriteExisting(e.target.checked)}
+                      onChange={(e) => {
+                        setOverwriteExisting(e.target.checked);
+                        saveAllSettings({ overwrite: e.target.checked });
+                      }}
                       style={{ accentColor: 'var(--theme-primary)' }}
                     />
-                    <span>기존에 입력된 배번이 있어도 전체 새로 덮어쓰기</span>
+                    <span style={{ color: '#0369a1' }}><strong>기존에 입력된 배번이 있어도 전체 새로 덮어쓰기</strong> (체크 권장)</span>
                   </label>
                 </div>
               </div>
@@ -4882,6 +5117,7 @@ function BibManagementModal({
         }}>
           <button
             type="button"
+            disabled={isApplying}
             onClick={handleClearAllAssignedBibs}
             style={{
               padding: '8px 14px',
@@ -4891,7 +5127,7 @@ function BibManagementModal({
               color: '#dc2626',
               fontWeight: '800',
               fontSize: '0.82rem',
-              cursor: 'pointer'
+              cursor: isApplying ? 'not-allowed' : 'pointer'
             }}
           >
             배번 전체 초기화 (공란화)
@@ -4900,6 +5136,7 @@ function BibManagementModal({
           <div style={{ display: 'flex', gap: '10px' }}>
             <button
               type="button"
+              disabled={isApplying}
               onClick={onClose}
               style={{
                 padding: '10px 18px',
@@ -4908,30 +5145,32 @@ function BibManagementModal({
                 background: 'white',
                 color: '#475569',
                 fontWeight: '700',
-                cursor: 'pointer'
+                cursor: isApplying ? 'not-allowed' : 'pointer'
               }}
             >
               닫기
             </button>
             <button
               type="button"
+              disabled={isApplying}
               onClick={handleExecuteAutoAssignment}
               style={{
                 padding: '10px 24px',
                 borderRadius: '10px',
                 border: 'none',
-                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                background: isApplying ? '#94a3b8' : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
                 color: 'white',
                 fontWeight: '900',
                 fontSize: '0.95rem',
-                cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(217, 119, 6, 0.35)',
+                cursor: isApplying ? 'not-allowed' : 'pointer',
+                boxShadow: isApplying ? 'none' : '0 4px 12px rgba(217, 119, 6, 0.35)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px'
               }}
             >
-              <span>⚡</span> 자동 배번 순차 배정 실행 ({totalAvailable}개 가용)
+              <span>{isApplying ? '⏳' : '⚡'}</span>
+              <span>{isApplying ? '배번 저장 및 배정 처리 중...' : `자동 배번 순차 배정 실행 (${totalAvailable}개 가용)`}</span>
             </button>
           </div>
         </div>
