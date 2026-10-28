@@ -4230,45 +4230,56 @@ export default function TenantPortalPage({
                           }}
                         >
                           <div
+                            className="board-card-header"
                             onClick={() => setSelectedAnnouncement(isExpanded ? null : item)}
                             style={{
-                              padding: '12px 18px',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              gap: '12px',
                               background: item.isPinned ? 'rgba(31, 111, 139, 0.03)' : 'white'
                             }}
                           >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
-                              {item.isPinned && (
-                                <span style={{ padding: '3px 7px', borderRadius: '5px', background: 'rgba(197, 168, 128, 0.2)', color: '#b39366', fontWeight: '800', fontSize: '0.72rem', flexShrink: 0 }}>
-                                  📌 중요
+                            {/* 상단 뱃지 및 모바일 메타정보 바 */}
+                            <div className="board-card-top-bar">
+                              <div className="board-card-badges">
+                                {item.isPinned && (
+                                  <span style={{ padding: '3px 7px', borderRadius: '5px', background: 'rgba(197, 168, 128, 0.2)', color: '#b39366', fontWeight: '800', fontSize: '0.72rem', flexShrink: 0 }}>
+                                    📌 중요
+                                  </span>
+                                )}
+                                <span style={{
+                                  padding: '3px 8px',
+                                  borderRadius: '5px',
+                                  background: item.category === '긴급공지' ? '#fee2e2' : '#f1f5f9',
+                                  color: item.category === '긴급공지' ? '#dc2626' : '#475569',
+                                  fontWeight: '700',
+                                  fontSize: '0.75rem',
+                                  flexShrink: 0
+                                }}>
+                                  {item.category || '일반공지'}
                                 </span>
-                              )}
-                              <span style={{
-                                padding: '3px 8px',
-                                borderRadius: '5px',
-                                background: item.category === '긴급공지' ? '#fee2e2' : '#f1f5f9',
-                                color: item.category === '긴급공지' ? '#dc2626' : '#475569',
-                                fontWeight: '700',
-                                fontSize: '0.75rem',
-                                flexShrink: 0
-                              }}>
-                                {item.category || '일반공지'}
-                              </span>
-                              <h3 style={{ margin: 0, fontSize: '0.96rem', fontWeight: '800', color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {item.title}
-                              </h3>
-                              {item.isPopup && (
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '2px 7px', borderRadius: '10px', background: '#fef2f2', color: '#dc2626', fontSize: '0.7rem', fontWeight: '800', flexShrink: 0 }}>
-                                  <Bell size={9} /> 팝업알림
+                                {item.isPopup && (
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '2px 7px', borderRadius: '10px', background: '#fef2f2', color: '#dc2626', fontSize: '0.7rem', fontWeight: '800', flexShrink: 0 }}>
+                                    <Bell size={9} /> 팝업알림
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* 모바일 화면 전용 날짜 및 보기/접기 */}
+                              <div className="board-card-meta show-on-mobile">
+                                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{dateStr}</span>
+                                <span style={{ fontSize: '0.8rem', color: 'var(--theme-primary)', fontWeight: '700' }}>
+                                  {isExpanded ? '접기 ▲' : '보기 ▼'}
                                 </span>
-                              )}
+                              </div>
                             </div>
 
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+                            {/* 글 제목 영역 (모바일에서는 100% 가로폭 사용) */}
+                            <div className="board-card-body-row">
+                              <h3 className="board-card-title">
+                                {item.title}
+                              </h3>
+                            </div>
+
+                            {/* 데스크톱 화면 전용 날짜 및 보기/접기 */}
+                            <div className="board-card-meta hide-on-mobile">
                               <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{dateStr}</span>
                               <span style={{ fontSize: '0.82rem', color: 'var(--theme-primary)', fontWeight: '700' }}>
                                 {isExpanded ? '접기 ▲' : '보기 ▼'}
@@ -4381,43 +4392,52 @@ export default function TenantPortalPage({
                           }}
                         >
                           <div
+                            className="board-card-header"
                             onClick={() => handleOpenQnaItem(item)}
-                            style={{
-                              padding: '12px 18px',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              gap: '12px'
-                            }}
                           >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
-                              <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: '700', minWidth: '30px' }}>
-                                #{filteredQna.length - idx}
-                              </span>
-
-                              {isAnswered ? (
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '3px 7px', borderRadius: '16px', background: '#ecfdf5', color: '#059669', fontSize: '0.72rem', fontWeight: '800', flexShrink: 0 }}>
-                                  <CheckCircle2 size={10} /> 답변완료
+                            {/* 상단 뱃지 및 모바일 메타정보 바 */}
+                            <div className="board-card-top-bar">
+                              <div className="board-card-badges">
+                                <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: '700', minWidth: '26px' }}>
+                                  #{filteredQna.length - idx}
                                 </span>
-                              ) : (
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '3px 7px', borderRadius: '16px', background: '#fffbeb', color: '#d97706', fontSize: '0.72rem', fontWeight: '800', flexShrink: 0 }}>
-                                  <Clock size={10} /> 답변대기
-                                </span>
-                              )}
 
-                              {item.isSecret && (
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '2px 6px', borderRadius: '4px', background: '#fef2f2', color: '#dc2626', fontSize: '0.72rem', fontWeight: '800', flexShrink: 0 }}>
-                                  <Lock size={10} /> 비밀글
-                                </span>
-                              )}
+                                {isAnswered ? (
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '3px 7px', borderRadius: '16px', background: '#ecfdf5', color: '#059669', fontSize: '0.72rem', fontWeight: '800', flexShrink: 0 }}>
+                                    <CheckCircle2 size={10} /> 답변완료
+                                  </span>
+                                ) : (
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '3px 7px', borderRadius: '16px', background: '#fffbeb', color: '#d97706', fontSize: '0.72rem', fontWeight: '800', flexShrink: 0 }}>
+                                    <Clock size={10} /> 답변대기
+                                  </span>
+                                )}
 
-                              <h3 style={{ margin: 0, fontSize: '0.96rem', fontWeight: '800', color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {item.isSecret && (
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '2px 6px', borderRadius: '4px', background: '#fef2f2', color: '#dc2626', fontSize: '0.72rem', fontWeight: '800', flexShrink: 0 }}>
+                                    <Lock size={10} /> 비밀글
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* 모바일 화면 전용 작성자 & 날짜 & 보기 */}
+                              <div className="board-card-meta show-on-mobile">
+                                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{item.authorName}</span>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{dateStr}</span>
+                                <span style={{ fontSize: '0.78rem', color: 'var(--theme-primary)', fontWeight: '700' }}>
+                                  {item.isSecret && !isUnlocked ? '🔒 열람' : (isExpanded ? '접기 ▲' : '보기 ▼')}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* 질문 제목 영역 (모바일에서는 100% 가로폭 사용) */}
+                            <div className="board-card-body-row">
+                              <h3 className="board-card-title">
                                 {item.title}
                               </h3>
                             </div>
 
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+                            {/* 데스크톱 화면 전용 작성자 & 날짜 & 보기 */}
+                            <div className="board-card-meta hide-on-mobile">
                               <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{item.authorName}</span>
                               <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{dateStr}</span>
                               <span style={{ fontSize: '0.82rem', color: 'var(--theme-primary)', fontWeight: '700' }}>
