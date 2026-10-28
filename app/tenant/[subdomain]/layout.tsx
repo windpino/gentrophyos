@@ -7,8 +7,8 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { subdomain } = await params;
   
-  const title = '제20회 이순신장군배 전국윈드서핑대회 참가신청서';
-  const description = '제20회 이순신장군배 전국윈드서핑대회 참가 신청서 접수 페이지';
+  const title = '제20회 이순신장군배 전국윈드서핑대회';
+  const description = '제20회 이순신장군배 전국윈드서핑대회 공식 홈페이지';
 
   return {
     title,
