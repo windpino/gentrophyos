@@ -943,3 +943,72 @@ button, input, select, textarea {
   }
 }
 
+/* 참가자 관리 테이블 화면 고정 좌우 스크롤 플로팅 버튼 */
+.floating-table-nav-btn {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 18px;
+  border-radius: 9999px;
+  background: rgba(15, 23, 42, 0.88);
+  color: #ffffff;
+  border: 1.5px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 4px 10px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  font-size: 0.88rem;
+  font-weight: 800;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.18s ease, background 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease, left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.floating-table-nav-btn:hover:not(:disabled) {
+  transform: translateY(-50%) scale(1.06);
+  background: rgba(15, 23, 42, 0.98);
+  border-color: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 14px 30px -4px rgba(0, 0, 0, 0.5), 0 6px 12px rgba(0, 0, 0, 0.25);
+}
+
+.floating-table-nav-btn:active:not(:disabled) {
+  transform: translateY(-50%) scale(0.97);
+}
+
+.floating-table-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* 좌측 버튼 위치: 사이드바 유무에 따라 반응 */
+.grid-dashboard .floating-table-nav-btn.left {
+  left: calc(280px + 24px);
+}
+
+.grid-dashboard.sidebar-collapsed .floating-table-nav-btn.left {
+  left: 24px;
+}
+
+/* 우측 버튼 위치 */
+.floating-table-nav-btn.right {
+  right: 24px;
+}
+
+@media (max-width: 960px) {
+  .grid-dashboard .floating-table-nav-btn.left {
+    left: 10px !important;
+    padding: 10px 12px;
+    font-size: 0.78rem;
+  }
+  .floating-table-nav-btn.right {
+    right: 10px !important;
+    padding: 10px 12px;
+    font-size: 0.78rem;
+  }
+}
+
+

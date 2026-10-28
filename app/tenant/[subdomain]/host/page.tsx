@@ -1886,90 +1886,31 @@ export default function HostDashboardPage({
               </div>
             </div>
 
+            {/* 세로 스크롤 시에도 화면(뷰포트)에 항상 따라다니는 좌/우 고정 플로팅 버튼 */}
+            <button
+              type="button"
+              className="floating-table-nav-btn left"
+              onClick={() => handleScrollTable('left')}
+              disabled={!canScrollLeft}
+              title="목록 왼쪽으로 스크롤 (◀)"
+            >
+              <ChevronLeft size={20} strokeWidth={3} />
+              <span style={{ letterSpacing: '-0.3px' }}>좌측 이동</span>
+            </button>
+
+            <button
+              type="button"
+              className="floating-table-nav-btn right"
+              onClick={() => handleScrollTable('right')}
+              disabled={!canScrollRight}
+              title="목록 오른쪽으로 스크롤 (▶)"
+            >
+              <span style={{ letterSpacing: '-0.3px' }}>우측 이동</span>
+              <ChevronRight size={20} strokeWidth={3} />
+            </button>
+
             {/* 스프레드시트 형태의 그리드 테이블 */}
             <div className="glass-panel" style={{ padding: '8px', background: 'white', position: 'relative' }}>
-              {/* 세로 스크롤 시 화면 중앙을 따라다니는 좌/우 스크롤 플로팅 버튼 오버레이 */}
-              <div style={{
-                position: 'absolute',
-                top: 0,
-                bottom: 0,
-                left: 0,
-                right: 0,
-                pointerEvents: 'none',
-                zIndex: 40,
-              }}>
-                <div style={{
-                  position: 'sticky',
-                  top: '50vh',
-                  transform: 'translateY(-50%)',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '0 8px',
-                  pointerEvents: 'none',
-                  width: '100%',
-                  boxSizing: 'border-box'
-                }}>
-                  {/* 좌측 이동 플로팅 버튼 */}
-                  <button
-                    type="button"
-                    onClick={() => handleScrollTable('left')}
-                    title="목록 왼쪽으로 스크롤 (◀)"
-                    style={{
-                      pointerEvents: 'auto',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      padding: '10px 14px 10px 10px',
-                      borderRadius: '999px',
-                      border: '1.5px solid rgba(255, 255, 255, 0.7)',
-                      background: 'rgba(15, 23, 42, 0.85)',
-                      backdropFilter: 'blur(10px)',
-                      color: 'white',
-                      fontWeight: '800',
-                      fontSize: '0.82rem',
-                      cursor: 'pointer',
-                      boxShadow: '0 8px 24px -4px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.2)',
-                      transition: 'all 0.15s ease',
-                      opacity: canScrollLeft ? 1 : 0.45,
-                      userSelect: 'none'
-                    }}
-                  >
-                    <ChevronLeft size={20} strokeWidth={3} />
-                    <span style={{ letterSpacing: '-0.3px' }}>좌측 이동</span>
-                  </button>
-
-                  {/* 우측 이동 플로팅 버튼 */}
-                  <button
-                    type="button"
-                    onClick={() => handleScrollTable('right')}
-                    title="목록 오른쪽으로 스크롤 (▶)"
-                    style={{
-                      pointerEvents: 'auto',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      padding: '10px 10px 10px 14px',
-                      borderRadius: '999px',
-                      border: '1.5px solid rgba(255, 255, 255, 0.7)',
-                      background: 'rgba(15, 23, 42, 0.85)',
-                      backdropFilter: 'blur(10px)',
-                      color: 'white',
-                      fontWeight: '800',
-                      fontSize: '0.82rem',
-                      cursor: 'pointer',
-                      boxShadow: '0 8px 24px -4px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.2)',
-                      transition: 'all 0.15s ease',
-                      opacity: canScrollRight ? 1 : 0.45,
-                      userSelect: 'none'
-                    }}
-                  >
-                    <span style={{ letterSpacing: '-0.3px' }}>우측 이동</span>
-                    <ChevronRight size={20} strokeWidth={3} />
-                  </button>
-                </div>
-              </div>
-
               <div ref={tableScrollRef} className="premium-table-container" style={{ overflowX: 'auto', width: '100%', display: 'block', scrollBehavior: 'smooth' }}>
                 <table className="premium-table" style={{ minWidth: '1200px', width: '100%' }}>
                   <thead>
