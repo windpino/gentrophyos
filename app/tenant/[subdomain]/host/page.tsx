@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, use, useMemo } from 'react';
-import { Award, Check, X, Menu, Upload, Download, Plus, Trash2, ArrowUp, ArrowDown, Users, FileText, Settings, Layers, Calendar, RefreshCw, Save, Search, Eye, ExternalLink, Clock, ShieldAlert, AlertCircle, CheckCircle2, Bell, MessageSquare, Megaphone, Lock, Unlock, Edit3, HelpCircle } from 'lucide-react';
+import React, { useState, useEffect, use, useMemo, useRef } from 'react';
+import { Award, Check, X, Menu, Upload, Download, Plus, Trash2, ArrowUp, ArrowDown, Users, FileText, Settings, Layers, Calendar, RefreshCw, Save, Search, Eye, ExternalLink, Clock, ShieldAlert, AlertCircle, CheckCircle2, Bell, MessageSquare, Megaphone, Lock, Unlock, Edit3, HelpCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '@/src/lib/firebase';
 
@@ -269,6 +269,30 @@ export default function HostDashboardPage({
   const [sortField, setSortField] = useState<'name' | 'bibNumber' | 'birth' | 'createdAt' | null>(null);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
+  // 참가자 관리 목록 가로 스크롤 제어 및 세로 스크롤 연동 플로팅 이동 버튼 상태
+  const tableScrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+
+  const checkScrollBounds = () => {
+    if (tableScrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = tableScrollRef.current;
+      setCanScrollLeft(scrollLeft > 10);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
+    }
+  };
+
+  const handleScrollTable = (direction: 'left' | 'right') => {
+    if (tableScrollRef.current) {
+      const amount = 420;
+      tableScrollRef.current.scrollBy({
+        left: direction === 'left' ? -amount : amount,
+        behavior: 'smooth',
+      });
+      setTimeout(checkScrollBounds, 320);
+    }
+  };
+
   const handleHeaderSort = (field: 'name' | 'bibNumber' | 'birth' | 'createdAt') => {
     if (sortField === field) {
       setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
@@ -312,6 +336,20 @@ export default function HostDashboardPage({
   const [deleteTarget, setDeleteTarget] = useState<GridRow | null>(null); // 참가자 삭제 확인 모달
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // 참가자 관리 테이블 가로 스크롤 범위 감지 이벤트 리스너
+  useEffect(() => {
+    const el = tableScrollRef.current;
+    if (el) {
+      checkScrollBounds();
+      el.addEventListener('scroll', checkScrollBounds, { passive: true });
+      window.addEventListener('resize', checkScrollBounds);
+      return () => {
+        el.removeEventListener('scroll', checkScrollBounds);
+        window.removeEventListener('resize', checkScrollBounds);
+      };
+    }
+  }, [activeSection, gridData]);
 
   // 온라인 참가 신청 접수 기간 및 권한 설정 상태
   const [regStartDate, setRegStartDate] = useState('2026-09-29T09:00');
@@ -1778,6 +1816,57 @@ export default function HostDashboardPage({
                   🏷️ 배번티 관리 & 자동 배정
                 </button>
 
+                {/* 상단 툴바 가로 스크롤 컨트롤러 */}
+                <div style={{ display: 'inline-flex', alignItems: 'center', background: '#f1f5f9', borderRadius: '10px', padding: '3px', border: '1px solid #cbd5e1' }} title="좌우 열 스크롤 이동">
+                  <button
+                    type="button"
+                    onClick={() => handleScrollTable('left')}
+                    disabled={!canScrollLeft}
+                    style={{
+                      border: 'none',
+                      background: canScrollLeft ? '#ffffff' : 'transparent',
+                      padding: '8px 12px',
+                      borderRadius: '7px',
+                      cursor: canScrollLeft ? 'pointer' : 'default',
+                      opacity: canScrollLeft ? 1 : 0.4,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontSize: '0.84rem',
+                      fontWeight: '800',
+                      color: '#1e293b',
+                      boxShadow: canScrollLeft ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <ChevronLeft size={16} strokeWidth={2.5} /> 좌측 열
+                  </button>
+                  <div style={{ width: '1px', height: '18px', background: '#cbd5e1', margin: '0 2px' }} />
+                  <button
+                    type="button"
+                    onClick={() => handleScrollTable('right')}
+                    disabled={!canScrollRight}
+                    style={{
+                      border: 'none',
+                      background: canScrollRight ? '#ffffff' : 'transparent',
+                      padding: '8px 12px',
+                      borderRadius: '7px',
+                      cursor: canScrollRight ? 'pointer' : 'default',
+                      opacity: canScrollRight ? 1 : 0.4,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontSize: '0.84rem',
+                      fontWeight: '800',
+                      color: '#1e293b',
+                      boxShadow: canScrollRight ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    우측 열 <ChevronRight size={16} strokeWidth={2.5} />
+                  </button>
+                </div>
+
                 <button
                   className="btn-secondary"
                   onClick={handleAddNewRow}
@@ -1798,8 +1887,90 @@ export default function HostDashboardPage({
             </div>
 
             {/* 스프레드시트 형태의 그리드 테이블 */}
-            <div className="glass-panel" style={{ padding: '8px', background: 'white' }}>
-              <div className="premium-table-container" style={{ overflowX: 'auto', width: '100%', display: 'block' }}>
+            <div className="glass-panel" style={{ padding: '8px', background: 'white', position: 'relative' }}>
+              {/* 세로 스크롤 시 화면 중앙을 따라다니는 좌/우 스크롤 플로팅 버튼 오버레이 */}
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                bottom: 0,
+                left: 0,
+                right: 0,
+                pointerEvents: 'none',
+                zIndex: 40,
+              }}>
+                <div style={{
+                  position: 'sticky',
+                  top: '50vh',
+                  transform: 'translateY(-50%)',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '0 8px',
+                  pointerEvents: 'none',
+                  width: '100%',
+                  boxSizing: 'border-box'
+                }}>
+                  {/* 좌측 이동 플로팅 버튼 */}
+                  <button
+                    type="button"
+                    onClick={() => handleScrollTable('left')}
+                    title="목록 왼쪽으로 스크롤 (◀)"
+                    style={{
+                      pointerEvents: 'auto',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '10px 14px 10px 10px',
+                      borderRadius: '999px',
+                      border: '1.5px solid rgba(255, 255, 255, 0.7)',
+                      background: 'rgba(15, 23, 42, 0.85)',
+                      backdropFilter: 'blur(10px)',
+                      color: 'white',
+                      fontWeight: '800',
+                      fontSize: '0.82rem',
+                      cursor: 'pointer',
+                      boxShadow: '0 8px 24px -4px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.2)',
+                      transition: 'all 0.15s ease',
+                      opacity: canScrollLeft ? 1 : 0.45,
+                      userSelect: 'none'
+                    }}
+                  >
+                    <ChevronLeft size={20} strokeWidth={3} />
+                    <span style={{ letterSpacing: '-0.3px' }}>좌측 이동</span>
+                  </button>
+
+                  {/* 우측 이동 플로팅 버튼 */}
+                  <button
+                    type="button"
+                    onClick={() => handleScrollTable('right')}
+                    title="목록 오른쪽으로 스크롤 (▶)"
+                    style={{
+                      pointerEvents: 'auto',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '10px 10px 10px 14px',
+                      borderRadius: '999px',
+                      border: '1.5px solid rgba(255, 255, 255, 0.7)',
+                      background: 'rgba(15, 23, 42, 0.85)',
+                      backdropFilter: 'blur(10px)',
+                      color: 'white',
+                      fontWeight: '800',
+                      fontSize: '0.82rem',
+                      cursor: 'pointer',
+                      boxShadow: '0 8px 24px -4px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.2)',
+                      transition: 'all 0.15s ease',
+                      opacity: canScrollRight ? 1 : 0.45,
+                      userSelect: 'none'
+                    }}
+                  >
+                    <span style={{ letterSpacing: '-0.3px' }}>우측 이동</span>
+                    <ChevronRight size={20} strokeWidth={3} />
+                  </button>
+                </div>
+              </div>
+
+              <div ref={tableScrollRef} className="premium-table-container" style={{ overflowX: 'auto', width: '100%', display: 'block', scrollBehavior: 'smooth' }}>
                 <table className="premium-table" style={{ minWidth: '1200px', width: '100%' }}>
                   <thead>
                     <tr>
