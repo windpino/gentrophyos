@@ -220,11 +220,11 @@ const getDefaultTenantData = (subdomain: string): TenantData => ({
     entryFeeIndividual: '30,000원',
     entryFeeGroup: '단체전 팀당 50,000원',
     deadlineDate: '2026년 10월 18일(일) 18:00 (130명 한도 조기마감)',
-    registrationEnabled: true,
-    registrationMode: 'FORCE_ENABLED',
+    registrationEnabled: false,
+    registrationMode: 'FORCE_CLOSED',
     registrationStartDate: '2026-09-29T09:00',
     registrationEndDate: '2026-10-18T18:00',
-    registrationNotice: '',
+    registrationNotice: '제20회 이순신장군배 전국윈드서핑대회 온라인 참가 신청 접수가 공식 마감되었습니다. 참가자 명단 및 배번, 대진표를 확인해 주시기 바랍니다.',
     rulesNote: '구명동의(라이프재킷) 착용 필수. 모든 참가 선수는 해상 레이스 중 반드시 공인된 구명조끼를 바르게 착용해야 합니다. 미착용 혹은 임의 탈착 적발 시 즉각 실격(DSQ) 처리됩니다.\n모든 출전 선수는 세일에 배정된 배번 배표 조끼를 식별이 가능하도록 착용해야 합니다.\n해상 기상 악화 시 경기위원장의 지시에 따라 즉시 레이스를 중단하고 전원 육상으로 복귀하여야 합니다.',
     itineraryDay1: '10:00 - 12:00 : 참가선수 확인 및 등록 / 계측\n12:00 - 13:00 : 중식 제공 (대회장)\n13:00 - 13:30 : 개회식 (수륙해수욕장 특설무대)\n14:00 - 18:00 : 1일차 레이스 (각 종목 코스별)\n19:00 - : 석식 및 환영의 밤 (통영윈드서핑협회 앞마당)',
     itineraryDay2: '10:00 - 12:00 : 2일차 레이스\n12:00 - 13:00 : 중식 제공 (대회장)\n13:00 - 15:00 : 2일차 레이스(단체전)\n16:00 - : 시상식 및 폐회식 (통영윈드서핑협회 앞마당)',
@@ -972,30 +972,31 @@ export default function TenantPortalPage({
     registrationEndDate: '2026-10-18T18:00',
     scale: '130명 한도 (선착순 조기마감)',
     location: '경상남도 통영시 도남동 수륙해수욕장 일원',
-    registrationMode: 'FORCE_ENABLED',
-    registrationEnabled: true,
+    registrationMode: (tenant?.overviewConfig?.registrationMode as any) || 'FORCE_CLOSED',
+    registrationEnabled: tenant?.overviewConfig?.registrationEnabled ?? false,
+    registrationNotice: tenant?.overviewConfig?.registrationNotice || '제20회 이순신장군배 전국윈드서핑대회 온라인 참가 신청 접수가 공식 마감되었습니다. 참가자 명단 및 배번, 대진표를 확인해 주시기 바랍니다.',
   };
-  const regMode = regConfig.registrationMode || 'FORCE_ENABLED';
+  const regMode = regConfig.registrationMode || 'FORCE_CLOSED';
   const regStartDateStr = '2026-09-29T09:00';
   const regEndDateStr = '2026-10-18T18:00';
-  const regNotice = regConfig.registrationNotice || '';
+  const regNotice = regConfig.registrationNotice || '제20회 이순신장군배 전국윈드서핑대회 온라인 참가 신청 접수가 공식 마감되었습니다. 참가자 명단 및 배번, 대진표를 확인해 주시기 바랍니다.';
 
   const now = new Date();
   const regStartDate = regStartDateStr ? new Date(regStartDateStr) : null;
   const regEndDate = regEndDateStr ? new Date(regEndDateStr) : null;
 
-  let regStatusType: 'OPEN' | 'BEFORE' | 'CLOSED' | 'DISABLED' = 'OPEN';
-  let regStatusMessage = '';
-  let regStatusBadge = { text: '접수 진행 중', icon: '🟢' };
+  let regStatusType: 'OPEN' | 'BEFORE' | 'CLOSED' | 'DISABLED' = 'CLOSED';
+  let regStatusMessage = '대회 참가 신청 접수가 마감되었습니다. (선착순 130명 마감 완료)';
+  let regStatusBadge = { text: '접수 기간 마감', icon: '🔴' };
 
-  if (regMode === 'FORCE_ENABLED') {
+  if (regMode === 'FORCE_CLOSED' || regMode === 'CLOSED' || regMode === 'DISABLED' || regConfig.registrationEnabled === false) {
+    regStatusType = 'CLOSED';
+    regStatusMessage = regNotice || '제20회 이순신장군배 전국윈드서핑대회 온라인 참가 신청 접수가 공식 마감되었습니다.';
+    regStatusBadge = { text: '접수 기간 마감', icon: '🔴' };
+  } else if (regMode === 'FORCE_ENABLED') {
     regStatusType = 'OPEN';
     regStatusMessage = '온라인 참가 신청 접수가 정상 진행 중입니다. (130명 한도 선착순 조기마감)';
     regStatusBadge = { text: '접수 진행 중', icon: '🟢' };
-  } else if (regMode === 'DISABLED' || regConfig.registrationEnabled === false) {
-    regStatusType = 'DISABLED';
-    regStatusMessage = regNotice || '현재는 대회 주최 측에 의해 참가 신청 접수가 일시 중단되었습니다.';
-    regStatusBadge = { text: '접수 일시 중단', icon: '⚫' };
   } else if (regStartDate && !isNaN(regStartDate.getTime()) && now < regStartDate) {
     regStatusType = 'BEFORE';
     regStatusMessage = `대회 참가 신청 접수 기간 전입니다. (접수 시작: ${regStartDateStr.replace('T', ' ')})`;
@@ -2008,25 +2009,29 @@ export default function TenantPortalPage({
             <button
               type="button"
               onClick={() => {
+                if (!isRegistrationOpen) {
+                  alert('제20회 이순신장군배 전국윈드서핑대회 온라인 참가 신청 접수가 공식 마감되었습니다.');
+                  return;
+                }
                 window.open(window.location.pathname + '?mode=apply', '_blank');
               }}
               style={{
                 padding: '6px 12px',
                 fontSize: '0.78rem',
                 fontWeight: '800',
-                background: 'linear-gradient(135deg, var(--theme-gold) 0%, #b39366 100%)',
-                color: '#1b263b',
+                background: isRegistrationOpen ? 'linear-gradient(135deg, var(--theme-gold) 0%, #b39366 100%)' : '#e2e8f0',
+                color: isRegistrationOpen ? '#1b263b' : '#64748b',
                 border: 'none',
                 borderRadius: '18px',
-                cursor: 'pointer',
+                cursor: isRegistrationOpen ? 'pointer' : 'default',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '4px',
-                boxShadow: '0 2px 8px rgba(197, 168, 128, 0.3)',
+                boxShadow: isRegistrationOpen ? '0 2px 8px rgba(197, 168, 128, 0.3)' : 'none',
                 whiteSpace: 'nowrap',
               }}
             >
-              ✍️ 참가신청
+              {isRegistrationOpen ? '✍️ 참가신청' : '🔒 접수 마감'}
             </button>
           </div>
 
@@ -2180,6 +2185,10 @@ export default function TenantPortalPage({
                 type="button"
                 onClick={() => {
                   setIsMobileMenuOpen(false);
+                  if (!isRegistrationOpen) {
+                    alert('제20회 이순신장군배 전국윈드서핑대회 온라인 참가 신청 접수가 공식 마감되었습니다.');
+                    return;
+                  }
                   window.open(window.location.pathname + '?mode=apply', '_blank');
                 }}
                 style={{
@@ -2189,16 +2198,16 @@ export default function TenantPortalPage({
                   gap: '8px',
                   padding: '13px',
                   borderRadius: '10px',
-                  background: 'linear-gradient(135deg, var(--theme-gold) 0%, #b39366 100%)',
-                  color: '#1b263b',
+                  background: isRegistrationOpen ? 'linear-gradient(135deg, var(--theme-gold) 0%, #b39366 100%)' : '#f1f5f9',
+                  color: isRegistrationOpen ? '#1b263b' : '#64748b',
                   fontWeight: '800',
                   fontSize: '0.96rem',
-                  border: 'none',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 10px rgba(197, 168, 128, 0.35)',
+                  border: isRegistrationOpen ? 'none' : '1px solid #cbd5e1',
+                  cursor: isRegistrationOpen ? 'pointer' : 'default',
+                  boxShadow: isRegistrationOpen ? '0 4px 10px rgba(197, 168, 128, 0.35)' : 'none',
                 }}
               >
-                ✍️ 참가 신청서 작성
+                {isRegistrationOpen ? '✍️ 참가 신청서 작성' : '🔒 참가신청 접수 마감'}
               </button>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
@@ -2302,6 +2311,10 @@ export default function TenantPortalPage({
           <div className="hero-buttons">
             <button
               onClick={() => {
+                if (!isRegistrationOpen) {
+                  alert('제20회 이순신장군배 전국윈드서핑대회 온라인 참가 신청 접수가 공식 마감되었습니다.');
+                  return;
+                }
                 if (!ongoingTournament) return;
                 window.open(window.location.pathname + '?mode=apply', '_blank');
               }}
@@ -2311,15 +2324,16 @@ export default function TenantPortalPage({
                 fontSize: '1rem',
                 textTransform: 'uppercase',
                 fontWeight: '800',
-                background: 'linear-gradient(135deg, var(--theme-gold) 0%, #b39366 100%)',
-                color: '#1b263b',
+                background: isRegistrationOpen ? 'linear-gradient(135deg, var(--theme-gold) 0%, #b39366 100%)' : '#64748b',
+                color: isRegistrationOpen ? '#1b263b' : '#ffffff',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '8px',
-                boxShadow: '0 4px 15px rgba(197, 168, 128, 0.4)',
+                boxShadow: isRegistrationOpen ? '0 4px 15px rgba(197, 168, 128, 0.4)' : 'none',
+                cursor: isRegistrationOpen ? 'pointer' : 'default',
               }}
             >
-              <span>참가 신청서 작성 및 제출 (접수 중)</span>
+              <span>{isRegistrationOpen ? '참가 신청서 작성 및 제출 (접수 중)' : '🔒 참가신청 접수 마감 (선착순 마감 완료)'}</span>
             </button>
             <button
               onClick={() => {
@@ -3631,6 +3645,10 @@ export default function TenantPortalPage({
                     <button
                       type="button"
                       onClick={() => {
+                        if (!isRegistrationOpen) {
+                          alert('제20회 이순신장군배 전국윈드서핑대회 온라인 참가 신청 접수가 공식 마감되었습니다.');
+                          return;
+                        }
                         window.open(window.location.pathname + '?mode=apply', '_blank');
                       }}
                       className="btn-primary"
@@ -3641,12 +3659,13 @@ export default function TenantPortalPage({
                         fontWeight: '800',
                         justifyContent: 'center',
                         marginTop: '8px',
-                        background: 'linear-gradient(135deg, var(--theme-gold) 0%, #b39366 100%)',
-                        color: '#1b263b',
-                        boxShadow: '0 4px 12px rgba(197, 168, 128, 0.4)',
+                        background: isRegistrationOpen ? 'linear-gradient(135deg, var(--theme-gold) 0%, #b39366 100%)' : '#64748b',
+                        color: isRegistrationOpen ? '#1b263b' : '#ffffff',
+                        boxShadow: isRegistrationOpen ? '0 4px 12px rgba(197, 168, 128, 0.4)' : 'none',
+                        cursor: isRegistrationOpen ? 'pointer' : 'default',
                       }}
                     >
-                      참가 신청서 작성하기 ✍️
+                      {isRegistrationOpen ? '참가 신청서 작성하기 ✍️' : '🔒 참가신청 접수 마감 (종료)'}
                     </button>
 
                     {/* 공식 개최공시서 바로 다운로드 버튼 */}

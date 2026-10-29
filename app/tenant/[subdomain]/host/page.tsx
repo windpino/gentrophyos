@@ -381,6 +381,8 @@ export default function HostDashboardPage({
 
   // 배번티 보유 및 분실 관리 모달 상태
   const [isBibModalOpen, setIsBibModalOpen] = useState(false);
+  // 개별 선수 배번티 수동 변경 모달 타겟 상태
+  const [individualBibTarget, setIndividualBibTarget] = useState<GridRow | null>(null);
 
   const [authChecking, setAuthChecking] = useState(true);
 
@@ -724,6 +726,39 @@ export default function HostDashboardPage({
     } finally {
       setDnsDnfSaving(false);
     }
+  };
+
+  // 개별 선수 배번티 수동 변경 및 DB 즉시 영구 저장 핸들러
+  const handleSaveIndividualBib = async (playerId: string, newBibNumber: string) => {
+    // 1. 로컬 gridData 즉시 갱신
+    handleCellChange(playerId, 'bibNumber', newBibNumber);
+
+    // 2. 서버 DB에 단건 즉시 영구 저장
+    if (activeTournament) {
+      try {
+        const targetRow = gridData.find(r => r.id === playerId);
+        const updatedRow = {
+          ...(targetRow || {}),
+          id: playerId,
+          bibNumber: newBibNumber,
+          isEdited: true,
+        };
+        const res = await fetch(`/api/tenant/${subdomain}/registrations/bulk-update`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            tournamentId: activeTournament.id,
+            updatedList: [updatedRow],
+          }),
+        });
+        if (res.ok) {
+          await loadSectionData(activeTournament.id);
+        }
+      } catch (e) {
+        console.error('단건 배번 저장 오류:', e);
+      }
+    }
+    setIndividualBibTarget(null);
   };
 
   const handleSaveRegistrationPeriod = async () => {
@@ -1976,22 +2011,58 @@ export default function HostDashboardPage({
                         </td>
 
                         {/* 배번티번호 */}
-                        <td style={{ padding: '8px 16px' }}>
-                          <input
-                            type="text"
-                            value={row.bibNumber || ''}
-                            onChange={(e) => handleCellChange(row.id, 'bibNumber', e.target.value)}
-                            style={{
-                              width: '100%',
-                              background: 'none',
-                              border: 'none',
-                              color: 'var(--text-main)',
-                              outline: 'none',
-                              fontSize: '0.95rem',
-                              fontWeight: '600'
-                            }}
-                            placeholder="배번 기입"
-                          />
+                        <td style={{ padding: '8px 12px', whiteSpace: 'nowrap' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            {(() => {
+                              const badge = getBibBadgeStyle(row.bibNumber);
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={() => setIndividualBibTarget(row)}
+                                  title="클릭하여 배번 수동 선택/변경"
+                                  style={{
+                                    border: `1px solid ${badge.borderColor}`,
+                                    background: badge.background,
+                                    color: badge.color,
+                                    borderRadius: '6px',
+                                    padding: '4px 8px',
+                                    fontSize: '0.78rem',
+                                    fontWeight: '800',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    boxShadow: badge.boxShadow || 'none',
+                                    transition: 'all 0.15s ease',
+                                    whiteSpace: 'nowrap'
+                                  }}
+                                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
+                                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                                >
+                                  <span>{badge.icon}</span>
+                                  <span>{badge.text}</span>
+                                  <Edit3 size={11} style={{ opacity: 0.6 }} />
+                                </button>
+                              );
+                            })()}
+                            <input
+                              type="text"
+                              value={row.bibNumber || ''}
+                              onChange={(e) => handleCellChange(row.id, 'bibNumber', e.target.value)}
+                              style={{
+                                width: '85px',
+                                background: '#f8fafc',
+                                border: '1px solid #cbd5e1',
+                                borderRadius: '6px',
+                                padding: '4px 8px',
+                                color: 'var(--text-main)',
+                                outline: 'none',
+                                fontSize: '0.82rem',
+                                fontWeight: '700'
+                              }}
+                              placeholder="직접 기입"
+                            />
+                          </div>
                         </td>
 
                         {/* 생년월일 */}
@@ -2565,6 +2636,29 @@ export default function HostDashboardPage({
                       참가확정자만 ({approvedList.length}명)
                     </button>
                   </div>
+
+                  {/* 대진표 화면에서 바로 열 수 있는 배번티 관리 & 자동 배정 모달 버튼 */}
+                  <button
+                    type="button"
+                    onClick={() => setIsBibModalOpen(true)}
+                    style={{
+                      padding: '7px 14px',
+                      borderRadius: '10px',
+                      border: 'none',
+                      fontSize: '0.82rem',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                      color: '#ffffff',
+                      boxShadow: '0 2px 8px rgba(217, 119, 6, 0.3)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px'
+                    }}
+                    title="배번티 보유 관리 및 분실 제외 순차 자동 배정"
+                  >
+                    <span>🎽 배번티 관리 & 자동 배정</span>
+                  </button>
                 </div>
               </div>
 
@@ -2764,23 +2858,33 @@ export default function HostDashboardPage({
                                                   {(() => {
                                                     const badge = getBibBadgeStyle(player.bibNumber);
                                                     return (
-                                                      <span style={{
-                                                        fontWeight: '900',
-                                                        color: badge.color,
-                                                        background: badge.background,
-                                                        border: `1.5px solid ${badge.borderColor}`,
-                                                        boxShadow: badge.boxShadow || 'none',
-                                                        padding: '3px 10px',
-                                                        borderRadius: '8px',
-                                                        fontSize: '0.82rem',
-                                                        whiteSpace: 'nowrap',
-                                                        display: 'inline-flex',
-                                                        alignItems: 'center',
-                                                        gap: '4px'
-                                                      }}>
+                                                      <button
+                                                        type="button"
+                                                        onClick={() => setIndividualBibTarget(player)}
+                                                        title="클릭하여 배번티 수동 배정 및 변경"
+                                                        style={{
+                                                          fontWeight: '900',
+                                                          color: badge.color,
+                                                          background: badge.background,
+                                                          border: `1.5px solid ${badge.borderColor}`,
+                                                          boxShadow: badge.boxShadow || 'none',
+                                                          padding: '3px 10px',
+                                                          borderRadius: '8px',
+                                                          fontSize: '0.82rem',
+                                                          whiteSpace: 'nowrap',
+                                                          display: 'inline-flex',
+                                                          alignItems: 'center',
+                                                          gap: '5px',
+                                                          cursor: 'pointer',
+                                                          transition: 'all 0.15s ease',
+                                                        }}
+                                                        onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
+                                                        onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                                                      >
                                                         <span>{badge.icon}</span>
                                                         <span>{badge.text}</span>
-                                                      </span>
+                                                        <Edit3 size={11} style={{ opacity: 0.6 }} />
+                                                      </button>
                                                     );
                                                   })()}
                                                 </div>
@@ -3862,6 +3966,16 @@ export default function HostDashboardPage({
         }}
       />
 
+      {/* ── 개별 선수 배번티 수동 배정 및 변경 모달 ── */}
+      <IndividualBibModal
+        isOpen={Boolean(individualBibTarget)}
+        onClose={() => setIndividualBibTarget(null)}
+        player={individualBibTarget}
+        gridData={gridData}
+        subdomain={subdomain}
+        onSave={handleSaveIndividualBib}
+      />
+
     </div>
   );
 }
@@ -4375,6 +4489,401 @@ function QnaAnswerModal({ targetItem, isSaving, onClose, onSave }: QnaAnswerModa
   );
 }
 
+// ── 개별 선수 배번티 수동 변경 및 즉시 저장 모달 ──
+interface IndividualBibModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  player: GridRow | null;
+  gridData: GridRow[];
+  subdomain: string;
+  onSave: (playerId: string, newBib: string) => Promise<void> | void;
+}
+
+function IndividualBibModal({
+  isOpen,
+  onClose,
+  player,
+  gridData,
+  subdomain,
+  onSave,
+}: IndividualBibModalProps) {
+  const [activeColor, setActiveColor] = useState<'white' | 'green' | 'orange'>('white');
+  const [selectedBib, setSelectedBib] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lostNumbers, setLostNumbers] = useState<{ white: number[]; green: number[]; orange: number[] }>({
+    white: [],
+    green: [],
+    orange: [],
+  });
+
+  // 선수가 바뀔 때마다 초기화
+  useEffect(() => {
+    if (player && isOpen) {
+      const current = (player.bibNumber || '').trim();
+      setSelectedBib(current);
+
+      if (current.includes('연두') || current.includes('연') || current.includes('green')) {
+        setActiveColor('green');
+      } else if (current.includes('오렌지') || current.includes('주황') || current.includes('주') || current.includes('orange')) {
+        setActiveColor('orange');
+      } else {
+        setActiveColor('white');
+      }
+
+      // 분실 배번 목록 불러오기
+      if (typeof window !== 'undefined') {
+        try {
+          const saved = localStorage.getItem(`gentrophy_lost_bibs_${subdomain}`);
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (parsed && typeof parsed === 'object') {
+              setLostNumbers({
+                white: Array.isArray(parsed.white) ? parsed.white : [],
+                green: Array.isArray(parsed.green) ? parsed.green : [],
+                orange: Array.isArray(parsed.orange) ? parsed.orange : [],
+              });
+            }
+          }
+        } catch {}
+      }
+    }
+  }, [player, isOpen, subdomain]);
+
+  if (!isOpen || !player) return null;
+
+  // 현재 다른 선수가 배정받은 배번 맵 (중복 배정 시 안내용)
+  const assignedMap = new Map<string, string>();
+  for (const r of gridData) {
+    if (r.id !== player.id && r.bibNumber && r.bibNumber.trim()) {
+      assignedMap.set(r.bibNumber.trim(), r.name);
+    }
+  }
+
+  const colorMeta = {
+    white: { label: '흰색 배번티 (1~50)', icon: '⚪', prefix: '흰색', badgeBg: '#ffffff', badgeColor: '#0f172a', border: '#94a3b8' },
+    green: { label: '연두색 배번티 (1~50)', icon: '🟢', prefix: '연두', badgeBg: '#dcfce7', badgeColor: '#14532d', border: '#86efac' },
+    orange: { label: '오렌지색 배번티 (1~50)', icon: '🟠', prefix: '오렌지', badgeBg: '#ffedd5', badgeColor: '#9a3412', border: '#fdba74' },
+  };
+
+  const handleSelectNumber = (num: number) => {
+    const bibStr = `${colorMeta[activeColor].prefix} ${num}번`;
+    const occupier = assignedMap.get(bibStr);
+    if (occupier) {
+      if (!confirm(`⚠️ [${bibStr}]은(는) 이미 '${occupier}' 선수에게 배정되어 있습니다.\n\n해당 배번으로 변경하시겠습니까? (중복 배정 주의)`)) {
+        return;
+      }
+    }
+    setSelectedBib(bibStr);
+  };
+
+  const handleConfirmSave = async () => {
+    setIsSubmitting(true);
+    try {
+      await onSave(player.id, selectedBib.trim());
+      onClose();
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleClearBib = async () => {
+    if (confirm(`'${player.name}' 선수의 배번을 해제(미배정 공란 처리)하시겠습니까?`)) {
+      setIsSubmitting(true);
+      try {
+        await onSave(player.id, '');
+        onClose();
+      } finally {
+        setIsSubmitting(false);
+      }
+    }
+  };
+
+  const currentBadge = getBibBadgeStyle(player.bibNumber);
+  const previewBadge = getBibBadgeStyle(selectedBib);
+
+  return (
+    <div style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      backgroundColor: 'rgba(15, 23, 42, 0.75)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10001, padding: '16px'
+    }}>
+      <div style={{
+        backgroundColor: '#ffffff',
+        borderRadius: '20px',
+        width: '100%',
+        maxWidth: '680px',
+        maxHeight: '90vh',
+        overflowY: 'auto',
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+        border: '1px solid #e2e8f0',
+        padding: '24px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px'
+      }}>
+        {/* 헤더 */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '14px' }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '900', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>🎽</span> 선수 배번티 수동 배정 및 변경
+            </h3>
+            <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+              선수의 배번티 색상과 번호를 클릭하여 즉시 변경하거나 직접 입력할 수 있습니다.
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* 대상 선수 프로필 카드 */}
+        <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '14px 18px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+          <div>
+            <div style={{ fontSize: '1.15rem', fontWeight: '900', color: '#0f172a' }}>
+              {player.name} <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#64748b' }}>({player.gender} / {player.birth || '생년월일 미기재'})</span>
+            </div>
+            <div style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '2px' }}>
+              종목: <strong style={{ color: '#0284c7' }}>{player.division}</strong> · 조 편성: <strong>{player.subclass || '통합부'}</strong> · 소속: {player.club || '무소속'}
+            </div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: '700', marginBottom: '3px' }}>현재 배번</div>
+            <span style={{
+              fontWeight: '900',
+              color: currentBadge.color,
+              background: currentBadge.background,
+              border: `1.5px solid ${currentBadge.borderColor}`,
+              boxShadow: currentBadge.boxShadow || 'none',
+              padding: '4px 10px',
+              borderRadius: '8px',
+              fontSize: '0.85rem',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}>
+              <span>{currentBadge.icon}</span>
+              <span>{currentBadge.text}</span>
+            </span>
+          </div>
+        </div>
+
+        {/* 색상 탭 선택 */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+          {(['white', 'green', 'orange'] as const).map(color => {
+            const meta = colorMeta[color];
+            const isTabActive = activeColor === color;
+            return (
+              <button
+                key={color}
+                type="button"
+                onClick={() => setActiveColor(color)}
+                style={{
+                  padding: '10px 8px',
+                  borderRadius: '10px',
+                  border: isTabActive ? `2px solid ${meta.border}` : '1px solid #e2e8f0',
+                  background: isTabActive ? meta.badgeBg : '#f8fafc',
+                  color: isTabActive ? meta.badgeColor : '#64748b',
+                  fontWeight: '800',
+                  fontSize: '0.88rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  boxShadow: isTabActive ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
+                  transition: 'all 0.15s'
+                }}
+              >
+                <span>{meta.icon}</span>
+                <span>{meta.prefix} (1~50)</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* 1~50 번호 그리드 선택 */}
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: '800', color: '#334155' }}>
+              {colorMeta[activeColor].label} 번호 선택
+            </span>
+            <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+              ※ 흐린 글자는 다른 선수 배정 완료 또는 분실 번호입니다.
+            </span>
+          </div>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(10, 1fr)',
+            gap: '6px',
+            background: '#f8fafc',
+            padding: '12px',
+            borderRadius: '12px',
+            border: '1px solid #e2e8f0'
+          }}>
+            {Array.from({ length: 50 }, (_, i) => i + 1).map(num => {
+              const bibStr = `${colorMeta[activeColor].prefix} ${num}번`;
+              const isSelected = selectedBib === bibStr;
+              const isLost = lostNumbers[activeColor].includes(num);
+              const occupier = assignedMap.get(bibStr);
+
+              return (
+                <button
+                  key={num}
+                  type="button"
+                  onClick={() => handleSelectNumber(num)}
+                  title={
+                    isLost ? `${num}번: 분실된 배번` :
+                    occupier ? `${num}번: '${occupier}' 선수 사용 중` :
+                    `${bibStr} 선택`
+                  }
+                  style={{
+                    padding: '8px 2px',
+                    borderRadius: '8px',
+                    border: isSelected ? '2px solid #0284c7' : isLost ? '1px dashed #cbd5e1' : occupier ? '1px solid #fecaca' : '1px solid #e2e8f0',
+                    background: isSelected ? '#0284c7' : isLost ? '#f1f5f9' : occupier ? '#fef2f2' : '#ffffff',
+                    color: isSelected ? '#ffffff' : isLost ? '#94a3b8' : occupier ? '#dc2626' : '#0f172a',
+                    fontWeight: isSelected || occupier ? '900' : '700',
+                    fontSize: '0.82rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    textDecoration: isLost ? 'line-through' : 'none',
+                    opacity: isLost ? 0.45 : occupier && !isSelected ? 0.75 : 1,
+                    transition: 'all 0.12s ease'
+                  }}
+                >
+                  <span>{num}</span>
+                  {occupier && (
+                    <span style={{ fontSize: '0.62rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '38px', lineHeight: 1 }}>
+                      {occupier}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 직접 입력 및 실시간 미리보기 */}
+        <div style={{ background: '#f8fafc', padding: '14px 18px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+          <div style={{ flex: 1, minWidth: '220px' }}>
+            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '800', color: '#475569', marginBottom: '4px' }}>
+              선택/입력된 배번 (직접 수정 가능)
+            </label>
+            <input
+              type="text"
+              value={selectedBib}
+              onChange={(e) => setSelectedBib(e.target.value)}
+              placeholder="예: 흰색 1번, 연두 5번 등"
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: '1px solid #cbd5e1',
+                fontSize: '0.95rem',
+                fontWeight: '800',
+                outline: 'none',
+                color: '#0f172a'
+              }}
+            />
+          </div>
+
+          <div style={{ textAlign: 'right', minWidth: '140px' }}>
+            <span style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#94a3b8', marginBottom: '4px' }}>
+              실제 뱃지 미리보기
+            </span>
+            <span style={{
+              fontWeight: '900',
+              color: previewBadge.color,
+              background: previewBadge.background,
+              border: `1.5px solid ${previewBadge.borderColor}`,
+              boxShadow: previewBadge.boxShadow || 'none',
+              padding: '5px 12px',
+              borderRadius: '8px',
+              fontSize: '0.9rem',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}>
+              <span>{previewBadge.icon}</span>
+              <span>{previewBadge.text}</span>
+            </span>
+          </div>
+        </div>
+
+        {/* 하단 액션 버튼 바 */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #e2e8f0', paddingTop: '16px', flexWrap: 'wrap', gap: '10px' }}>
+          <button
+            type="button"
+            onClick={handleClearBib}
+            disabled={isSubmitting || !player.bibNumber}
+            style={{
+              padding: '10px 16px',
+              borderRadius: '10px',
+              border: '1px solid #fecaca',
+              background: '#fef2f2',
+              color: '#dc2626',
+              fontWeight: '800',
+              fontSize: '0.85rem',
+              cursor: isSubmitting || !player.bibNumber ? 'not-allowed' : 'pointer',
+              opacity: isSubmitting || !player.bibNumber ? 0.5 : 1
+            }}
+          >
+            🗑️ 배번 해제 (미배정)
+          </button>
+
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              style={{
+                padding: '10px 18px',
+                borderRadius: '10px',
+                border: '1px solid #cbd5e1',
+                background: '#ffffff',
+                color: '#475569',
+                fontWeight: '700',
+                fontSize: '0.88rem',
+                cursor: 'pointer'
+              }}
+            >
+              취소
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirmSave}
+              disabled={isSubmitting}
+              style={{
+                padding: '10px 22px',
+                borderRadius: '10px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                color: '#ffffff',
+                fontWeight: '800',
+                fontSize: '0.92rem',
+                cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              <span>💾 이 배번으로 저장 및 즉시 반영</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── 독립형 배번티 보유 관리 & 분실 제외 자동 배정 모달 ──
 interface BibManagementModalProps {
   isOpen: boolean;
@@ -4405,7 +4914,7 @@ function BibManagementModal({
   const [numberingStyle, setNumberingStyle] = useState<'colorWithNum' | 'colorPrefix' | 'colorShort' | 'numberOnly'>('colorWithNum');
   const [assignScope, setAssignScope] = useState<'all' | 'approved'>('all');
   const [assignOrder, setAssignOrder] = useState<'bracket' | 'name' | 'regOrder'>('bracket');
-  const [overwriteExisting, setOverwriteExisting] = useState<boolean>(true);
+  const [overwriteExisting, setOverwriteExisting] = useState<boolean>(false);
   const [directInputText, setDirectInputText] = useState('');
   const [isApplying, setIsApplying] = useState<boolean>(false);
 
@@ -5154,7 +5663,7 @@ function BibManagementModal({
                     />
                     <span><strong>승인(결제 완료) 참가자만 대상</strong> ({gridData.filter(r => r.paymentStatus === 'APPROVED' || r.status === 'APPROVED').length}명)</span>
                   </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: '700', color: '#1e293b', cursor: 'pointer', marginTop: '4px', background: '#e0f2fe', padding: '6px 10px', borderRadius: '8px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.86rem', fontWeight: '700', color: '#1e293b', cursor: 'pointer', marginTop: '4px', background: overwriteExisting ? '#fee2e2' : '#f0fdf4', padding: '8px 12px', borderRadius: '8px', border: `1px solid ${overwriteExisting ? '#fecaca' : '#bbf7d0'}` }}>
                     <input
                       type="checkbox"
                       checked={overwriteExisting}
@@ -5164,7 +5673,15 @@ function BibManagementModal({
                       }}
                       style={{ accentColor: 'var(--theme-primary)' }}
                     />
-                    <span style={{ color: '#0369a1' }}><strong>기존에 입력된 배번이 있어도 전체 새로 덮어쓰기</strong> (체크 권장)</span>
+                    {overwriteExisting ? (
+                      <span style={{ color: '#b91c1c' }}>
+                        <strong>⚠️ 기존 배번 덮어쓰기 활성화:</strong> 이미 입력/수동 지정된 배번도 무시하고 전체 새로 배정합니다.
+                      </span>
+                    ) : (
+                      <span style={{ color: '#15803d' }}>
+                        <strong>🛡️ 기존 배번 보존 모드:</strong> 이미 배번이 부여되거나 수동으로 변경한 선수는 그대로 유지하고, <u>미배정 선수에게만 빈 배번을 순차 배정</u>합니다.
+                      </span>
+                    )}
                   </label>
                 </div>
               </div>
