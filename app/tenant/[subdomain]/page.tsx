@@ -318,6 +318,9 @@ export default function TenantPortalPage({
     registrationEndDate: '2026-10-18T18:00',
     scale: '130명 한도 (선착순 조기마감)',
     location: '경상남도 통영시 도남동 수륙해수욕장 일원',
+    registrationMode: 'FORCE_CLOSED',
+    registrationEnabled: false,
+    registrationNotice: tenant?.overviewConfig?.registrationNotice || '제20회 이순신장군배 전국윈드서핑대회 온라인 참가 신청 접수가 공식 마감되었습니다. 참가자 명단 및 배번, 대진표를 확인해 주시기 바랍니다.',
     noticeHwpData: tenant?.overviewConfig?.noticeHwpData || '/files/2026년20회통영대회_개최공시서.hwp',
     noticeHwpName: tenant?.overviewConfig?.noticeHwpName || '2026년20회통영대회_개최공시서.hwp',
     noticePdfData: tenant?.overviewConfig?.noticePdfData || '/files/2026년20회통영대회_개최공시서.pdf',
@@ -692,6 +695,9 @@ export default function TenantPortalPage({
           data.tenant.overviewConfig.scale = '130명 한도 (선착순 조기마감)';
           data.tenant.overviewConfig.location = '경상남도 통영시 도남동 수륙해수욕장 일원';
           data.tenant.overviewConfig.entryFeeIndividual = '30,000원';
+          data.tenant.overviewConfig.registrationMode = 'FORCE_CLOSED';
+          data.tenant.overviewConfig.registrationEnabled = false;
+          data.tenant.overviewConfig.registrationNotice = '제20회 이순신장군배 전국윈드서핑대회 온라인 참가 신청 접수가 공식 마감되었습니다. 참가자 명단 및 배번, 대진표를 확인해 주시기 바랍니다.';
           if (data.tenant.overviewConfig.contactNote === '* 대회 참가자 전원에게 기념 티셔츠 및 참가 기념품을 제공합니다.' || !data.tenant.overviewConfig.contactNote) {
             data.tenant.overviewConfig.contactNote = '* 대회 참가자 전원에게 기념 티셔츠를 제공합니다.';
           }
@@ -972,8 +978,8 @@ export default function TenantPortalPage({
     registrationEndDate: '2026-10-18T18:00',
     scale: '130명 한도 (선착순 조기마감)',
     location: '경상남도 통영시 도남동 수륙해수욕장 일원',
-    registrationMode: (tenant?.overviewConfig?.registrationMode as any) || 'FORCE_CLOSED',
-    registrationEnabled: tenant?.overviewConfig?.registrationEnabled ?? false,
+    registrationMode: 'FORCE_CLOSED',
+    registrationEnabled: false,
     registrationNotice: tenant?.overviewConfig?.registrationNotice || '제20회 이순신장군배 전국윈드서핑대회 온라인 참가 신청 접수가 공식 마감되었습니다. 참가자 명단 및 배번, 대진표를 확인해 주시기 바랍니다.',
   };
   const regMode = regConfig.registrationMode || 'FORCE_CLOSED';
@@ -3665,7 +3671,7 @@ export default function TenantPortalPage({
                         cursor: isRegistrationOpen ? 'pointer' : 'default',
                       }}
                     >
-                      {isRegistrationOpen ? '참가 신청서 작성하기 ✍️' : '🔒 참가신청 접수 마감 (종료)'}
+                      {isRegistrationOpen ? '참가 신청서 작성하기 ✍️' : '🔒 참가신청 접수 마감 (선착순 마감 완료)'}
                     </button>
 
                     {/* 공식 개최공시서 바로 다운로드 버튼 */}

@@ -54,8 +54,9 @@ export async function POST(
       registrationEndDate: '2026-10-18T18:00',
       scale: '130명 한도 (선착순 조기마감)',
       location: overviewConfig.location || existingConfig.location || '경상남도 통영시 도남동 수륙해수욕장 일원',
-      registrationMode: 'FORCE_ENABLED',
-      registrationEnabled: true,
+      registrationMode: overviewConfig.registrationMode || existingConfig.registrationMode || 'FORCE_CLOSED',
+      registrationEnabled: overviewConfig.registrationEnabled ?? false,
+      registrationNotice: overviewConfig.registrationNotice || existingConfig.registrationNotice || '제20회 이순신장군배 전국윈드서핑대회 온라인 참가 신청 접수가 공식 마감되었습니다. 참가자 명단 및 배번, 대진표를 확인해 주시기 바랍니다.',
       contactNote: (overviewConfig?.contactNote === '* 대회 참가자 전원에게 기념 티셔츠 및 참가 기념품을 제공합니다.' || existingConfig?.contactNote === '* 대회 참가자 전원에게 기념 티셔츠 및 참가 기념품을 제공합니다.' || (!overviewConfig?.contactNote && !existingConfig?.contactNote))
         ? '* 대회 참가자 전원에게 기념 티셔츠를 제공합니다.'
         : (overviewConfig.contactNote || existingConfig.contactNote),

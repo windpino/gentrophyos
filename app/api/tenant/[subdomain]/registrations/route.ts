@@ -164,14 +164,14 @@ export async function POST(
     const tenant = cached.tenantData;
 
     const overviewConfig = tenant.overviewConfig || {};
-    const regMode = overviewConfig.registrationMode || (overviewConfig.registrationEnabled === false ? 'DISABLED' : 'FORCE_ENABLED');
+    const regMode = overviewConfig.registrationMode || (overviewConfig.registrationEnabled === false ? 'DISABLED' : 'FORCE_CLOSED');
     const startDate = overviewConfig.registrationStartDate ? new Date(overviewConfig.registrationStartDate) : null;
     const endDate = overviewConfig.registrationEndDate ? new Date(overviewConfig.registrationEndDate) : null;
     const now = new Date();
 
-    if (regMode === 'DISABLED' || overviewConfig.registrationEnabled === false) {
+    if (regMode === 'DISABLED' || regMode === 'FORCE_CLOSED' || overviewConfig.registrationEnabled === false) {
       return NextResponse.json({
-        error: overviewConfig.registrationNotice || '현재는 대회 주최 측에 의해 참가 신청 접수가 일시 중단되었습니다.'
+        error: overviewConfig.registrationNotice || '제20회 이순신장군배 전국윈드서핑대회 온라인 참가 신청 접수가 공식 마감되었습니다.'
       }, { status: 400 });
     }
 
