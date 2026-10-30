@@ -2434,23 +2434,28 @@ export default function TenantPortalPage({
             </button>
             <button
               onClick={() => {
-                if (ongoingTournament) {
-                  setActiveTab('live');
-                  setActiveSubTab('live-leaderboard');
-                }
+                setActiveTab('live');
+                setActiveSubTab('live-leaderboard');
               }}
-              className="btn-secondary"
               style={{
                 padding: '16px 32px',
                 fontSize: '1rem',
                 textTransform: 'uppercase',
-                fontWeight: '800',
-                background: 'rgba(255, 255, 255, 0.08)',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
-                color: 'white',
+                fontWeight: '900',
+                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                border: 'none',
+                borderRadius: '8px',
+                color: '#ffffff',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+                boxShadow: '0 4px 20px rgba(245, 158, 11, 0.55)',
+                transition: 'all 0.2s ease-in-out',
               }}
             >
-              실시간 전광판 리더보드
+              <span>🏆</span>
+              <span>실시간 전광판 리더보드</span>
             </button>
           </div>
         </div>
