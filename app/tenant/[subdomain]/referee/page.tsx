@@ -1169,33 +1169,45 @@ export default function RefereeMobilePage({
     });
   };
 
-  // 배번(티넘버) 스마트 매칭 도우미 (색상별 1~50번 체계 완벽 호환)
+  // 배번(티넘버) 스마트 매칭 도우미 (색상별 1~50번 체계 완벽 호환 및 색상이 달라도 같은 번호인 선수 모두 매칭)
   const isSmartBibMatch = (pBib?: string, pName?: string, query?: string) => {
     if (!query) return false;
     const q = query.trim().toLowerCase();
-    if (pName && pName.trim().toLowerCase() === q) return true;
-    if (!pBib) return false;
+    if (!q) return false;
 
+    // 1. 이름 검색 (완전 일치 또는 검색어가 이름에 포함된 경우)
+    if (pName) {
+      const nameLower = pName.trim().toLowerCase();
+      if (nameLower === q || nameLower.includes(q)) return true;
+    }
+
+    if (!pBib) return false;
     const b = pBib.trim().toLowerCase();
     if (b === q) return true;
 
-    // 정규화: 공백 제거, '번' 제거, 색상 명칭 단축 통일
+    // 2. 색상 명칭 단축 및 정규화 매칭
     const normalize = (s: string) =>
       s
         .replace(/\s+/g, '')
         .replace(/번$/, '')
         .replace(/^오렌지|^주황|^오/, '주')
         .replace(/^연두/, '연')
+        .replace(/^형광/, '형')
+        .replace(/^노랑|^노란/, '노')
+        .replace(/^빨강|^빨간/, '빨')
+        .replace(/^파랑|^파란/, '파')
         .replace(/^흰색/, '흰');
 
     const normB = normalize(b);
     const normQ = normalize(q);
-    if (normB === normQ) return true;
+    if (normB === normQ || normB.includes(normQ)) return true;
 
-    // 심판이 숫자만 입력했을 때 매칭 (예: '5' 입력 시 '흰5' 또는 '흰색 5번' 매칭)
+    // 3. 숫자 검색: 사용자가 숫자(예: '7' 또는 '7번')를 입력했을 때,
+    // 해당 종목 출전 선수 중 색상이 달라도 같은 번호를 가진 모든 선수를 매칭
+    // (예: '7' 입력 시 '흰색 7', '연두 7', '주황 7', '노랑 7' 모두 검색)
     const bDigits = b.replace(/[^0-9]/g, '');
     const qDigits = q.replace(/[^0-9]/g, '');
-    if (q === qDigits && bDigits === qDigits && qDigits.length > 0) {
+    if (qDigits.length > 0 && bDigits === qDigits) {
       return true;
     }
 
@@ -1211,14 +1223,15 @@ export default function RefereeMobilePage({
       return;
     }
 
-    const matched = participants.find(
+    const matchedList = participants.filter(
       p => isSmartBibMatch(p.bibNumber, p.name, cleanBib)
     );
 
-    if (matched) {
+    if (matchedList.length === 1) {
+      const matched = matchedList[0];
       assignRankToPlayer(matched.id, selectedRound, currentRankNum);
       setInputFeedback({
-        text: `✅ ${currentRankNum}위에 '${matched.name}' 선수(배번 ${matched.bibNumber || cleanBib})가 등록되었습니다!`,
+        text: `✅ ${currentRankNum}위에 '${matched.name}' 선수(배번 ${formatBibShortDisplay(matched.bibNumber)})가 등록되었습니다!`,
         isError: false,
       });
       setBibInput('');
@@ -1227,9 +1240,14 @@ export default function RefereeMobilePage({
       if (currentRankNum < participants.length) {
         setCurrentRankNum(prev => prev + 1);
       }
+    } else if (matchedList.length > 1) {
+      setInputFeedback({
+        text: `💡 동일 번호/이름 선수가 ${matchedList.length}명 검색되었습니다. 아래 목록에서 배정할 선수의 [${currentRankNum}위 배정] 버튼을 터치해주세요.`,
+        isError: false,
+      });
     } else {
       setInputFeedback({
-        text: `⚠️ '${cleanBib}'에 일치하는 선수가 없습니다. 등록된 배번인지 확인해주세요.`,
+        text: `⚠️ '${cleanBib}'에 일치하는 선수가 없습니다. 등록된 배번이나 이름을 확인해주세요.`,
         isError: true,
       });
     }
@@ -1535,11 +1553,11 @@ export default function RefereeMobilePage({
 
   // 선택된 라운드 기준 참가자 데이터 집계
   const currentRankPlayer = participants.find(p => p[selectedRound] === currentRankNum);
-  const matchedTypingPlayer = bibInput.trim()
-    ? participants.find(
+  const matchedTypingPlayers = bibInput.trim()
+    ? participants.filter(
         p => isSmartBibMatch(p.bibNumber, p.name, bibInput.trim())
       )
-    : null;
+    : [];
 
   const unassignedPlayers = participants.filter(
     p => p[selectedRound] === null || p[selectedRound] === undefined || p[selectedRound] === ''
@@ -2465,36 +2483,124 @@ export default function RefereeMobilePage({
                       </button>
                     </div>
 
-                    {/* 실시간 매칭 프리뷰 */}
-                    {matchedTypingPlayer && (
+                    {/* 실시간 매칭 프리뷰 (색상이 달라도 같은 번호인 선수 모두 표시) */}
+                    {matchedTypingPlayers.length > 0 && (
                       <div style={{
                         background: '#eff6ff',
                         border: '1px solid #bfdbfe',
-                        padding: '8px 12px',
-                        borderRadius: '8px',
-                        fontSize: '0.85rem',
-                        color: '#1e40af',
-                        fontWeight: '700',
+                        padding: '10px 12px',
+                        borderRadius: '10px',
                         display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between'
+                        flexDirection: 'column',
+                        gap: '8px'
                       }}>
-                        <span>🏃 매칭: <strong>{matchedTypingPlayer.name}</strong> (배번: #{matchedTypingPlayer.bibNumber || '-'})</span>
-                        <div style={{ display: 'flex', gap: '4px' }}>
-                          <button
-                            type="button"
-                            onClick={() => handleSetPlayerSpecialScore(matchedTypingPlayer.id, 'DNS')}
-                            style={{ padding: '3px 6px', background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer' }}
-                          >
-                            DNS 처리
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleSetPlayerSpecialScore(matchedTypingPlayer.id, 'DNF')}
-                            style={{ padding: '3px 6px', background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer' }}
-                          >
-                            DNF 처리
-                          </button>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.82rem', color: '#1e40af', fontWeight: '800' }}>
+                            🔎 검색된 선수: <strong>{matchedTypingPlayers.length}명</strong>
+                            {matchedTypingPlayers.length > 1 && ' (원하는 선수를 터치하세요)'}
+                          </span>
+                          <span style={{ fontSize: '0.74rem', color: '#3b82f6' }}>
+                            입력: &apos;{bibInput.trim()}&apos;
+                          </span>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          {matchedTypingPlayers.map((p) => {
+                            const curScore = p[selectedRound];
+                            const isAssigned = curScore !== null && curScore !== undefined && curScore !== '';
+                            const isAssignedCurrentRank = curScore === currentRankNum;
+
+                            return (
+                              <div
+                                key={p.id}
+                                style={{
+                                  background: isAssignedCurrentRank ? '#dbeafe' : '#ffffff',
+                                  border: `1px solid ${isAssignedCurrentRank ? '#3b82f6' : '#cbd5e1'}`,
+                                  borderRadius: '8px',
+                                  padding: '8px 10px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  gap: '8px',
+                                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0, flexWrap: 'wrap' }}>
+                                  <span style={{
+                                    fontSize: '0.84rem',
+                                    fontWeight: '900',
+                                    color: '#0f172a',
+                                    background: '#f1f5f9',
+                                    padding: '2px 7px',
+                                    borderRadius: '6px',
+                                    border: '1px solid #cbd5e1',
+                                    whiteSpace: 'nowrap'
+                                  }}>
+                                    #{formatBibShortDisplay(p.bibNumber)}
+                                  </span>
+                                  <strong style={{ fontSize: '0.92rem', color: '#1e293b', whiteSpace: 'nowrap' }}>
+                                    {p.name}
+                                  </strong>
+                                  {p.subclass && (
+                                    <span style={{
+                                      fontSize: '0.7rem',
+                                      fontWeight: '700',
+                                      padding: '1px 5px',
+                                      borderRadius: '4px',
+                                      background: p.subclass === '청년부' ? '#eff6ff' : p.subclass === '중년부' ? '#ecfdf5' : '#fffbeb',
+                                      color: p.subclass === '청년부' ? '#1d4ed8' : p.subclass === '중년부' ? '#047857' : '#b45309'
+                                    }}>
+                                      {p.subclass}
+                                    </span>
+                                  )}
+                                  {p.club && (
+                                    <span style={{ fontSize: '0.75rem', color: '#64748b', whiteSpace: 'nowrap' }}>
+                                      {p.club}
+                                    </span>
+                                  )}
+                                  {isAssigned && (
+                                    <span style={{ fontSize: '0.72rem', color: '#4f46e5', fontWeight: '800' }}>
+                                      ({curScore === 'DNS' || curScore === 'DNF' ? curScore : `${curScore}위`})
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flexShrink: 0 }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleQuickAssignPlayer(p)}
+                                    style={{
+                                      padding: '6px 10px',
+                                      background: 'var(--theme-primary)',
+                                      color: 'white',
+                                      border: 'none',
+                                      borderRadius: '6px',
+                                      fontSize: '0.78rem',
+                                      fontWeight: '800',
+                                      cursor: 'pointer',
+                                      whiteSpace: 'nowrap'
+                                    }}
+                                  >
+                                    {currentRankNum}위 배정
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSetPlayerSpecialScore(p.id, 'DNS')}
+                                    style={{ padding: '5px 7px', background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '4px', fontSize: '0.72rem', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                                  >
+                                    DNS
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSetPlayerSpecialScore(p.id, 'DNF')}
+                                    style={{ padding: '5px 7px', background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', borderRadius: '4px', fontSize: '0.72rem', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                                  >
+                                    DNF
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
