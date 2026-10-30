@@ -3,6 +3,7 @@
 import React, { useState, useEffect, use, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Award, Calendar, Layers, FileText, CheckCircle2, User, UserPlus, RefreshCw, Archive, Search, Compass, MapPin, Phone, Sparkles, Trophy, Smartphone, ShieldCheck, X, AlertTriangle, Menu, Copy, Check, ExternalLink, Bell, MessageSquare, Megaphone, Lock, Unlock, HelpCircle, Edit3, Trash2, Plus, Clock } from 'lucide-react';
+import { logAnalyticsEvent } from '@/src/lib/analytics';
 
 interface TenantData {
   id: string;
@@ -680,6 +681,11 @@ export default function TenantPortalPage({
     };
   }, [subdomain, activeTab, activeTournamentId]);
 
+  // 주요 탭 전환 이벤트 애널리틱스 트래킹
+  useEffect(() => {
+    logAnalyticsEvent('tab_view', { tab_id: activeTab, subdomain });
+  }, [activeTab, subdomain]);
+
   // 탭 및 대회 ID 변경시 로드 (15초 내 탭 재진입 시 중복 호출 방지하여 Firestore Read 절감)
   const lastLiveFetchRef = React.useRef<number>(0);
   useEffect(() => {
@@ -1055,6 +1061,15 @@ export default function TenantPortalPage({
       setSubmittedApplicantName(name);
       setShowSuccessModal(true);
       setRegSuccess('참가 신청서가 성공적으로 접수되었습니다. 입금 안내창을 확인해 주세요.');
+
+      // Firebase Analytics 참가 신청 성공 이벤트 로깅
+      logAnalyticsEvent('registration_submitted', {
+        tournament_id: activeTournamentId,
+        applicant_name: name,
+        division: formResponses.division || '',
+        club: formResponses.club || '',
+        subdomain
+      });
 
       if (formResponses.club) {
         const submittedClub = String(formResponses.club).trim();
@@ -3519,6 +3534,13 @@ export default function TenantPortalPage({
                     download={overview.noticeHwpName || `${overview.title || '대회개최공시서'}.hwp`}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={() => {
+                      logAnalyticsEvent('file_download', {
+                        file_name: overview.noticeHwpName || '개최공시서.hwp',
+                        file_type: 'hwp',
+                        subdomain
+                      });
+                    }}
                     style={{
                       background: 'white',
                       border: '1px solid var(--border-color)',
@@ -3606,6 +3628,13 @@ export default function TenantPortalPage({
                     download={overview.noticePdfName || `${overview.title || '대회개최공시서'}.pdf`}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={() => {
+                      logAnalyticsEvent('file_download', {
+                        file_name: overview.noticePdfName || '개최공시서.pdf',
+                        file_type: 'pdf',
+                        subdomain
+                      });
+                    }}
                     style={{
                       background: 'white',
                       border: '1px solid var(--border-color)',

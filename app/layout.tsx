@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import AnalyticsTracker from '@/components/AnalyticsTracker';
 
 export const metadata: Metadata = {
   title: '제20회 이순신장군배 전국윈드서핑대회',
@@ -25,6 +26,7 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body>
+        <AnalyticsTracker />
         {children}
       </body>
     </html>
