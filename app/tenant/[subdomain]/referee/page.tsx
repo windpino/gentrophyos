@@ -50,11 +50,10 @@ const DEFAULT_ROUNDS: RoundItem[] = [
   { key: 'r3', label: '3라운드 (3R)', short: '3R' },
   { key: 'r4', label: '4라운드 (4R)', short: '4R' },
   { key: 'r5', label: '5라운드 (5R)', short: '5R' },
-  { key: 'r6', label: '6라운드 (6R)', short: '6R' },
 ];
 
 const DEFAULT_TEAM_ROUNDS: RoundItem[] = [
-  { key: 'r1', label: '1회 (결승)', short: '1회' },
+  { key: 'r1', label: '1라운드 (1R)', short: '1R' },
 ];
 
 export function formatBibShortDisplay(bibNumber?: string): string {
@@ -535,9 +534,16 @@ export default function RefereeMobilePage({
           try {
             const parsed = JSON.parse(localRoundsStr);
             if (Array.isArray(parsed) && parsed.length > 0) {
-              if (divisionName === '단체전' && parsed.length === 6 && parsed[0]?.key === 'r1' && parsed[5]?.key === 'r6') {
-                // 기존 6라운드 캐시가 남아있는 경우 단체전 단일 1회로 초기화
-                activeRounds = [...DEFAULT_TEAM_ROUNDS];
+              if (divisionName === '단체전') {
+                if ((parsed.length === 6 && parsed[5]?.key === 'r6') || parsed.some((r: any) => r.short === '1회')) {
+                  activeRounds = [...DEFAULT_TEAM_ROUNDS];
+                  localStorage.setItem(getRoundsStorageKey(tId, divisionName), JSON.stringify(activeRounds));
+                } else {
+                  activeRounds = parsed;
+                }
+              } else if (parsed.length === 6 && parsed[0]?.key === 'r1' && parsed[5]?.key === 'r6') {
+                // 이전 기본값 6개 라운드가 남아있는 경우 기본 1~5개 라운드로 자동 마이그레이션
+                activeRounds = [...DEFAULT_ROUNDS];
                 localStorage.setItem(getRoundsStorageKey(tId, divisionName), JSON.stringify(activeRounds));
               } else {
                 activeRounds = parsed;
@@ -564,12 +570,19 @@ export default function RefereeMobilePage({
               const num = parseInt(k.replace('r', ''), 10);
               return {
                 key: k,
-                label: divisionName === '단체전' && num === 1 ? '1회 (결승)' : `${num}라운드 (${num}R)`,
-                short: divisionName === '단체전' && num === 1 ? '1회' : `${num}R`
+                label: `${num}라운드 (${num}R)`,
+                short: `${num}R`
               };
             });
           }
         }
+      }
+
+      if (!activeRounds || activeRounds.length === 0) {
+        activeRounds = divisionName === '단체전' ? [...DEFAULT_TEAM_ROUNDS] : [...DEFAULT_ROUNDS];
+      }
+      if (divisionName === '단체전' && !activeRounds.some(r => r.key === 'r1')) {
+        activeRounds.unshift({ key: 'r1', label: '1라운드 (1R)', short: '1R' });
       }
 
       setRounds(activeRounds);
@@ -785,26 +798,40 @@ export default function RefereeMobilePage({
     });
   };
 
-  // 시뮬레이션 데이터 전체 초기화 (해당 종목)
+  // 시뮬레이션 데이터 및 라운드 추가/삭제 전체 초기화 (해당 종목 기본 1~5라운드로 초기화)
   const handleResetSimulationData = () => {
     if (!activeTournament) return;
-    if (!window.confirm(`[${activeDivisionTab}] 종목의 시뮬레이션(가상 시연) 입력 기록을 모두 초기화하시겠습니까?\n(참가자 신청서 원본 데이터에는 전혀 영향을 주지 않습니다.)`)) {
+    if (!window.confirm(`[${activeDivisionTab}] 종목의 시뮬레이션 점수 및 라운드 추가/삭제를 모두 초기화하시겠습니까?\n기본 ${activeDivisionTab === '단체전' ? '1라운드' : '1~5라운드'} 설정으로 재설정됩니다.`)) {
       return;
     }
+
+    const defaultRounds = activeDivisionTab === '단체전' ? [...DEFAULT_TEAM_ROUNDS] : [...DEFAULT_ROUNDS];
+
     if (typeof window !== 'undefined') {
       localStorage.removeItem(getSimStorageKey(activeTournament.id, activeDivisionTab));
+      localStorage.removeItem(getRoundsStorageKey(activeTournament.id, activeDivisionTab));
     }
+
+    setRounds(defaultRounds);
+    setSelectedRound('r1');
+
     setParticipants(prev =>
       prev.map(p => {
         const next: any = { ...p, total: 0, rank: '-' };
-        rounds.forEach(r => { next[r.key] = null; });
+        Object.keys(next).forEach(k => {
+          if (/^r\d+$/.test(k)) delete next[k];
+        });
+        defaultRounds.forEach(r => { next[r.key] = null; });
         return next;
       })
     );
     setCurrentRankNum(1);
     setBibInput('');
     setIsRankConfirmed(false);
-    setInputFeedback({ text: '🧹 시뮬레이션 점수가 초기화되었습니다. 1위부터 다시 시연해 보세요!', isError: false });
+    setInputFeedback({
+      text: `🧹 [${activeDivisionTab}] 시연 점수와 라운드가 기본(${activeDivisionTab === '단체전' ? '1R' : '1~5R'})으로 초기화되었습니다!`,
+      isError: false
+    });
   };
 
   // ── [동적 라운드 추가 / 삭제 핸들러] ──

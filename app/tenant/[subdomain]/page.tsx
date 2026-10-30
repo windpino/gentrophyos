@@ -2707,7 +2707,7 @@ export default function TenantPortalPage({
                             return parseInt(a.replace('r', ''), 10) - parseInt(b.replace('r', ''), 10);
                           });
                         } else {
-                          activeRoundKeys = ['r1', 'r2', 'r3', 'r4', 'r5', 'r6'];
+                          activeRoundKeys = divKey === '단체전' ? ['r1'] : ['r1', 'r2', 'r3', 'r4', 'r5'];
                         }
                       }
 
