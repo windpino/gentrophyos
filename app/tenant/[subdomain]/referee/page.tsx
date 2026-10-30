@@ -53,6 +53,25 @@ const DEFAULT_ROUNDS: RoundItem[] = [
   { key: 'r6', label: '6라운드 (6R)', short: '6R' },
 ];
 
+const DEFAULT_TEAM_ROUNDS: RoundItem[] = [
+  { key: 'r1', label: '1회 (결승)', short: '1회' },
+];
+
+export function formatBibShortDisplay(bibNumber?: string): string {
+  if (!bibNumber) return '-';
+  const trimmed = bibNumber.trim();
+  return trimmed.replace(/(\d+)\s*번$/, '$1');
+}
+
+export function formatRankDisplay(rank: any): string {
+  if (rank === null || rank === undefined || rank === '' || rank === '-') return '-';
+  const num = Number(rank);
+  if (!isNaN(num) && num > 0) {
+    return `${num}등`;
+  }
+  return String(rank).endsWith('등') ? String(rank) : `${rank}등`;
+}
+
 export default function RefereeMobilePage({
   params,
 }: {
@@ -503,8 +522,10 @@ export default function RefereeMobilePage({
       // (1) 서버에 명시적으로 저장된 data.rounds
       // (2) 로컬 스토리지에 캐시된 라운드 목록
       // (3) 저장된 리더보드 데이터에서 발견된 라운드 키들
-      // (4) 기본 6개 라운드 (DEFAULT_ROUNDS)
-      let activeRounds: RoundItem[] = [...DEFAULT_ROUNDS];
+      // (4) 단체전은 1회(DEFAULT_TEAM_ROUNDS), 개인전은 기본 6개 라운드 (DEFAULT_ROUNDS)
+      let activeRounds: RoundItem[] = divisionName === '단체전'
+        ? [...DEFAULT_TEAM_ROUNDS]
+        : [...DEFAULT_ROUNDS];
 
       if (data.rounds && Array.isArray(data.rounds) && data.rounds.length > 0) {
         activeRounds = data.rounds;
@@ -514,7 +535,13 @@ export default function RefereeMobilePage({
           try {
             const parsed = JSON.parse(localRoundsStr);
             if (Array.isArray(parsed) && parsed.length > 0) {
-              activeRounds = parsed;
+              if (divisionName === '단체전' && parsed.length === 6 && parsed[0]?.key === 'r1' && parsed[5]?.key === 'r6') {
+                // 기존 6라운드 캐시가 남아있는 경우 단체전 단일 1회로 초기화
+                activeRounds = [...DEFAULT_TEAM_ROUNDS];
+                localStorage.setItem(getRoundsStorageKey(tId, divisionName), JSON.stringify(activeRounds));
+              } else {
+                activeRounds = parsed;
+              }
             }
           } catch (e) {}
         } else if (data.leaderboard && data.leaderboard.length > 0) {
@@ -537,8 +564,8 @@ export default function RefereeMobilePage({
               const num = parseInt(k.replace('r', ''), 10);
               return {
                 key: k,
-                label: `${num}라운드 (${num}R)`,
-                short: `${num}R`
+                label: divisionName === '단체전' && num === 1 ? '1회 (결승)' : `${num}라운드 (${num}R)`,
+                short: divisionName === '단체전' && num === 1 ? '1회' : `${num}R`
               };
             });
           }
@@ -641,14 +668,6 @@ export default function RefereeMobilePage({
     }
 
     if (activeDivisionTab === '단체전') {
-      const clubNames = Array.from(
-        new Set(
-          rawRegistrations
-            .map((r: any) => r.club?.trim())
-            .filter(Boolean)
-        )
-      ) as string[];
-
       const teamStorageKey = `gentrophy_${activeTournament.id}_teams_단체전`;
       let defaultTeams: any[] = [];
       if (typeof window !== 'undefined') {
@@ -657,34 +676,21 @@ export default function RefereeMobilePage({
           try {
             const parsed = JSON.parse(savedTeamsStr);
             if (Array.isArray(parsed) && parsed.length > 0) {
-              defaultTeams = parsed;
+              const isOldDummyTeams = parsed.length === 4 && parsed.every((t: any, idx: number) =>
+                t.id === `team_${idx + 1}` && ['통영윈드서핑클럽', '거제요트클럽', '부산세일링클럽', '창원윈드클럽'].includes(t.name)
+              );
+              if (!isOldDummyTeams) {
+                defaultTeams = parsed;
+              } else {
+                localStorage.removeItem(teamStorageKey);
+                localStorage.removeItem(getSimStorageKey(activeTournament.id, '단체전'));
+              }
             }
           } catch (e) {}
         }
       }
 
-      if (defaultTeams.length === 0) {
-        if (clubNames.length > 0) {
-          defaultTeams = clubNames.map((club, idx) => ({
-            id: `team_${idx + 1}`,
-            name: club,
-            club: club,
-            bibNumber: `T${idx + 1}`,
-            birth: '단체팀',
-            division: '단체전',
-            total: 0,
-            rank: '-'
-          }));
-        } else {
-          defaultTeams = [
-            { id: 'team_1', name: '통영윈드서핑클럽', club: '통영윈드서핑클럽', bibNumber: 'T1', birth: '단체팀', division: '단체전', total: 0, rank: '-' },
-            { id: 'team_2', name: '거제요트클럽', club: '거제요트클럽', bibNumber: 'T2', birth: '단체팀', division: '단체전', total: 0, rank: '-' },
-            { id: 'team_3', name: '부산세일링클럽', club: '부산세일링클럽', bibNumber: 'T3', birth: '단체팀', division: '단체전', total: 0, rank: '-' },
-            { id: 'team_4', name: '창원윈드클럽', club: '창원윈드클럽', bibNumber: 'T4', birth: '단체팀', division: '단체전', total: 0, rank: '-' }
-          ];
-        }
-      }
-
+      // 단체전 예시 더미 팀 완전 제거: 운영진이 직접 추가한 팀들만 나열
       loadLeaderboardForDivision(activeTournament.id, '단체전', defaultTeams);
       setCurrentRankNum(1);
       setBibInput('');
@@ -756,10 +762,6 @@ export default function RefereeMobilePage({
   };
 
   const handleDeleteTeam = (teamId: string, teamName: string) => {
-    if (participants.length <= 1) {
-      alert('최소 1개 이상의 출전 팀이 유지되어야 합니다.');
-      return;
-    }
     if (!window.confirm(`정말 [${teamName}] 팀을 출전 목록에서 제외하시겠습니까?`)) {
       return;
     }
@@ -806,7 +808,7 @@ export default function RefereeMobilePage({
   };
 
   // ── [동적 라운드 추가 / 삭제 핸들러] ──
-  // 라운드 추가 (+1R)
+  // 라운드 추가 (+1R) - 선택된 종목에만 적용 및 기억
   const handleAddRound = () => {
     const nextNum = rounds.length + 1;
     const newKey = `r${nextNum}`;
@@ -829,30 +831,30 @@ export default function RefereeMobilePage({
     setParticipants(updatedParticipants);
     setSelectedRound(newKey);
     setCurrentRankNum(1);
-    setInputFeedback({ text: `✨ [${nextNum}R] 라운드가 추가되었습니다!`, isError: false });
+    setInputFeedback({ text: `✨ [${activeDivisionTab}] 종목에 [${newRound.short}] 라운드가 추가되었습니다!`, isError: false });
 
     if (activeTournament) {
       persistRounds(activeTournament.id, activeDivisionTab, updatedRounds, updatedParticipants);
     }
   };
 
-  // 특정 라운드 삭제
-  const handleDeleteRound = (roundKeyToDelete?: string) => {
+  // 항상 마지막 라운드만 삭제 가능하도록 설정 (선택된 종목에만 적용 및 기억)
+  const handleDeleteRound = () => {
     if (rounds.length <= 1) {
       alert('최소 1개 이상의 라운드가 유지되어야 합니다.');
       return;
     }
 
-    const targetKey = roundKeyToDelete || selectedRound;
-    const targetRound = rounds.find(r => r.key === targetKey);
-    const targetName = targetRound ? targetRound.short : targetKey;
+    const lastRound = rounds[rounds.length - 1];
+    const targetKey = lastRound.key;
+    const targetName = lastRound.short;
 
     const confirmed = window.confirm(
-      `정말 [${targetName}] 라운드를 삭제하시겠습니까?\n해당 라운드에 입력된 모든 선수의 순위 및 점수가 영구 삭제됩니다.`
+      `정말 [${activeDivisionTab}] 종목의 마지막 라운드 [${targetName}]를 삭제하시겠습니까?\n해당 라운드에 입력된 모든 선수의 순위 및 점수가 영구 삭제됩니다.`
     );
     if (!confirmed) return;
 
-    const updatedRounds = rounds.filter(r => r.key !== targetKey);
+    const updatedRounds = rounds.slice(0, -1);
     setRounds(updatedRounds);
 
     const strippedList = participants.map(p => {
@@ -867,7 +869,7 @@ export default function RefereeMobilePage({
       setSelectedRound(updatedRounds[updatedRounds.length - 1].key);
       setCurrentRankNum(1);
     }
-    setInputFeedback({ text: `🗑️ [${targetName}] 라운드가 삭제되었습니다.`, isError: false });
+    setInputFeedback({ text: `🗑️ [${activeDivisionTab}] 종목의 마지막 라운드 [${targetName}]가 삭제되었습니다.`, isError: false });
 
     if (activeTournament) {
       persistRounds(activeTournament.id, activeDivisionTab, updatedRounds, updatedParticipants);
@@ -1681,7 +1683,67 @@ export default function RefereeMobilePage({
 
             {/* 클럽 선택 및 팀 추가 컨트롤 */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '10px', marginBottom: '14px' }}>
-              {/* (1) 등록된 소속클럽에서 선택 추가 */}
+              {/* (1) 직접 팀명 입력 추가 (권장) */}
+              <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1.5px solid #3b82f6' }}>
+                <label style={{ fontSize: '0.82rem', fontWeight: '800', color: '#1e3a8a', display: 'block', marginBottom: '6px' }}>
+                  ✏️ 직접 출전 팀명 입력하여 추가:
+                </label>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <input
+                    type="text"
+                    value={customTeamNameToAdd}
+                    onChange={(e) => setCustomTeamNameToAdd(e.target.value)}
+                    placeholder="팀명 입력 (예: 거제요트클럽, 창원윈드클럽)"
+                    style={{
+                      flex: 1,
+                      padding: '8px 10px',
+                      borderRadius: '8px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '0.85rem',
+                      fontWeight: '700',
+                      background: 'white'
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (customTeamNameToAdd.trim()) {
+                          handleAddTeamFromClub(customTeamNameToAdd.trim());
+                          setCustomTeamNameToAdd('');
+                        }
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!customTeamNameToAdd.trim()) {
+                        alert('팀명을 입력해 주세요.');
+                        return;
+                      }
+                      handleAddTeamFromClub(customTeamNameToAdd.trim());
+                      setCustomTeamNameToAdd('');
+                    }}
+                    style={{
+                      background: '#059669',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '8px 14px',
+                      fontSize: '0.82rem',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    <Plus size={14} /> 직접 추가
+                  </button>
+                </div>
+              </div>
+
+              {/* (2) 등록된 소속클럽에서 선택 추가 */}
               <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                 <label style={{ fontSize: '0.78rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '6px' }}>
                   🏢 등록된 소속협회/클럽에서 팀 추가:
@@ -1736,66 +1798,6 @@ export default function RefereeMobilePage({
                   </button>
                 </div>
               </div>
-
-              {/* (2) 직접 팀명 입력 추가 */}
-              <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                <label style={{ fontSize: '0.78rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '6px' }}>
-                  ✏️ 직접 팀명(클럽명) 입력하여 추가:
-                </label>
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  <input
-                    type="text"
-                    value={customTeamNameToAdd}
-                    onChange={(e) => setCustomTeamNameToAdd(e.target.value)}
-                    placeholder="예: 거제요트클럽 B팀"
-                    style={{
-                      flex: 1,
-                      padding: '8px 10px',
-                      borderRadius: '8px',
-                      border: '1px solid #cbd5e1',
-                      fontSize: '0.85rem',
-                      fontWeight: '700',
-                      background: 'white'
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        if (customTeamNameToAdd.trim()) {
-                          handleAddTeamFromClub(customTeamNameToAdd.trim());
-                          setCustomTeamNameToAdd('');
-                        }
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!customTeamNameToAdd.trim()) {
-                        alert('팀명을 입력해 주세요.');
-                        return;
-                      }
-                      handleAddTeamFromClub(customTeamNameToAdd.trim());
-                      setCustomTeamNameToAdd('');
-                    }}
-                    style={{
-                      background: '#059669',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      padding: '8px 12px',
-                      fontSize: '0.82rem',
-                      fontWeight: '800',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    <Plus size={14} /> 직접 추가
-                  </button>
-                </div>
-              </div>
             </div>
 
             {/* 현재 출전 팀 목록 칩 */}
@@ -1803,44 +1805,50 @@ export default function RefereeMobilePage({
               <div style={{ fontSize: '0.78rem', fontWeight: '800', color: '#475569', marginBottom: '6px' }}>
                 📋 현재 편성된 단체전 출전 팀 목록 (총 {participants.length}팀):
               </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                {participants.map((team, idx) => (
-                  <div
-                    key={team.id}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      background: '#f1f5f9',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '8px',
-                      padding: '6px 10px',
-                      fontSize: '0.82rem',
-                      fontWeight: '800',
-                      color: '#0f172a'
-                    }}
-                  >
-                    <span style={{ color: '#2563eb' }}>#{team.bibNumber || `T${idx + 1}`}</span>
-                    <span>{team.name}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteTeam(team.id, team.name)}
-                      title="출전 명단에서 제외"
+              {participants.length === 0 ? (
+                <div style={{ padding: '14px', background: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: '10px', textAlign: 'center', color: '#64748b', fontSize: '0.82rem' }}>
+                  💡 출전 등록된 단체전 팀이 없습니다. 위 직접 추가란에 팀명을 입력하여 출전 팀을 추가해 주세요.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {participants.map((team, idx) => (
+                    <div
+                      key={team.id}
                       style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#ef4444',
-                        cursor: 'pointer',
-                        padding: '0 2px',
-                        display: 'flex',
-                        alignItems: 'center'
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        background: '#f1f5f9',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '8px',
+                        padding: '6px 10px',
+                        fontSize: '0.82rem',
+                        fontWeight: '800',
+                        color: '#0f172a'
                       }}
                     >
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-                ))}
-              </div>
+                      <span style={{ color: '#2563eb' }}>#{team.bibNumber || `T${idx + 1}`}</span>
+                      <span>{team.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteTeam(team.id, team.name)}
+                        title="출전 명단에서 제외"
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#ef4444',
+                          cursor: 'pointer',
+                          padding: '0 2px',
+                          display: 'flex',
+                          alignItems: 'center'
+                        }}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1880,7 +1888,7 @@ export default function RefereeMobilePage({
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleDeleteRound(selectedRound)}
+                    onClick={() => handleDeleteRound()}
                     disabled={rounds.length <= 1}
                     style={{
                       display: 'flex',
@@ -1895,9 +1903,9 @@ export default function RefereeMobilePage({
                       fontWeight: '800',
                       cursor: rounds.length <= 1 ? 'not-allowed' : 'pointer',
                     }}
-                    title="선택된 현재 라운드를 삭제합니다"
+                    title="가장 마지막 라운드를 삭제합니다"
                   >
-                    <Trash2 size={13} /> 라운드 삭제
+                    <Trash2 size={13} /> - 마지막 라운드({rounds[rounds.length - 1]?.short}) 삭제
                   </button>
                 </div>
               </div>
@@ -2104,6 +2112,12 @@ export default function RefereeMobilePage({
 
 {activeDivisionTab === '단체전' ? (
                 /* ── 단체전: 출전한 팀에서 직접 순위 선택 ── */
+                participants.length === 0 ? (
+                  <div style={{ padding: '24px', background: '#f8fafc', border: '1.5px dashed #cbd5e1', borderRadius: '14px', textAlign: 'center', color: '#475569' }}>
+                    <p style={{ margin: '0 0 6px 0', fontWeight: '900', fontSize: '1rem', color: '#1e3a8a' }}>🚩 단체전 출전 팀을 먼저 추가해 주세요</p>
+                    <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>위 [단체전 출전 클럽(팀) 편성 설정]의 직접 추가란에서 출전 팀을 추가하면 순위를 결정할 수 있습니다.</p>
+                  </div>
+                ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                   <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '14px', border: '2px solid #3b82f6' }}>
                     <label style={{ fontSize: '0.95rem', fontWeight: '900', color: '#1e3a8a', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
@@ -2219,6 +2233,7 @@ export default function RefereeMobilePage({
                     </div>
                   )}
                 </div>
+                )
               ) : (
                 /* ── 개인전 배번 입력 및 빠른 칩 선택 폼 ── */
                 <>
@@ -2685,7 +2700,7 @@ export default function RefereeMobilePage({
                     cursor: rounds.length <= 1 ? 'not-allowed' : 'pointer'
                   }}
                 >
-                  <Trash2 size={14} /> 마지막 라운드 삭제
+                  <Trash2 size={14} /> 마지막 라운드({rounds[rounds.length - 1]?.short}) 삭제
                 </button>
               </div>
             </div>
@@ -2989,8 +3004,8 @@ export default function RefereeMobilePage({
                       return (
                         <tr key={p.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                           {/* 순위 */}
-                          <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: '900', color: p.rank === 1 ? '#d97706' : '#0f172a' }}>
-                            {p.rank}
+                          <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: '900', color: p.rank === 1 ? '#d97706' : '#0f172a', whiteSpace: 'nowrap' }}>
+                            {formatRankDisplay(p.rank)}
                           </td>
                           {/* 이름 */}
                           <td style={{ padding: '8px', fontWeight: '800' }}>
@@ -3247,31 +3262,41 @@ export default function RefereeMobilePage({
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9pt', textAlign: 'center', color: '#000' }}>
           <thead>
             <tr style={{ background: '#f1f5f9', borderTop: '2px solid #000', borderBottom: '2px solid #000' }}>
-              <th style={{ padding: '6px 4px', width: '42px', border: '1px solid #cbd5e1' }}>순위</th>
-              <th style={{ padding: '6px 4px', width: '50px', border: '1px solid #cbd5e1' }}>배번</th>
-              <th style={{ padding: '6px 8px', minWidth: '80px', border: '1px solid #cbd5e1' }}>{activeDivisionTab === '단체전' ? '팀명 (소속클럽)' : '선수명'}</th>
-              <th style={{ padding: '6px 6px', width: '85px', border: '1px solid #cbd5e1' }}>{activeDivisionTab === '단체전' ? '소속협회' : '생년월일'}</th>
-              <th style={{ padding: '6px 8px', minWidth: '95px', border: '1px solid #cbd5e1' }}>소속협회/클럽</th>
+              <th style={{ padding: '6px 2px', width: '48px', border: '1px solid #cbd5e1', whiteSpace: 'nowrap' }}>순위</th>
+              <th style={{ padding: '6px 2px', width: '78px', minWidth: '75px', border: '1px solid #cbd5e1', whiteSpace: 'nowrap' }}>배번</th>
+              <th style={{ padding: '6px 4px', width: '65px', minWidth: '60px', border: '1px solid #cbd5e1', whiteSpace: 'nowrap' }}>{activeDivisionTab === '단체전' ? '팀명 (소속클럽)' : '선수명'}</th>
+              <th style={{ padding: '6px 4px', width: '80px', border: '1px solid #cbd5e1', whiteSpace: 'nowrap' }}>{activeDivisionTab === '단체전' ? '소속협회' : '생년월일'}</th>
+              <th style={{ padding: '6px 6px', minWidth: '90px', border: '1px solid #cbd5e1' }}>소속협회/클럽</th>
               {rounds.map(r => (
-                <th key={r.key} style={{ padding: '6px 4px', width: '46px', border: '1px solid #cbd5e1' }}>
+                <th key={r.key} style={{ padding: '6px 2px', width: '44px', border: '1px solid #cbd5e1', whiteSpace: 'nowrap' }}>
                   {r.short}
                 </th>
               ))}
-              <th style={{ padding: '6px 4px', width: '50px', border: '1px solid #cbd5e1', fontWeight: '900' }}>총점</th>
+              <th style={{ padding: '6px 2px', width: '48px', border: '1px solid #cbd5e1', fontWeight: '900', whiteSpace: 'nowrap' }}>총점</th>
             </tr>
           </thead>
           <tbody>
             {participants.map((p, idx) => {
               const rankVal = p.rank || idx + 1;
+              const rankText = formatRankDisplay(rankVal);
+              const bibDisplay = formatBibShortDisplay(p.bibNumber);
               return (
                 <tr key={p.id} style={{ borderBottom: '1px solid #cbd5e1' }}>
-                  <td style={{ padding: '5px 4px', fontWeight: '900', fontSize: '10pt', border: '1px solid #cbd5e1' }}>
-                    {rankVal}
+                  <td style={{ padding: '5px 2px', fontWeight: '900', fontSize: '9.5pt', border: '1px solid #cbd5e1', whiteSpace: 'nowrap' }}>
+                    {rankText}
                   </td>
-                  <td style={{ padding: '5px 4px', border: '1px solid #cbd5e1' }}>{p.bibNumber || '-'}</td>
-                  <td style={{ padding: '5px 8px', fontWeight: '800', border: '1px solid #cbd5e1' }}>{p.name}</td>
-                  <td style={{ padding: '5px 4px', fontSize: '8.5pt', border: '1px solid #cbd5e1' }}>{p.birth || '-'}</td>
-                  <td style={{ padding: '5px 6px', fontSize: '8.5pt', border: '1px solid #cbd5e1' }}>{p.club || '-'}</td>
+                  <td style={{ padding: '5px 2px', border: '1px solid #cbd5e1', whiteSpace: 'nowrap', fontWeight: '700' }}>
+                    {bibDisplay}
+                  </td>
+                  <td style={{ padding: '5px 4px', fontWeight: '800', border: '1px solid #cbd5e1', whiteSpace: 'nowrap' }}>
+                    {p.name}
+                  </td>
+                  <td style={{ padding: '5px 4px', fontSize: '8.5pt', border: '1px solid #cbd5e1', whiteSpace: 'nowrap' }}>
+                    {p.birth || '-'}
+                  </td>
+                  <td style={{ padding: '5px 6px', fontSize: '8.5pt', border: '1px solid #cbd5e1' }}>
+                    {p.club || '-'}
+                  </td>
                   {rounds.map(r => {
                     const conducted = isRoundConducted(r.key, participants);
                     const rawVal = p[r.key];
@@ -3280,12 +3305,12 @@ export default function RefereeMobilePage({
                         ? (conducted ? 'DNS' : '-')
                         : rawVal;
                     return (
-                      <td key={r.key} style={{ padding: '5px 4px', border: '1px solid #cbd5e1' }}>
+                      <td key={r.key} style={{ padding: '5px 2px', border: '1px solid #cbd5e1', whiteSpace: 'nowrap' }}>
                         {effective}
                       </td>
                     );
                   })}
-                  <td style={{ padding: '5px 4px', fontWeight: '900', border: '1px solid #cbd5e1' }}>
+                  <td style={{ padding: '5px 2px', fontWeight: '900', border: '1px solid #cbd5e1', whiteSpace: 'nowrap' }}>
                     {p.total ?? 0}
                   </td>
                 </tr>

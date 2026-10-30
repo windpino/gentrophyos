@@ -2814,21 +2814,25 @@ export default function TenantPortalPage({
                               {processedRows.map((row: any, rIdx: number) => {
                                 const rankDisplay = anyRoundConducted ? rIdx + 1 : (row.rank && row.rank !== '-' ? row.rank : '-');
                                 const isTop3 = typeof rankDisplay === 'number' && rankDisplay <= 3;
+                                const rankText = typeof rankDisplay === 'number' || (typeof rankDisplay === 'string' && rankDisplay !== '-' && !isNaN(Number(rankDisplay)))
+                                  ? `${rankDisplay}등`
+                                  : rankDisplay;
 
                                 return (
                                   <tr key={rIdx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                    <td style={{ textAlign: 'center', fontWeight: '800', padding: '8px 4px' }}>
+                                    <td style={{ textAlign: 'center', fontWeight: '800', padding: '8px 2px', whiteSpace: 'nowrap' }}>
                                       <span style={{
                                         display: 'inline-block',
-                                        width: '24px',
-                                        height: '24px',
-                                        lineHeight: '24px',
-                                        borderRadius: '50%',
+                                        minWidth: '28px',
+                                        padding: '2px 4px',
+                                        borderRadius: '8px',
                                         background: rankDisplay === 1 ? 'var(--theme-gold)' : rankDisplay === 2 ? '#cbd5e1' : rankDisplay === 3 ? '#b45309' : '#f1f5f9',
                                         color: isTop3 ? 'white' : 'var(--text-main)',
-                                        fontSize: '0.78rem'
+                                        fontSize: '0.74rem',
+                                        fontWeight: '800',
+                                        whiteSpace: 'nowrap'
                                       }}>
-                                        {rankDisplay}
+                                        {rankText}
                                       </span>
                                     </td>
                                     <td style={{ fontWeight: '800', padding: '8px 6px', textAlign: 'left', whiteSpace: 'nowrap' }}>
