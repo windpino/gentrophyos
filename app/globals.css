@@ -950,6 +950,11 @@ button, input, select, textarea {
     page-break-inside: avoid !important;
   }
 
+  .print-page-break {
+    page-break-before: always !important;
+    break-before: page !important;
+  }
+
   @page {
     size: A4 portrait;
     margin: 10mm 12mm;
