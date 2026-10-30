@@ -78,6 +78,8 @@ export async function GET(
           leaderboard: memDiv.list || [],
           rounds: memDiv.rounds || null,
           dnsDnfRule: memDiv.dnsDnfRule || null,
+          updatedAt: memDiv.updatedAt || null,
+          isConfirmed: memDiv.isConfirmed !== false,
           isCustom: true
         }, {
           headers: { 'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=29' }
@@ -93,6 +95,8 @@ export async function GET(
           leaderboard: divData.list || [],
           rounds: divData.rounds || null,
           dnsDnfRule: divData.dnsDnfRule || null,
+          updatedAt: divData.updatedAt || null,
+          isConfirmed: divData.isConfirmed !== false,
           isCustom: true
         }, {
           headers: { 'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=29' }
@@ -110,6 +114,8 @@ export async function GET(
           leaderboard: savedData.list || [],
           rounds: savedData.rounds || null,
           dnsDnfRule: savedData.dnsDnfRule || null,
+          updatedAt: savedData.updatedAt || null,
+          isConfirmed: savedData.isConfirmed !== false,
           isCustom: true
         }, {
           headers: { 'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=29' }
@@ -282,7 +288,7 @@ export async function POST(
   try {
     const { subdomain } = await params;
     const body = await req.json();
-    const { tournamentId, division, list, rounds, dnsDnfRule } = body;
+    const { tournamentId, division, list, rounds, dnsDnfRule, isReset } = body;
 
     if (!tournamentId || !division) {
       return NextResponse.json({ error: '대회 ID와 종목은 필수입니다.' }, { status: 400 });
@@ -297,7 +303,8 @@ export async function POST(
     const updatePayload: any = {
       ...existingData,
       division,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      isConfirmed: isReset ? false : true
     };
     if (list !== undefined) {
       updatePayload.list = list;

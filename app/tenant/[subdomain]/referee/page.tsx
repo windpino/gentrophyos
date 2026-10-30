@@ -719,6 +719,15 @@ export default function RefereeMobilePage({
         let mapped = preliminary;
         if (hasScores) {
           mapped = sortAndRankParticipants(preliminary, activeRounds, activeRule, false);
+          if (data.isConfirmed !== false || isSimulationMode) {
+            setIsRankConfirmed(true);
+            if (data.updatedAt) {
+              setConfirmedTime(new Date(data.updatedAt).toLocaleString('ko-KR'));
+            }
+          } else {
+            setIsRankConfirmed(false);
+            setConfirmedTime(null);
+          }
         } else {
           mapped = recalculateAllParticipants(preliminary, activeRounds, activeRule);
           mapped.sort((a, b) => {
@@ -727,6 +736,8 @@ export default function RefereeMobilePage({
             if (a.rank === '-' && b.rank === '-') return 0;
             return Number(a.rank) - Number(b.rank);
           });
+          setIsRankConfirmed(false);
+          setConfirmedTime(null);
         }
         setParticipants(mapped);
       } else {
@@ -869,38 +880,85 @@ export default function RefereeMobilePage({
     });
   };
 
-  // 시뮬레이션 데이터 및 라운드 추가/삭제 전체 초기화 (해당 종목 기본 1~5라운드로 초기화)
-  const handleResetSimulationData = () => {
+  // ── [순위 및 점수 전체 초기화 핸들러 (확정 공개 이후에도 언제든 초기화 가능)] ──
+  const handleResetRankings = async () => {
     if (!activeTournament) return;
-    if (!window.confirm(`[${activeDivisionTab}] 종목의 시뮬레이션 점수 및 라운드 추가/삭제를 모두 초기화하시겠습니까?\n기본 ${activeDivisionTab === '단체전' ? '1라운드' : '1~5라운드'} 설정으로 재설정됩니다.`)) {
+
+    const isConfirmedNotice = isRankConfirmed
+      ? `\n\n⚠️ 주의: 현재 [${activeDivisionTab}] 종목은 공식 확정 및 공개된 상태입니다.\n초기화 시 홈페이지 실시간 리더보드의 순위 데이터도 함께 초기화(미입력 상태)로 변경됩니다.`
+      : '';
+
+    const confirmMsg =
+      `[${activeDivisionTab}] 종목의 모든 입력된 순위와 점수를 초기화하시겠습니까?` +
+      isConfirmedNotice +
+      `\n\n• 팀/선수 목록은 그대로 유지되며, 라운드 점수와 순위만 1위부터 다시 입력할 수 있도록 초기화됩니다.` +
+      `\n• 계속 진행하시려면 [확인]을 눌러주세요.`;
+
+    if (!window.confirm(confirmMsg)) {
       return;
     }
 
     const defaultRounds = activeDivisionTab === '단체전' ? [...DEFAULT_TEAM_ROUNDS] : [...DEFAULT_ROUNDS];
 
+    // 1. 로컬스토리지 캐시 초기화
     if (typeof window !== 'undefined') {
       localStorage.removeItem(getSimStorageKey(activeTournament.id, activeDivisionTab));
       localStorage.removeItem(getRoundsStorageKey(activeTournament.id, activeDivisionTab));
     }
 
+    // 2. 참가자(팀) 목록의 라운드 점수와 총점, 순위를 초기 상태로 리셋
+    const resetParticipants = participants.map(p => {
+      const next: any = { ...p, total: 0, rank: '-' };
+      Object.keys(next).forEach(k => {
+        if (/^r\d+$/.test(k)) delete next[k];
+      });
+      defaultRounds.forEach(r => { next[r.key] = null; });
+      return next;
+    });
+
     setRounds(defaultRounds);
     setSelectedRound('r1');
-
-    setParticipants(prev =>
-      prev.map(p => {
-        const next: any = { ...p, total: 0, rank: '-' };
-        Object.keys(next).forEach(k => {
-          if (/^r\d+$/.test(k)) delete next[k];
-        });
-        defaultRounds.forEach(r => { next[r.key] = null; });
-        return next;
-      })
-    );
+    setParticipants(resetParticipants);
     setCurrentRankNum(1);
     setBibInput('');
     setIsRankConfirmed(false);
+    setConfirmedTime(null);
+
+    // 3. 실전 모드이거나 홈페이지 공개 상태인 경우 서버 DB(Firestore)에도 초기화 동기화 반영
+    if (!isSimulationMode && tenant?.overviewConfig?.bracketsPublished) {
+      setSubmitting(true);
+      try {
+        const res = await fetch(`/api/tenant/${subdomain}/leaderboard`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tournamentId: activeTournament.id,
+            division: activeDivisionTab,
+            rounds: defaultRounds,
+            list: resetParticipants,
+            dnsDnfRule: dnsDnfRule,
+            isReset: true
+          })
+        });
+        if (res.ok) {
+          logAnalyticsEvent('referee_reset_leaderboard', { division: activeDivisionTab });
+          alert(`✅ [${activeDivisionTab}] 순위 및 점수가 성공적으로 초기화되었습니다.\n홈페이지 실시간 리더보드에도 초기화가 즉시 반영되었습니다.`);
+        } else {
+          const err = await res.json();
+          alert(err.error || '서버 초기화 중 오류가 발생했습니다.');
+        }
+      } catch (e: any) {
+        alert('서버 초기화 통신 오류: ' + e.message);
+      } finally {
+        setSubmitting(false);
+      }
+    } else {
+      logAnalyticsEvent('referee_reset_leaderboard', { division: activeDivisionTab, isSimulation: isSimulationMode });
+      alert(`🧹 [${activeDivisionTab}] 점수와 순위가 초기화되었습니다.\n1위부터 새로 순위 입력을 진행하실 수 있습니다.`);
+    }
+
     setInputFeedback({
-      text: `🧹 [${activeDivisionTab}] 시연 점수와 라운드가 기본(${activeDivisionTab === '단체전' ? '1R' : '1~5R'})으로 초기화되었습니다!`,
+      text: `🧹 [${activeDivisionTab}] 점수와 순위가 초기화되었습니다. 새로 입력을 시작해 주세요.`,
       isError: false
     });
   };
@@ -1569,27 +1627,25 @@ export default function RefereeMobilePage({
               >
                 {isSimulationMode ? '실전 모드로 전환' : '시뮬레이션 모드로 전환'}
               </button>
-              {isSimulationMode && (
-                <button
-                  type="button"
-                  onClick={handleResetSimulationData}
-                  style={{
-                    padding: '6px 10px',
-                    borderRadius: '8px',
-                    border: '1px solid #fca5a5',
-                    background: '#fef2f2',
-                    color: '#dc2626',
-                    fontSize: '0.78rem',
-                    fontWeight: '800',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}
-                >
-                  <RotateCcw size={12} /> 시연 점수 초기화
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={handleResetRankings}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid #fca5a5',
+                  background: '#fef2f2',
+                  color: '#dc2626',
+                  fontSize: '0.78rem',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                <RotateCcw size={12} /> {isSimulationMode ? '시연 점수 초기화' : (isRankConfirmed ? '확정 취소 및 순위 초기화' : '점수/순위 초기화')}
+              </button>
             </div>
           </div>
 
@@ -2913,26 +2969,47 @@ export default function RefereeMobilePage({
                     <strong>[{activeDivisionTab}]</strong> 순위가 공식 확정되었습니다! (확정일시: {confirmedTime})
                   </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={handlePrintRankings}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '8px 16px',
-                    borderRadius: '8px',
-                    background: '#047857',
-                    color: 'white',
-                    border: 'none',
-                    fontWeight: '800',
-                    fontSize: '0.85rem',
-                    cursor: 'pointer',
-                    boxShadow: '0 2px 6px rgba(4, 120, 87, 0.3)'
-                  }}
-                >
-                  <Printer size={16} /> 🖨️ 바로 인쇄하기
-                </button>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={handleResetRankings}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '8px 14px',
+                      borderRadius: '8px',
+                      background: '#fee2e2',
+                      color: '#dc2626',
+                      border: '1px solid #fca5a5',
+                      fontWeight: '800',
+                      fontSize: '0.85rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <RotateCcw size={15} /> 🧹 순위 확정 취소
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handlePrintRankings}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '8px 16px',
+                      borderRadius: '8px',
+                      background: '#047857',
+                      color: 'white',
+                      border: 'none',
+                      fontWeight: '800',
+                      fontSize: '0.85rem',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 6px rgba(4, 120, 87, 0.3)'
+                    }}
+                  >
+                    <Printer size={16} /> 🖨️ 바로 인쇄하기
+                  </button>
+                </div>
               </div>
             )}
 
@@ -2985,6 +3062,29 @@ export default function RefereeMobilePage({
                 {isSimulationMode
                   ? (isRankConfirmed ? '🧪 시뮬레이션 재확정 (비공개 시연)' : '🧪 시뮬레이션 확정 테스트 (비공개)')
                   : (isRankConfirmed ? '순위 확정 완료 (재확정)' : '순위 최종 확정 (공개)')}
+              </button>
+              <button
+                type="button"
+                onClick={handleResetRankings}
+                disabled={submitting}
+                style={{
+                  flex: '1 1 150px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  padding: '13px',
+                  fontSize: '0.92rem',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  borderRadius: '10px',
+                  border: '1px solid #fca5a5',
+                  background: '#fef2f2',
+                  color: '#dc2626',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <RotateCcw size={18} /> {isRankConfirmed ? '🧹 확정 취소 및 초기화' : '🧹 순위 및 점수 초기화'}
               </button>
               <button
                 type="button"
