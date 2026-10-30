@@ -730,6 +730,97 @@ export default function TenantPortalPage({
     }
   };
 
+  // 생년월일 비교값 변환 (숫자가 클수록 젊음: 청년부 -> 중년부 -> 장년부)
+  const parseBirthNum = (rawBirth: string): number => {
+    const digits = String(rawBirth || '').replace(/[^0-9]/g, '');
+    if (!digits) return 0;
+    if (digits.length >= 8) return parseInt(digits.slice(0, 8), 10) || 0;
+    if (digits.length === 6) {
+      const yy = parseInt(digits.slice(0, 2), 10);
+      const prefix = yy <= 26 ? '20' : '19';
+      return parseInt(`${prefix}${digits}`, 10) || 0;
+    }
+    if (digits.length === 4) return parseInt(`${digits}0101`, 10) || 0;
+    return parseInt(digits, 10) || 0;
+  };
+
+  // 대진표 및 리더보드 공통: 참가 선수 파싱 및 연령 1/3 균등분할(청년부·중년부·장년부) 표준 함수
+  const getParsedBracketPlayers = (regs: any[]) => {
+    const parsed = regs.map((r: any) => {
+      let birth = '';
+      let division = '';
+      let gender = '';
+      let club = '';
+      let subclass = '통합부';
+      
+      try {
+        if (r.formResponses) {
+          const extra = typeof r.formResponses === 'string' ? JSON.parse(r.formResponses) : r.formResponses;
+          birth = extra.birthDate || extra.birth || '';
+          division = extra.division || '';
+          gender = extra.gender || '';
+          club = extra.club || '';
+          subclass = extra.subclass || extra.class || extra.category || extra.subDivision || '통합부';
+        }
+      } catch (e) {}
+
+      if (!club) club = r.player?.club || '미소속';
+      if (!division) division = '미분류 종목';
+      if (!gender) {
+        if (division.includes('남자')) gender = '남자부';
+        else if (division.includes('여자')) gender = '여자부';
+        else gender = '남자부';
+      } else {
+        gender = gender.includes('부') ? gender : `${gender}부`;
+      }
+      
+      let rootDivision = division;
+      if (division.includes('윈드포일')) rootDivision = '윈드포일';
+      else if (division.includes('윙포일')) rootDivision = '윙포일';
+      else if (division.includes('혼합오픈')) rootDivision = '혼합오픈';
+      else if (division.includes('펀엔포뮬러') || division.includes('펀&포뮬러')) rootDivision = '펀&포뮬러';
+
+      return {
+        id: r.id,
+        playerId: r.playerId || r.player?.id || r.id,
+        name: r.player?.name || '',
+        bibNumber: r.bibNumber || '-',
+        club,
+        birth,
+        division: rootDivision,
+        gender,
+        subclass
+      };
+    });
+
+    // 혼합오픈 및 펀&포뮬러 종목(남자부)에서 세부 클래스가 미지정(통합부)인 경우 생년월일 1/3 균등분할(청년부·중년부·장년부) 적용
+    ['혼합오픈', '펀&포뮬러'].forEach(targetDiv => {
+      const divMalePlayers = parsed.filter(p => p.division === targetDiv && p.gender === '남자부');
+      const needsAutoSplit = divMalePlayers.length > 0 && divMalePlayers.every(p => !p.subclass || p.subclass === '통합부');
+      if (needsAutoSplit) {
+        const sortedByBirth = [...divMalePlayers].sort((a, b) => {
+          const bA = parseBirthNum(a.birth);
+          const bB = parseBirthNum(b.birth);
+          if (bA === 0 && bB === 0) return a.name.localeCompare(b.name, 'ko');
+          if (bA === 0) return 1;
+          if (bB === 0) return -1;
+          if (bB !== bA) return bB - bA;
+          return a.name.localeCompare(b.name, 'ko');
+        });
+        const total = sortedByBirth.length;
+        const cut1 = Math.ceil(total / 3);
+        const cut2 = Math.ceil((total * 2) / 3);
+        sortedByBirth.forEach((p, idx) => {
+          if (idx < cut1) p.subclass = '청년부';
+          else if (idx < cut2) p.subclass = '중년부';
+          else p.subclass = '장년부';
+        });
+      }
+    });
+
+    return parsed;
+  };
+
   const getDivisionTabs = () => {
     const divisionField = formFields.find((f: any) => f.id === 'division');
     const configuredDivisions = divisionField?.options || [];
@@ -2410,8 +2501,7 @@ export default function TenantPortalPage({
 
               {activeTab === 'live' && [
                 { id: 'live-leaderboard', label: '실시간 리더보드 🟢' },
-                { id: 'live-brackets', label: '대진표 및 조 편성표' },
-                { id: 'live-notice', label: '공지사항 / 긴급 알림' }
+                { id: 'live-brackets', label: '대진표 및 조 편성표' }
               ].map(sub => (
                 <button
                   key={sub.id}
@@ -2499,7 +2589,7 @@ export default function TenantPortalPage({
               {/* 종목 카테고리 필터바 */}
               <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
                 {(() => {
-                  const categories = ['전체', '윈드포일', '윙포일', '혼합오픈', '펀엔포뮬러', '단체전'];
+                  const categories = ['전체', '윈드포일', '윙포일', '혼합오픈', '펀&포뮬러', '단체전'];
                   return categories.map((cat: string) => {
                     const active = selectedLeaderboardCategory === cat;
                     return (
@@ -2547,6 +2637,17 @@ export default function TenantPortalPage({
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                   {(() => {
+                    const bracketPlayers = getParsedBracketPlayers(registrations);
+
+                    const getRowSubclass = (row: any) => {
+                      const match = bracketPlayers.find(p =>
+                        (row.id && (p.id === row.id || (row.playerId && p.id === row.playerId))) ||
+                        (row.bibNumber && row.bibNumber !== '-' && String(p.bibNumber) === String(row.bibNumber)) ||
+                        (row.name && p.name === row.name && (parseBirthNum(p.birth) === parseBirthNum(row.birth) || !row.birth || !p.birth))
+                      );
+                      return match ? match.subclass : (row.subclass || '통합부');
+                    };
+
                     const getExactDivisionName = (root: string, gender: '남자부' | '여자부') => {
                       const allTabs = getDivisionTabs();
                       const exact = allTabs.find((tab: string) => {
@@ -2557,14 +2658,14 @@ export default function TenantPortalPage({
                       if (exact) return exact;
 
                       const fuzzy = allTabs.find((tab: string) => {
-                        const hasRoot = tab.includes(root) || (root === '펀엔포뮬러' && (tab.includes('펀엔') || tab.includes('펀&')));
+                        const hasRoot = tab.includes(root) || ((root.includes('펀엔') || root.includes('펀&')) && (tab.includes('펀엔') || tab.includes('펀&')));
                         const hasGender = tab.includes(gender.replace('부', ''));
                         return hasRoot && hasGender;
                       });
                       return fuzzy || `${root} (${gender})`;
                     };
 
-                    const renderTable = (list: any[], divKey?: string) => {
+                    const renderTable = (list: any[], divKey?: string, subclassLabel?: string) => {
                       // 리더보드 데이터에서 활성 라운드 키 동적 추출 (r1, r2, ... rN)
                       const customRounds = divKey && leaderboardRounds[divKey] ? leaderboardRounds[divKey] : null;
                       let activeRoundKeys: string[] = [];
@@ -2617,6 +2718,61 @@ export default function TenantPortalPage({
                         return finished > 0 ? finished + 1 : list.length + 1;
                       };
 
+                      const anyRoundConducted = activeRoundKeys.some(rKey => isRoundConducted(rKey));
+
+                      // 점수 계산 및 총점 산출
+                      const processedRows = list.map((row: any) => {
+                        const numericScores = activeRoundKeys.map(rKey => {
+                          const val = row[rKey];
+                          const conducted = isRoundConducted(rKey);
+                          if (val === null || val === undefined || val === '') {
+                            return conducted ? dnsScore : null;
+                          }
+                          const upper = String(val).trim().toUpperCase();
+                          if (upper === 'DNS') return dnsScore;
+                          if (upper === 'DNF') return getDnfScore(rKey);
+                          const num = Number(val);
+                          return isNaN(num) ? null : num;
+                        });
+
+                        const validScores = numericScores.filter((val): val is number => val !== null);
+                        const validScoresCount = validScores.length;
+
+                        let discardIdx = -1;
+                        if (validScoresCount >= 4) {
+                          let maxVal = -1;
+                          for (let i = 0; i < activeRoundKeys.length; i++) {
+                            const val = numericScores[i];
+                            if (val !== null && val > maxVal) {
+                              maxVal = val;
+                              discardIdx = i;
+                            }
+                          }
+                        }
+
+                        const computedTotal = validScoresCount >= 4
+                          ? numericScores.reduce<number>((acc, val, i) => (val !== null && i !== discardIdx ? acc + val : acc), 0)
+                          : numericScores.reduce<number>((acc, val) => (val !== null ? acc + val : acc), 0);
+
+                        return {
+                          ...row,
+                          numericScores,
+                          validScoresCount,
+                          discardIdx,
+                          computedTotal,
+                        };
+                      });
+
+                      // 순위 정렬: 라운드 경기가 진행된 적이 있으면 총점(낮은 점수 우선) 정렬
+                      if (anyRoundConducted) {
+                        processedRows.sort((a, b) => {
+                          if (a.computedTotal !== b.computedTotal) {
+                            return a.computedTotal - b.computedTotal;
+                          }
+                          return String(a.bibNumber).localeCompare(String(b.bibNumber), undefined, { numeric: true });
+                        });
+                      }
+
                       return (
                         <div className="premium-table-container">
                           <table className="premium-table" style={{ fontSize: '0.9rem', width: '100%', borderCollapse: 'collapse', color: 'black' }}>
@@ -2636,42 +2792,9 @@ export default function TenantPortalPage({
                               </tr>
                             </thead>
                             <tbody>
-                              {list.map((row: any, rIdx: number) => {
-                                const numericScores = activeRoundKeys.map(rKey => {
-                                  const val = row[rKey];
-                                  const conducted = isRoundConducted(rKey);
-                                  if (val === null || val === undefined || val === '') {
-                                    return conducted ? dnsScore : null;
-                                  }
-                                  const upper = String(val).trim().toUpperCase();
-                                  if (upper === 'DNS') return dnsScore;
-                                  if (upper === 'DNF') return getDnfScore(rKey);
-                                  const num = Number(val);
-                                  return isNaN(num) ? null : num;
-                                });
-                                const validScores = numericScores.filter((val): val is number => val !== null);
-                                const validScoresCount = validScores.length;
-                                
-                                let discardIdx = -1;
-                                if (validScoresCount >= 4) {
-                                  let maxVal = -1;
-                                  for (let i = 0; i < activeRoundKeys.length; i++) {
-                                    const val = numericScores[i];
-                                    if (val !== null) {
-                                      if (val > maxVal) {
-                                        maxVal = val;
-                                        discardIdx = i;
-                                      }
-                                    }
-                                  }
-                                }
-
-                                const computedTotal = validScoresCount >= 4
-                                  ? validScores.reduce((acc, cur, idx) => {
-                                      // validScores 인덱스가 아닌 numericScores 기준 discardIdx 제외 합산
-                                      return acc;
-                                    }, 0) || numericScores.reduce<number>((acc, val, i) => (val !== null && i !== discardIdx ? acc + val : acc), 0)
-                                  : numericScores.reduce<number>((acc, val) => (val !== null ? acc + val : acc), 0);
+                              {processedRows.map((row: any, rIdx: number) => {
+                                const rankDisplay = anyRoundConducted ? rIdx + 1 : (row.rank && row.rank !== '-' ? row.rank : '-');
+                                const isTop3 = typeof rankDisplay === 'number' && rankDisplay <= 3;
 
                                 return (
                                   <tr key={rIdx} style={{ borderBottom: '1px solid #f1f5f9' }}>
@@ -2682,14 +2805,19 @@ export default function TenantPortalPage({
                                         height: '28px',
                                         lineHeight: '28px',
                                         borderRadius: '50%',
-                                        background: row.rank === 1 ? 'var(--theme-gold)' : row.rank === 2 ? '#cbd5e1' : row.rank === 3 ? '#b45309' : '#f1f5f9',
-                                        color: row.rank <= 3 ? 'white' : 'var(--text-main)',
+                                        background: rankDisplay === 1 ? 'var(--theme-gold)' : rankDisplay === 2 ? '#cbd5e1' : rankDisplay === 3 ? '#b45309' : '#f1f5f9',
+                                        color: isTop3 ? 'white' : 'var(--text-main)',
                                         fontSize: '0.85rem'
                                       }}>
-                                        {row.rank}
+                                        {rankDisplay}
                                       </span>
                                     </td>
-                                    <td style={{ fontWeight: '800' }}>{row.name}</td>
+                                    <td style={{ fontWeight: '800' }}>
+                                      <div>{row.name}</div>
+                                      {row.club && row.club !== '미소속' && (
+                                        <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: '500' }}>{row.club}</div>
+                                      )}
+                                    </td>
                                     <td>
                                       {row.bibNumber ? (() => {
                                         const badge = getBibBadgeStyle(row.bibNumber);
@@ -2722,8 +2850,8 @@ export default function TenantPortalPage({
                                         : rawVal;
                                       const upper = String(effectiveVal).toUpperCase();
                                       const isPenalty = upper === 'DNS' || upper === 'DNF';
-                                      const pointVal = numericScores[idx];
-                                      const isDiscarded = idx === discardIdx;
+                                      const pointVal = row.numericScores[idx];
+                                      const isDiscarded = idx === row.discardIdx;
                                       return (
                                         <td key={idx} style={{
                                           textAlign: 'center',
@@ -2741,7 +2869,9 @@ export default function TenantPortalPage({
                                         </td>
                                       );
                                     })}
-                                    <td style={{ textAlign: 'center', fontWeight: '900', color: 'var(--theme-primary)', fontSize: '1.05rem' }}>{computedTotal}점</td>
+                                    <td style={{ textAlign: 'center', fontWeight: '900', color: 'var(--theme-primary)', fontSize: '1.05rem' }}>
+                                      {anyRoundConducted ? `${row.computedTotal}점` : '-'}
+                                    </td>
                                   </tr>
                                 );
                               })}
@@ -2753,8 +2883,10 @@ export default function TenantPortalPage({
 
                     const activeRoot = selectedLeaderboardCategory;
                     const rootsToRender = activeRoot === '전체'
-                      ? ['윈드포일', '윙포일', '혼합오픈', '펀엔포뮬러', '단체전']
-                      : [activeRoot];
+                      ? ['윈드포일', '윙포일', '혼합오픈', '펀&포뮬러', '단체전']
+                      : [activeRoot === '펀엔포뮬러' ? '펀&포뮬러' : activeRoot];
+
+                    const subclassOrder = ['청년부', '중년부', '장년부', '통합부', '일반부', '대학부', '고등부', '중등부', '초등부', '마스터즈'];
 
                     return rootsToRender.map((root: string) => {
                       if (root === '단체전') {
@@ -2769,10 +2901,17 @@ export default function TenantPortalPage({
                               </h3>
                             </div>
 
-                            <div className="glass-panel" style={{ background: 'white', padding: '24px 30px', borderTop: '4px solid #10b981' }}>
-                              <h4 style={{ fontSize: '1.15rem', fontWeight: '900', color: 'var(--text-main)', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <span style={{ fontSize: '1.2rem' }}>🏆</span> 단체전 (소속협회/클럽 대항전)
-                              </h4>
+                            <div className="glass-panel" style={{ background: 'white', padding: '24px 30px', borderTop: '4px solid #10b981', borderRadius: '14px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
+                                <h4 style={{ fontSize: '1.15rem', fontWeight: '900', color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <span style={{ fontSize: '1.2rem' }}>🏆</span> 단체전 (소속협회/클럽 대항전)
+                                </h4>
+                                {teamList.length > 0 && (
+                                  <span style={{ fontSize: '0.78rem', background: '#10b981', color: 'white', padding: '3px 10px', borderRadius: '12px', fontWeight: '800' }}>
+                                    {teamList.length}개 팀
+                                  </span>
+                                )}
+                              </div>
                               {teamList.length === 0 ? (
                                 <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '10px 0' }}>
                                   해당 부서의 등록/확정된 순위표가 없습니다.
@@ -2785,7 +2924,22 @@ export default function TenantPortalPage({
 
                       if (root === '윈드포일') {
                         const openList = leaderboards['윈드포일'] || [];
-                        if (activeRoot === '전체' && openList.length === 0) return null;
+                        const regOpen = bracketPlayers.filter(p => p.division === '윈드포일');
+                        const effectiveOpenList = openList.length > 0
+                          ? openList
+                          : regOpen.map(p => ({
+                              id: p.id,
+                              name: p.name,
+                              bibNumber: p.bibNumber,
+                              birth: p.birth,
+                              club: p.club,
+                              division: '윈드포일',
+                              subclass: p.subclass,
+                              rank: '-',
+                              total: 0
+                            }));
+
+                        if (activeRoot === '전체' && effectiveOpenList.length === 0) return null;
 
                         return (
                           <div key={root} style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '10px' }}>
@@ -2795,19 +2949,26 @@ export default function TenantPortalPage({
                               </h3>
                             </div>
 
-                            <div className="glass-panel" style={{ background: 'white', padding: '24px 30px', borderTop: '4px solid var(--theme-primary)' }}>
-                              <h4 style={{ fontSize: '1.15rem', fontWeight: '900', color: 'var(--text-main)', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <span style={{ fontSize: '1.2rem' }}>🏆</span> 윈드포일 (남녀오픈)
-                              </h4>
-                              {openList.length === 0 ? (
+                            <div className="glass-panel" style={{ background: 'white', padding: '24px 30px', borderTop: '4px solid var(--theme-primary)', borderRadius: '14px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
+                                <h4 style={{ fontSize: '1.15rem', fontWeight: '900', color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <span style={{ fontSize: '1.2rem' }}>🏆</span> 윈드포일 (남녀오픈)
+                                </h4>
+                                <span style={{ fontSize: '0.78rem', background: 'var(--theme-primary)', color: 'white', padding: '3px 10px', borderRadius: '12px', fontWeight: '800' }}>
+                                  {effectiveOpenList.length}명 출전
+                                </span>
+                              </div>
+                              {effectiveOpenList.length === 0 ? (
                                 <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '10px 0' }}>
                                   해당 부서의 등록/확정된 순위표가 없습니다.
                                 </p>
-                              ) : renderTable(openList, '윈드포일')}
+                              ) : renderTable(effectiveOpenList, '윈드포일')}
                             </div>
                           </div>
                         );
                       }
+
+                      const isAgeSplitDiv = root === '혼합오픈' || root === '펀&포뮬러' || root === '펀엔포뮬러';
 
                       const maleDivName = getExactDivisionName(root, '남자부');
                       const femaleDivName = getExactDivisionName(root, '여자부');
@@ -2815,39 +2976,184 @@ export default function TenantPortalPage({
                       const maleList = leaderboards[maleDivName] || [];
                       const femaleList = leaderboards[femaleDivName] || [];
 
-                      if (activeRoot === '전체' && maleList.length === 0 && femaleList.length === 0) return null;
+                      const regMale = bracketPlayers.filter(p => (p.division === root || (root.includes('펀') && p.division.includes('펀'))) && p.gender === '남자부');
+                      const regFemale = bracketPlayers.filter(p => (p.division === root || (root.includes('펀') && p.division.includes('펀'))) && p.gender === '여자부');
+
+                      const effectiveMale = maleList.length > 0
+                        ? maleList
+                        : regMale.map(p => ({
+                            id: p.id,
+                            name: p.name,
+                            bibNumber: p.bibNumber,
+                            birth: p.birth,
+                            club: p.club,
+                            division: maleDivName,
+                            subclass: p.subclass,
+                            rank: '-',
+                            total: 0
+                          }));
+
+                      const effectiveFemale = femaleList.length > 0
+                        ? femaleList
+                        : regFemale.map(p => ({
+                            id: p.id,
+                            name: p.name,
+                            bibNumber: p.bibNumber,
+                            birth: p.birth,
+                            club: p.club,
+                            division: femaleDivName,
+                            subclass: p.subclass,
+                            rank: '-',
+                            total: 0
+                          }));
+
+                      if (activeRoot === '전체' && effectiveMale.length === 0 && effectiveFemale.length === 0) return null;
+
+                      // Group male by subclass (대진표대로 각 클래스 분할)
+                      const maleWithSubclass = effectiveMale.map(r => ({
+                        ...r,
+                        subclass: getRowSubclass(r)
+                      }));
+
+                      const maleSubclassMap: Record<string, any[]> = {};
+                      maleWithSubclass.forEach(r => {
+                        const sc = r.subclass || '통합부';
+                        if (!maleSubclassMap[sc]) maleSubclassMap[sc] = [];
+                        maleSubclassMap[sc].push(r);
+                      });
+
+                      const sortedMaleSubclassKeys = Object.keys(maleSubclassMap).sort((a, b) => {
+                        const ia = subclassOrder.indexOf(a);
+                        const ib = subclassOrder.indexOf(b);
+                        if (ia === -1 && ib === -1) return a.localeCompare(b, 'ko');
+                        if (ia === -1) return 1;
+                        if (ib === -1) return -1;
+                        return ia - ib;
+                      });
+
+                      // Group female by subclass
+                      const femaleWithSubclass = effectiveFemale.map(r => ({
+                        ...r,
+                        subclass: getRowSubclass(r)
+                      }));
+
+                      const femaleSubclassMap: Record<string, any[]> = {};
+                      femaleWithSubclass.forEach(r => {
+                        const sc = r.subclass || '통합부';
+                        if (!femaleSubclassMap[sc]) femaleSubclassMap[sc] = [];
+                        femaleSubclassMap[sc].push(r);
+                      });
+
+                      const sortedFemaleSubclassKeys = Object.keys(femaleSubclassMap).sort((a, b) => {
+                        const ia = subclassOrder.indexOf(a);
+                        const ib = subclassOrder.indexOf(b);
+                        if (ia === -1 && ib === -1) return a.localeCompare(b, 'ko');
+                        if (ia === -1) return 1;
+                        if (ib === -1) return -1;
+                        return ia - ib;
+                      });
 
                       return (
                         <div key={root} style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '10px' }}>
                           <div style={{ margin: '15px 0 0px 0', padding: '4px 12px', borderLeft: '4px solid var(--theme-primary)' }}>
-                            <h3 style={{ fontSize: '1.3rem', fontWeight: '900', color: 'var(--text-main)', margin: 0 }}>
-                              {root} 부문
+                            <h3 style={{ fontSize: '1.3rem', fontWeight: '900', color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span>⛵</span> {root} 부문
+                              {isAgeSplitDiv && (
+                                <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#0369a1', background: '#e0f2fe', border: '1px solid #bae6fd', padding: '3px 10px', borderRadius: '999px' }}>
+                                  대진표 연령 1/3 균등분할 편성 (청년부·중년부·장년부)
+                                </span>
+                              )}
                             </h3>
                           </div>
 
-                          {/* 남자부 카드 */}
-                          <div className="glass-panel" style={{ background: 'white', padding: '24px 30px', borderTop: '4px solid var(--theme-primary)' }}>
-                            <h4 style={{ fontSize: '1.15rem', fontWeight: '900', color: 'var(--text-main)', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <span style={{ fontSize: '1.2rem' }}>♂️</span> {root} (남자부)
-                            </h4>
-                            {maleList.length === 0 ? (
-                              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '10px 0' }}>
-                                해당 부서의 등록/확정된 순위표가 없습니다.
-                              </p>
-                            ) : renderTable(maleList, maleDivName)}
-                          </div>
+                          {/* 남자부 섹션 */}
+                          {sortedMaleSubclassKeys.length > 0 && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                              {sortedMaleSubclassKeys.length > 1 ? (
+                                sortedMaleSubclassKeys.map(subclass => {
+                                  const list = maleSubclassMap[subclass] || [];
+                                  const badgeColor =
+                                    subclass === '청년부'
+                                      ? '#0284c7'
+                                      : subclass === '중년부'
+                                      ? '#059669'
+                                      : subclass === '장년부'
+                                      ? '#d97706'
+                                      : 'var(--theme-primary)';
 
-                          {/* 여자부 카드 */}
-                          <div className="glass-panel" style={{ background: 'white', padding: '24px 30px', borderTop: '4px solid #f43f5e' }}>
-                            <h4 style={{ fontSize: '1.15rem', fontWeight: '900', color: 'var(--text-main)', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <span style={{ fontSize: '1.2rem' }}>♀️</span> {root} (여자부)
-                            </h4>
-                            {femaleList.length === 0 ? (
-                              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '10px 0' }}>
-                                해당 부서의 등록/확정된 순위표가 없습니다.
-                              </p>
-                            ) : renderTable(femaleList, femaleDivName)}
-                          </div>
+                                  return (
+                                    <div key={subclass} className="glass-panel" style={{ background: 'white', padding: '24px 30px', borderTop: `4px solid ${badgeColor}`, borderRadius: '14px' }}>
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
+                                        <h4 style={{ fontSize: '1.15rem', fontWeight: '900', color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <span style={{ color: badgeColor }}>🏷️</span> {root} (남자부) - <span style={{ color: badgeColor }}>{subclass}</span>
+                                        </h4>
+                                        <span style={{ fontSize: '0.78rem', background: badgeColor, color: 'white', padding: '3px 10px', borderRadius: '12px', fontWeight: '800' }}>
+                                          {list.length}명 출전
+                                        </span>
+                                      </div>
+                                      {renderTable(list, maleDivName, subclass)}
+                                    </div>
+                                  );
+                                })
+                              ) : (
+                                <div className="glass-panel" style={{ background: 'white', padding: '24px 30px', borderTop: '4px solid var(--theme-primary)', borderRadius: '14px' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
+                                    <h4 style={{ fontSize: '1.15rem', fontWeight: '900', color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                      <span style={{ fontSize: '1.2rem' }}>♂️</span> {root} (남자부)
+                                    </h4>
+                                    <span style={{ fontSize: '0.78rem', background: 'var(--theme-primary)', color: 'white', padding: '3px 10px', borderRadius: '12px', fontWeight: '800' }}>
+                                      {effectiveMale.length}명 출전
+                                    </span>
+                                  </div>
+                                  {effectiveMale.length === 0 ? (
+                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '10px 0' }}>
+                                      해당 부서의 등록/확정된 순위표가 없습니다.
+                                    </p>
+                                  ) : renderTable(effectiveMale, maleDivName)}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* 여자부 섹션 */}
+                          {sortedFemaleSubclassKeys.length > 0 && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                              {sortedFemaleSubclassKeys.length > 1 ? (
+                                sortedFemaleSubclassKeys.map(subclass => {
+                                  const list = femaleSubclassMap[subclass] || [];
+                                  return (
+                                    <div key={subclass} className="glass-panel" style={{ background: 'white', padding: '24px 30px', borderTop: '4px solid #f43f5e', borderRadius: '14px' }}>
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
+                                        <h4 style={{ fontSize: '1.15rem', fontWeight: '900', color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <span style={{ color: '#f43f5e' }}>🏷️</span> {root} (여자부) - <span style={{ color: '#f43f5e' }}>{subclass}</span>
+                                        </h4>
+                                        <span style={{ fontSize: '0.78rem', background: '#f43f5e', color: 'white', padding: '3px 10px', borderRadius: '12px', fontWeight: '800' }}>
+                                          {list.length}명 출전
+                                        </span>
+                                      </div>
+                                      {renderTable(list, femaleDivName, subclass)}
+                                    </div>
+                                  );
+                                })
+                              ) : (
+                                <div className="glass-panel" style={{ background: 'white', padding: '24px 30px', borderTop: '4px solid #f43f5e', borderRadius: '14px' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
+                                    <h4 style={{ fontSize: '1.15rem', fontWeight: '900', color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                      <span style={{ fontSize: '1.2rem' }}>♀️</span> {root} (여자부)
+                                    </h4>
+                                    <span style={{ fontSize: '0.78rem', background: '#f43f5e', color: 'white', padding: '3px 10px', borderRadius: '12px', fontWeight: '800' }}>
+                                      {effectiveFemale.length}명 출전
+                                    </span>
+                                  </div>
+                                  {effectiveFemale.length === 0 ? (
+                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '10px 0' }}>
+                                      해당 부서의 등록/확정된 순위표가 없습니다.
+                                    </p>
+                                  ) : renderTable(effectiveFemale, femaleDivName)}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       );
                     });
@@ -2902,91 +3208,7 @@ export default function TenantPortalPage({
                     </div>
                   )}
                   {(() => {
-                    // 1. Parse player data with subclass categorization
-                    const parsedPlayers = registrations.map((r: any) => {
-                      let birth = '';
-                      let division = '';
-                      let gender = '';
-                      let club = '';
-                      let subclass = '통합부';
-                      
-                      try {
-                        if (r.formResponses) {
-                          const extra = typeof r.formResponses === 'string' ? JSON.parse(r.formResponses) : r.formResponses;
-                          birth = extra.birthDate || extra.birth || '';
-                          division = extra.division || '';
-                          gender = extra.gender || '';
-                          club = extra.club || '';
-                          subclass = extra.subclass || extra.class || extra.category || extra.subDivision || '통합부';
-                        }
-                      } catch (e) {}
-
-                      if (!club) club = r.player?.club || '미소속';
-                      if (!division) division = '미분류 종목';
-                      if (!gender) {
-                        if (division.includes('남자')) gender = '남자부';
-                        else if (division.includes('여자')) gender = '여자부';
-                        else gender = '남자부';
-                      } else {
-                        gender = gender.includes('부') ? gender : `${gender}부`;
-                      }
-                      
-                      let rootDivision = division;
-                      if (division.includes('윈드포일')) rootDivision = '윈드포일';
-                      else if (division.includes('윙포일')) rootDivision = '윙포일';
-                      else if (division.includes('혼합오픈')) rootDivision = '혼합오픈';
-                      else if (division.includes('펀엔포뮬러') || division.includes('펀&포뮬러')) rootDivision = '펀&포뮬러';
-
-                      return {
-                        id: r.id,
-                        name: r.player?.name || '',
-                        bibNumber: r.bibNumber || '-',
-                        club,
-                        birth,
-                        division: rootDivision,
-                        gender,
-                        subclass
-                      };
-                    });
-
-                    // 생년월일 비교값 변환 (숫자가 클수록 젊음: 청년부 -> 중년부 -> 장년부)
-                    const parseBirthNum = (rawBirth: string): number => {
-                      const digits = String(rawBirth || '').replace(/[^0-9]/g, '');
-                      if (!digits) return 0;
-                      if (digits.length >= 8) return parseInt(digits.slice(0, 8), 10) || 0;
-                      if (digits.length === 6) {
-                        const yy = parseInt(digits.slice(0, 2), 10);
-                        const prefix = yy <= 26 ? '20' : '19';
-                        return parseInt(`${prefix}${digits}`, 10) || 0;
-                      }
-                      if (digits.length === 4) return parseInt(`${digits}0101`, 10) || 0;
-                      return parseInt(digits, 10) || 0;
-                    };
-
-                    // 혼합오픈 및 펀&포뮬러 종목(남자부)에서 세부 클래스가 미지정(통합부)인 경우 생년월일 1/3 균등분할(청년부·중년부·장년부) 적용
-                    ['혼합오픈', '펀&포뮬러'].forEach(targetDiv => {
-                      const divMalePlayers = parsedPlayers.filter(p => p.division === targetDiv && p.gender === '남자부');
-                      const needsAutoSplit = divMalePlayers.length > 0 && divMalePlayers.every(p => !p.subclass || p.subclass === '통합부');
-                      if (needsAutoSplit) {
-                        const sortedByBirth = [...divMalePlayers].sort((a, b) => {
-                          const bA = parseBirthNum(a.birth);
-                          const bB = parseBirthNum(b.birth);
-                          if (bA === 0 && bB === 0) return a.name.localeCompare(b.name, 'ko');
-                          if (bA === 0) return 1;
-                          if (bB === 0) return -1;
-                          if (bB !== bA) return bB - bA;
-                          return a.name.localeCompare(b.name, 'ko');
-                        });
-                        const total = sortedByBirth.length;
-                        const cut1 = Math.ceil(total / 3);
-                        const cut2 = Math.ceil((total * 2) / 3);
-                        sortedByBirth.forEach((p, idx) => {
-                          if (idx < cut1) p.subclass = '청년부';
-                          else if (idx < cut2) p.subclass = '중년부';
-                          else p.subclass = '장년부';
-                        });
-                      }
-                    });
+                    const parsedPlayers = getParsedBracketPlayers(registrations);
 
                     // 2. Group by rootDivision -> gender -> subclass
                     const grouped: Record<string, Record<string, Record<string, any[]>>> = {};

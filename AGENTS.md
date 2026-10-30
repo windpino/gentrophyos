@@ -10,4 +10,4 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # Git Push Policy
 
-Do NOT push code modifications to GitHub (e.g. `git push`) unless explicitly asked/instructed by the user. Keep all changes in the local repository until then.
+Always commit and push code modifications to GitHub (`git push origin main`) automatically after completing tasks, as instructed by the user.
