@@ -3281,42 +3281,42 @@ export default function TenantPortalPage({
 
           {/* LIVE. 경기운영 / 대진표 및 조 편성표 탭 */}
           {activeTab === 'live' && activeSubTab === 'live-brackets' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {/* 대진표 및 조 편성표 헤더 */}
-              <div className="glass-panel" style={{ background: 'white', padding: '28px 32px', borderTop: '4px solid var(--theme-primary)' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: '900', textAlign: 'center', color: 'var(--text-main)', marginBottom: '4px' }}>
+              <div className="glass-panel" style={{ background: 'white', padding: 'clamp(16px, 3vw, 24px) clamp(12px, 3vw, 20px)', borderTop: '4px solid var(--theme-primary)', borderRadius: '14px' }}>
+                <h2 style={{ fontSize: 'clamp(1.2rem, 3.5vw, 1.5rem)', fontWeight: '900', textAlign: 'center', color: 'var(--text-main)', marginBottom: '4px' }}>
                   {overview.title} 대진표 및 조 편성표
                 </h2>
-                <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>각 종목별, 성별, 세부 클래스별 조 편성 및 공식 참가 선수 목록</p>
+                <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>각 종목별, 성별, 세부 클래스별 조 편성 및 공식 참가 선수 목록</p>
               </div>
 
               {regsLoading ? (
-                <div className="glass-panel" style={{ background: 'white', padding: '60px 0', textAlign: 'center' }}>
-                  <RefreshCw className="animate-spin" size={32} style={{ color: 'var(--theme-primary)', margin: '0 auto 12px auto' }} />
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>참가 선수 및 조 편성표 데이터를 불러오는 중입니다...</p>
+                <div className="glass-panel" style={{ background: 'white', padding: '50px 0', textAlign: 'center' }}>
+                  <RefreshCw className="animate-spin" size={30} style={{ color: 'var(--theme-primary)', margin: '0 auto 12px auto' }} />
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: 0 }}>참가 선수 및 조 편성표 데이터를 불러오는 중입니다...</p>
                 </div>
               ) : !overview.bracketsPublished ? (
-                <div className="glass-panel" style={{ background: 'white', padding: '70px 24px', textAlign: 'center', color: 'var(--text-muted)', borderTop: '4px solid #cbd5e1' }}>
-                  <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto', fontSize: '1.8rem' }}>
+                <div className="glass-panel" style={{ background: 'white', padding: '60px 20px', textAlign: 'center', color: 'var(--text-muted)', borderTop: '4px solid #cbd5e1', borderRadius: '14px' }}>
+                  <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px auto', fontSize: '1.6rem' }}>
                     📋
                   </div>
-                  <p style={{ fontSize: '1.15rem', fontWeight: '800', color: 'var(--text-main)', margin: '0 0 8px 0' }}>
+                  <p style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-main)', margin: '0 0 6px 0' }}>
                     대진표 및 조 편성표가 아직 확정(공개)되지 않았습니다.
                   </p>
-                  <p style={{ fontSize: '0.9rem', margin: 0, lineHeight: '1.6' }}>
+                  <p style={{ fontSize: '0.86rem', margin: 0, lineHeight: '1.6' }}>
                     대회 운영본부에서 참가자 확인 및 조 편성을 최종 확정한 후 공식 공개됩니다.
                   </p>
                 </div>
               ) : registrations.length === 0 ? (
-                <div className="glass-panel" style={{ background: 'white', padding: '60px 0', textAlign: 'center', color: 'var(--text-muted)' }}>
-                  <p style={{ fontSize: '1rem', fontWeight: '700', margin: '0 0 4px 0' }}>승인 완료된 참가 선수가 없습니다.</p>
-                  <p style={{ fontSize: '0.85rem', margin: 0 }}>대회 주최측에서 참가 신청을 승인하면 대진 및 조 편성이 여기에 실시간으로 표시됩니다.</p>
+                <div className="glass-panel" style={{ background: 'white', padding: '50px 0', textAlign: 'center', color: 'var(--text-muted)', borderRadius: '14px' }}>
+                  <p style={{ fontSize: '0.95rem', fontWeight: '700', margin: '0 0 4px 0' }}>승인 완료된 참가 선수가 없습니다.</p>
+                  <p style={{ fontSize: '0.82rem', margin: 0 }}>대회 주최측에서 참가 신청을 승인하면 대진 및 조 편성이 여기에 실시간으로 표시됩니다.</p>
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   {overview.bracketsPublishedAt && (
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: '#059669', fontWeight: '700', padding: '0 4px', marginBottom: '-16px' }}>
-                      <CheckCircle2 size={15} /> 운영진 공식 확정 일시: {formatKoreanDateTime(overview.bracketsPublishedAt)}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: '#059669', fontWeight: '700', padding: '0 4px', marginBottom: '-10px' }}>
+                      <CheckCircle2 size={14} /> 운영진 공식 확정 일시: {formatKoreanDateTime(overview.bracketsPublishedAt)}
                     </div>
                   )}
                   {(() => {
@@ -3349,19 +3349,19 @@ export default function TenantPortalPage({
                       const isAgeSplitDiv = rootDiv === '혼합오픈' || rootDiv === '펀&포뮬러';
                       
                       return (
-                        <div key={rootDiv} className="glass-panel" style={{ background: 'white', padding: '30px', borderTop: '4px solid var(--theme-primary)', borderRadius: '16px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '24px', borderBottom: '2px solid var(--theme-primary)', paddingBottom: '10px' }}>
-                            <h3 style={{ fontSize: '1.4rem', fontWeight: '900', color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <span style={{ fontSize: '1.6rem' }}>⛵</span> {rootDiv} 대진 및 조 편성표
+                        <div key={rootDiv} className="glass-panel" style={{ background: 'white', padding: 'clamp(14px, 2.5vw, 22px) clamp(10px, 2vw, 18px)', borderTop: '4px solid var(--theme-primary)', borderRadius: '14px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '16px', borderBottom: '2px solid var(--theme-primary)', paddingBottom: '8px' }}>
+                            <h3 style={{ fontSize: 'clamp(1.15rem, 3vw, 1.35rem)', fontWeight: '900', color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span style={{ fontSize: '1.3rem' }}>⛵</span> {rootDiv} 대진 및 조 편성표
                             </h3>
                             {isAgeSplitDiv && (
-                              <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#0369a1', background: '#e0f2fe', border: '1px solid #bae6fd', padding: '4px 12px', borderRadius: '999px' }}>
-                                참가 연령(생년월일) 1/3 균등분할 · 청년부 / 중년부 / 장년부
+                              <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#0369a1', background: '#e0f2fe', border: '1px solid #bae6fd', padding: '3px 10px', borderRadius: '999px' }}>
+                                연령별 1/3 균등분할 · 청년부 / 중년부 / 장년부
                               </span>
                             )}
                           </div>
 
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                             {['남자부', '여자부'].map(gender => {
                               const subclasses = genderGroup[gender] || {};
                               if (Object.keys(subclasses).length === 0) return null;
@@ -3376,12 +3376,12 @@ export default function TenantPortalPage({
                               });
 
                               return (
-                                <div key={gender} style={{ background: '#f8fafc', padding: '24px', borderRadius: '14px', border: '1px solid var(--border-color)' }}>
-                                  <h4 style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <div key={gender} style={{ background: '#f8fafc', padding: 'clamp(10px, 2vw, 16px) clamp(8px, 1.5vw, 14px)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                                  <h4 style={{ fontSize: '1rem', fontWeight: '800', color: 'var(--theme-primary)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                     👤 {gender}
                                   </h4>
 
-                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: '10px' }}>
                                     {sortedSubclassKeys.map(subclass => {
                                       const rawList = subclasses[subclass] || [];
                                       const list = isAgeSplitDiv
@@ -3403,12 +3403,12 @@ export default function TenantPortalPage({
                                           ? '#d97706'
                                           : 'var(--theme-primary)';
                                       return (
-                                        <div key={subclass} style={{ background: 'white', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '18px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-                                          <h5 style={{ fontSize: '0.95rem', fontWeight: '850', color: 'var(--text-main)', margin: '0 0 12px 0', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div key={subclass} style={{ background: 'white', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '10px 12px', boxShadow: '0 1px 4px rgba(0,0,0,0.03)' }}>
+                                          <h5 style={{ fontSize: '0.88rem', fontWeight: '850', color: 'var(--text-main)', margin: '0 0 8px 0', borderBottom: '1px solid #e2e8f0', paddingBottom: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                             <span style={{ color: badgeColor }}>🏷️ {subclass}</span>
-                                            <span style={{ fontSize: '0.75rem', background: badgeColor, color: 'white', padding: '2px 8px', borderRadius: '10px', fontWeight: '700' }}>{list.length}명</span>
+                                            <span style={{ fontSize: '0.72rem', background: badgeColor, color: 'white', padding: '1px 7px', borderRadius: '8px', fontWeight: '700' }}>{list.length}명</span>
                                           </h5>
-                                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                                             {list.map((player: any, pIdx: number) => (
                                               <div
                                                 key={player.id}
@@ -3416,50 +3416,43 @@ export default function TenantPortalPage({
                                                   display: 'flex',
                                                   alignItems: 'center',
                                                   justifyContent: 'space-between',
-                                                  flexWrap: 'wrap',
-                                                  gap: '8px 12px',
-                                                  padding: '11px 14px',
+                                                  gap: '6px 10px',
+                                                  padding: '7px 10px',
                                                   background: '#ffffff',
-                                                  borderRadius: '10px',
-                                                  fontSize: '0.88rem',
+                                                  borderRadius: '8px',
+                                                  fontSize: '0.84rem',
                                                   border: '1px solid #e2e8f0',
-                                                  boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+                                                  boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
                                                 }}
                                               >
-                                                {/* 좌측: 순번, 선수명, 소속클럽명, 생년월 (일은 ** 처리) */}
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', minWidth: 0 }}>
-                                                  <span style={{ color: '#94a3b8', fontWeight: '800', fontSize: '0.82rem', minWidth: '18px' }}>
+                                                {/* 좌측: 순번, 선수명, 소속클럽명 (생년월일 가림 처리) */}
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, overflow: 'hidden' }}>
+                                                  <span style={{ color: '#94a3b8', fontWeight: '800', fontSize: '0.76rem', minWidth: '16px', flexShrink: 0 }}>
                                                     {pIdx + 1}
                                                   </span>
-                                                  <span style={{ fontWeight: '900', color: '#0f172a', fontSize: '0.98rem' }}>
+                                                  <span style={{ fontWeight: '900', color: '#0f172a', fontSize: '0.9rem', whiteSpace: 'nowrap', flexShrink: 0 }}>
                                                     {player.name}
                                                   </span>
-                                                  <span style={{
-                                                    fontSize: '0.78rem',
-                                                    color: '#334155',
-                                                    background: '#f1f5f9',
-                                                    padding: '2px 8px',
-                                                    borderRadius: '6px',
-                                                    fontWeight: '700',
-                                                    border: '1px solid #e2e8f0'
-                                                  }}>
-                                                    {player.club || '미소속'}
-                                                  </span>
-                                                  <span style={{
-                                                    fontSize: '0.78rem',
-                                                    color: '#64748b',
-                                                    fontWeight: '600',
-                                                    background: '#f8fafc',
-                                                    padding: '2px 6px',
-                                                    borderRadius: '4px',
-                                                    border: '1px solid #f1f5f9'
-                                                  }}>
-                                                    {formatMaskedBirthDate(player.birth)}
-                                                  </span>
+                                                  {player.club && player.club !== '미소속' && (
+                                                    <span style={{
+                                                      fontSize: '0.72rem',
+                                                      color: '#475569',
+                                                      background: '#f1f5f9',
+                                                      padding: '2px 6px',
+                                                      borderRadius: '4px',
+                                                      fontWeight: '700',
+                                                      border: '1px solid #e2e8f0',
+                                                      overflow: 'hidden',
+                                                      textOverflow: 'ellipsis',
+                                                      whiteSpace: 'nowrap'
+                                                    }}>
+                                                      {player.club}
+                                                    </span>
+                                                  )}
                                                 </div>
 
                                                 {/* 우측: 배번티 번호 강조 */}
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
                                                   {(() => {
                                                     const badge = getBibBadgeStyle(player.bibNumber);
                                                     return (
@@ -3469,13 +3462,13 @@ export default function TenantPortalPage({
                                                         background: badge.background,
                                                         border: `1.5px solid ${badge.borderColor}`,
                                                         boxShadow: badge.boxShadow || 'none',
-                                                        padding: '3px 10px',
-                                                        borderRadius: '8px',
-                                                        fontSize: '0.84rem',
+                                                        padding: '2px 8px',
+                                                        borderRadius: '6px',
+                                                        fontSize: '0.76rem',
                                                         whiteSpace: 'nowrap',
                                                         display: 'inline-flex',
                                                         alignItems: 'center',
-                                                        gap: '4px'
+                                                        gap: '3px'
                                                       }}>
                                                         <span>{badge.icon}</span>
                                                         <span>{badge.text}</span>
