@@ -2780,20 +2780,19 @@ export default function TenantPortalPage({
 
                       return (
                         <div className="premium-table-container">
-                          <table className="premium-table" style={{ fontSize: '0.9rem', width: '100%', borderCollapse: 'collapse', color: 'black' }}>
+                          <table className="premium-table leaderboard-table" style={{ fontSize: '0.88rem', width: '100%', borderCollapse: 'collapse', color: 'black' }}>
                             <thead>
                               <tr style={{ background: '#f8fafc' }}>
-                                <th style={{ width: '70px', textAlign: 'center', fontWeight: '800' }}>순위</th>
-                                <th style={{ minWidth: '90px', fontWeight: '800' }}>성명</th>
-                                <th style={{ minWidth: '90px', fontWeight: '800' }}>배번</th>
-                                <th style={{ minWidth: '100px', fontWeight: '800' }}>생년월일</th>
+                                <th style={{ width: '44px', textAlign: 'center', fontWeight: '800', padding: '10px 4px' }}>순위</th>
+                                <th style={{ minWidth: '68px', fontWeight: '800', textAlign: 'left', padding: '10px 6px' }}>성명</th>
+                                <th style={{ width: '56px', textAlign: 'center', fontWeight: '800', padding: '10px 4px' }}>배번</th>
                                 {activeRoundKeys.map(rKey => {
                                   const num = rKey.replace('r', '');
                                   return (
-                                    <th key={rKey} style={{ width: '60px', textAlign: 'center', fontWeight: '800' }}>{num}R</th>
+                                    <th key={rKey} style={{ width: '42px', textAlign: 'center', fontWeight: '800', padding: '10px 2px' }}>{num}R</th>
                                   );
                                 })}
-                                <th style={{ width: '80px', textAlign: 'center', fontWeight: '800', color: 'var(--theme-primary)' }}>총점</th>
+                                <th style={{ width: '54px', textAlign: 'center', fontWeight: '800', color: 'var(--theme-primary)', padding: '10px 4px' }}>총점</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -2803,27 +2802,27 @@ export default function TenantPortalPage({
 
                                 return (
                                   <tr key={rIdx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                    <td style={{ textAlign: 'center', fontWeight: '800' }}>
+                                    <td style={{ textAlign: 'center', fontWeight: '800', padding: '8px 4px' }}>
                                       <span style={{
                                         display: 'inline-block',
-                                        width: '28px',
-                                        height: '28px',
-                                        lineHeight: '28px',
+                                        width: '24px',
+                                        height: '24px',
+                                        lineHeight: '24px',
                                         borderRadius: '50%',
                                         background: rankDisplay === 1 ? 'var(--theme-gold)' : rankDisplay === 2 ? '#cbd5e1' : rankDisplay === 3 ? '#b45309' : '#f1f5f9',
                                         color: isTop3 ? 'white' : 'var(--text-main)',
-                                        fontSize: '0.85rem'
+                                        fontSize: '0.78rem'
                                       }}>
                                         {rankDisplay}
                                       </span>
                                     </td>
-                                    <td style={{ fontWeight: '800' }}>
-                                      <div>{row.name}</div>
+                                    <td style={{ fontWeight: '800', padding: '8px 6px', textAlign: 'left', whiteSpace: 'nowrap' }}>
+                                      <div style={{ fontSize: '0.88rem' }}>{row.name}</div>
                                       {row.club && row.club !== '미소속' && (
-                                        <div style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: '500' }}>{row.club}</div>
+                                        <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '500' }}>{row.club}</div>
                                       )}
                                     </td>
-                                    <td>
+                                    <td style={{ textAlign: 'center', padding: '8px 4px', whiteSpace: 'nowrap' }}>
                                       {row.bibNumber ? (() => {
                                         const badge = getBibBadgeStyle(row.bibNumber);
                                         return (
@@ -2832,13 +2831,13 @@ export default function TenantPortalPage({
                                             color: badge.color,
                                             background: badge.background,
                                             border: `1px solid ${badge.borderColor}`,
-                                            padding: '2px 8px',
-                                            borderRadius: '6px',
-                                            fontSize: '0.8rem',
+                                            padding: '2px 5px',
+                                            borderRadius: '5px',
+                                            fontSize: '0.75rem',
                                             whiteSpace: 'nowrap',
                                             display: 'inline-flex',
                                             alignItems: 'center',
-                                            gap: '4px'
+                                            gap: '3px'
                                           }}>
                                             <span>{badge.icon}</span>
                                             <span>{row.bibNumber}</span>
@@ -2846,7 +2845,6 @@ export default function TenantPortalPage({
                                         );
                                       })() : '-'}
                                     </td>
-                                    <td>{formatMaskedBirthDate(row.birth)}</td>
                                     {activeRoundKeys.map((rKey, idx) => {
                                       const rawVal = row[rKey];
                                       const conducted = isRoundConducted(rKey);
@@ -2860,21 +2858,23 @@ export default function TenantPortalPage({
                                       return (
                                         <td key={idx} style={{
                                           textAlign: 'center',
+                                          padding: '8px 2px',
                                           color: isDiscarded ? '#94a3b8' : isPenalty ? (upper === 'DNS' ? '#ef4444' : '#d97706') : 'inherit',
                                           textDecoration: isDiscarded ? 'line-through' : 'none',
-                                          fontWeight: isDiscarded ? 'normal' : isPenalty ? '800' : '600'
+                                          fontWeight: isDiscarded ? 'normal' : isPenalty ? '800' : '600',
+                                          fontSize: '0.85rem'
                                         }}>
                                           {effectiveVal}
                                           {isPenalty && pointVal !== null && (
-                                            <span style={{ fontSize: '0.7rem', display: 'block', textDecoration: 'none', color: isDiscarded ? '#94a3b8' : '#64748b', fontWeight: '700' }}>
+                                            <span style={{ fontSize: '0.65rem', display: 'block', textDecoration: 'none', color: isDiscarded ? '#94a3b8' : '#64748b', fontWeight: '700' }}>
                                               ({pointVal}점)
                                             </span>
                                           )}
-                                          {isDiscarded && <span style={{ fontSize: '0.7rem', display: 'block', textDecoration: 'none', color: '#f43f5e', fontWeight: '800' }}>(제외)</span>}
+                                          {isDiscarded && <span style={{ fontSize: '0.65rem', display: 'block', textDecoration: 'none', color: '#f43f5e', fontWeight: '800' }}>(제외)</span>}
                                         </td>
                                       );
                                     })}
-                                    <td style={{ textAlign: 'center', fontWeight: '900', color: 'var(--theme-primary)', fontSize: '1.05rem' }}>
+                                    <td style={{ textAlign: 'center', fontWeight: '900', color: 'var(--theme-primary)', fontSize: '0.98rem', padding: '8px 4px', whiteSpace: 'nowrap' }}>
                                       {anyRoundConducted ? `${row.computedTotal}점` : '-'}
                                     </td>
                                   </tr>
@@ -2906,7 +2906,7 @@ export default function TenantPortalPage({
                               </h3>
                             </div>
 
-                            <div className="glass-panel" style={{ background: 'white', padding: '24px 30px', borderTop: '4px solid #10b981', borderRadius: '14px' }}>
+                            <div className="glass-panel" style={{ background: 'white', padding: 'clamp(14px, 3vw, 24px) clamp(10px, 2.5vw, 24px)', borderTop: '4px solid #10b981', borderRadius: '14px' }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
                                 <h4 style={{ fontSize: '1.15rem', fontWeight: '900', color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                                   <span style={{ fontSize: '1.2rem' }}>🏆</span> 단체전 (소속협회/클럽 대항전)
@@ -2954,7 +2954,7 @@ export default function TenantPortalPage({
                               </h3>
                             </div>
 
-                            <div className="glass-panel" style={{ background: 'white', padding: '24px 30px', borderTop: '4px solid var(--theme-primary)', borderRadius: '14px' }}>
+                            <div className="glass-panel" style={{ background: 'white', padding: 'clamp(14px, 3vw, 24px) clamp(10px, 2.5vw, 24px)', borderTop: '4px solid var(--theme-primary)', borderRadius: '14px' }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
                                 <h4 style={{ fontSize: '1.15rem', fontWeight: '900', color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                                   <span style={{ fontSize: '1.2rem' }}>🏆</span> 윈드포일 (남녀오픈)
@@ -3087,7 +3087,7 @@ export default function TenantPortalPage({
                                       : 'var(--theme-primary)';
 
                                   return (
-                                    <div key={subclass} className="glass-panel" style={{ background: 'white', padding: '24px 30px', borderTop: `4px solid ${badgeColor}`, borderRadius: '14px' }}>
+                                    <div key={subclass} className="glass-panel" style={{ background: 'white', padding: 'clamp(14px, 3vw, 24px) clamp(10px, 2.5vw, 24px)', borderTop: `4px solid ${badgeColor}`, borderRadius: '14px' }}>
                                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
                                         <h4 style={{ fontSize: '1.15rem', fontWeight: '900', color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                                           <span style={{ color: badgeColor }}>🏷️</span> {root} (남자부) - <span style={{ color: badgeColor }}>{subclass}</span>
@@ -3101,7 +3101,7 @@ export default function TenantPortalPage({
                                   );
                                 })
                               ) : (
-                                <div className="glass-panel" style={{ background: 'white', padding: '24px 30px', borderTop: '4px solid var(--theme-primary)', borderRadius: '14px' }}>
+                                <div className="glass-panel" style={{ background: 'white', padding: 'clamp(14px, 3vw, 24px) clamp(10px, 2.5vw, 24px)', borderTop: '4px solid var(--theme-primary)', borderRadius: '14px' }}>
                                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
                                     <h4 style={{ fontSize: '1.15rem', fontWeight: '900', color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                                       <span style={{ fontSize: '1.2rem' }}>♂️</span> {root} (남자부)
@@ -3127,7 +3127,7 @@ export default function TenantPortalPage({
                                 sortedFemaleSubclassKeys.map(subclass => {
                                   const list = femaleSubclassMap[subclass] || [];
                                   return (
-                                    <div key={subclass} className="glass-panel" style={{ background: 'white', padding: '24px 30px', borderTop: '4px solid #f43f5e', borderRadius: '14px' }}>
+                                    <div key={subclass} className="glass-panel" style={{ background: 'white', padding: 'clamp(14px, 3vw, 24px) clamp(10px, 2.5vw, 24px)', borderTop: '4px solid #f43f5e', borderRadius: '14px' }}>
                                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
                                         <h4 style={{ fontSize: '1.15rem', fontWeight: '900', color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                                           <span style={{ color: '#f43f5e' }}>🏷️</span> {root} (여자부) - <span style={{ color: '#f43f5e' }}>{subclass}</span>
@@ -3141,7 +3141,7 @@ export default function TenantPortalPage({
                                   );
                                 })
                               ) : (
-                                <div className="glass-panel" style={{ background: 'white', padding: '24px 30px', borderTop: '4px solid #f43f5e', borderRadius: '14px' }}>
+                                <div className="glass-panel" style={{ background: 'white', padding: 'clamp(14px, 3vw, 24px) clamp(10px, 2.5vw, 24px)', borderTop: '4px solid #f43f5e', borderRadius: '14px' }}>
                                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
                                     <h4 style={{ fontSize: '1.15rem', fontWeight: '900', color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                                       <span style={{ fontSize: '1.2rem' }}>♀️</span> {root} (여자부)
