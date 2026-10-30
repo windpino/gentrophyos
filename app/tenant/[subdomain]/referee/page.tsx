@@ -3258,7 +3258,6 @@ export default function RefereeMobilePage({
                 </th>
               ))}
               <th style={{ padding: '6px 4px', width: '50px', border: '1px solid #cbd5e1', fontWeight: '900' }}>총점</th>
-              <th style={{ padding: '6px 8px', minWidth: '75px', border: '1px solid #cbd5e1' }}>비고</th>
             </tr>
           </thead>
           <tbody>
@@ -3280,20 +3279,14 @@ export default function RefereeMobilePage({
                       rawVal === null || rawVal === undefined || rawVal === ''
                         ? (conducted ? 'DNS' : '-')
                         : rawVal;
-                    const pts = getRoundScoreValue(rawVal, r.key, participants, dnsDnfRule);
                     return (
                       <td key={r.key} style={{ padding: '5px 4px', border: '1px solid #cbd5e1' }}>
-                        {effective === 'DNS' || effective === 'DNF'
-                          ? `${effective}(${pts})`
-                          : effective}
+                        {effective}
                       </td>
                     );
                   })}
                   <td style={{ padding: '5px 4px', fontWeight: '900', border: '1px solid #cbd5e1' }}>
                     {p.total ?? 0}
-                  </td>
-                  <td style={{ padding: '5px 6px', fontSize: '8.5pt', border: '1px solid #cbd5e1' }}>
-                    {rankVal === 1 ? '🥇 1위 (우승)' : rankVal === 2 ? '🥈 2위 (준우승)' : rankVal === 3 ? '🥉 3위' : ''}
                   </td>
                 </tr>
               );

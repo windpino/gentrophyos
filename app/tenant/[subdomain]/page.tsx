@@ -123,6 +123,20 @@ export function getBibBadgeStyle(bibNumber?: string) {
   };
 }
 
+// 배번 표시용 정제 함수: "연두35번" -> "연두35", "흰색 1번" -> "흰색 1", "배번 12번" -> "12" 처럼 접미사 '번' 및 불필요한 공백 제거
+export function formatBibShortDisplay(bibNumber?: string): string {
+  if (!bibNumber) return '-';
+  const trimmed = bibNumber.trim();
+  if (!trimmed || trimmed === '-') return '-';
+  // "배번 35번" -> "35", "배번35" -> "35"
+  let clean = trimmed.replace(/^배번\s*/, '');
+  // 뒤에 붙은 "번" 제거: "연두 35번" -> "연두 35", "연두35번" -> "연두35", "35번" -> "35"
+  clean = clean.replace(/(\d+)\s*번$/, '$1');
+  // 색상과 숫자 사이 불필요한 연속 공백 정돈
+  clean = clean.replace(/\s+/g, ' ').trim();
+  return clean || trimmed;
+}
+
 // 한글 초성 추출 및 초성 검색 유틸리티
 const CHOSEONG_LIST = [
   'ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ', 'ㅅ', 
@@ -350,6 +364,7 @@ export default function TenantPortalPage({
   const [leaderboardDnsDnfRules, setLeaderboardDnsDnfRules] = useState<Record<string, 'FINISHER_PLUS_ONE' | 'REGISTERED_PLUS_ONE'>>({});
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [selectedLeaderboardCategory, setSelectedLeaderboardCategory] = useState<string>('전체');
+  const [selectedLeaderboardViewMode, setSelectedLeaderboardViewMode] = useState<Record<string, 'overall' | 'subclass'>>({});
   const [registrations, setRegistrations] = useState<any[]>([]);
   const [regsLoading, setRegsLoading] = useState(false);
   const [liveStatus, setLiveStatus] = useState<'connected' | 'reconnecting' | 'disconnected'>('disconnected');
@@ -2825,6 +2840,7 @@ export default function TenantPortalPage({
                                     <td style={{ textAlign: 'center', padding: '8px 4px', whiteSpace: 'nowrap' }}>
                                       {row.bibNumber ? (() => {
                                         const badge = getBibBadgeStyle(row.bibNumber);
+                                        const shortBib = formatBibShortDisplay(row.bibNumber);
                                         return (
                                           <span style={{
                                             fontWeight: '800',
@@ -2840,7 +2856,7 @@ export default function TenantPortalPage({
                                             gap: '3px'
                                           }}>
                                             <span>{badge.icon}</span>
-                                            <span>{row.bibNumber}</span>
+                                            <span>{shortBib}</span>
                                           </span>
                                         );
                                       })() : '-'}
@@ -2853,7 +2869,6 @@ export default function TenantPortalPage({
                                         : rawVal;
                                       const upper = String(effectiveVal).toUpperCase();
                                       const isPenalty = upper === 'DNS' || upper === 'DNF';
-                                      const pointVal = row.numericScores[idx];
                                       const isDiscarded = idx === row.discardIdx;
                                       return (
                                         <td key={idx} style={{
@@ -2865,11 +2880,6 @@ export default function TenantPortalPage({
                                           fontSize: '0.85rem'
                                         }}>
                                           {effectiveVal}
-                                          {isPenalty && pointVal !== null && (
-                                            <span style={{ fontSize: '0.65rem', display: 'block', textDecoration: 'none', color: isDiscarded ? '#94a3b8' : '#64748b', fontWeight: '700' }}>
-                                              ({pointVal}점)
-                                            </span>
-                                          )}
                                           {isDiscarded && <span style={{ fontSize: '0.65rem', display: 'block', textDecoration: 'none', color: '#f43f5e', fontWeight: '800' }}>(제외)</span>}
                                         </td>
                                       );
@@ -3072,53 +3082,103 @@ export default function TenantPortalPage({
                           </div>
 
                           {/* 남자부 섹션 */}
-                          {sortedMaleSubclassKeys.length > 0 && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                              {sortedMaleSubclassKeys.length > 1 ? (
-                                sortedMaleSubclassKeys.map(subclass => {
-                                  const list = maleSubclassMap[subclass] || [];
-                                  const badgeColor =
-                                    subclass === '청년부'
-                                      ? '#0284c7'
-                                      : subclass === '중년부'
-                                      ? '#059669'
-                                      : subclass === '장년부'
-                                      ? '#d97706'
-                                      : 'var(--theme-primary)';
+                          {sortedMaleSubclassKeys.length > 0 && (() => {
+                            const currentMode = selectedLeaderboardViewMode[`${root}_male`] || 'overall';
+                            const hasSubclasses = sortedMaleSubclassKeys.length > 1;
 
-                                  return (
-                                    <div key={subclass} className="glass-panel" style={{ background: 'white', padding: 'clamp(14px, 3vw, 24px) clamp(10px, 2.5vw, 24px)', borderTop: `4px solid ${badgeColor}`, borderRadius: '14px' }}>
-                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
-                                        <h4 style={{ fontSize: '1.15rem', fontWeight: '900', color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                          <span style={{ color: badgeColor }}>🏷️</span> {root} (남자부) - <span style={{ color: badgeColor }}>{subclass}</span>
-                                        </h4>
-                                        <span style={{ fontSize: '0.78rem', background: badgeColor, color: 'white', padding: '3px 10px', borderRadius: '12px', fontWeight: '800' }}>
-                                          {list.length}명 출전
-                                        </span>
-                                      </div>
-                                      {renderTable(list, maleDivName, subclass)}
-                                    </div>
-                                  );
-                                })
-                              ) : (
-                                <div className="glass-panel" style={{ background: 'white', padding: 'clamp(14px, 3vw, 24px) clamp(10px, 2.5vw, 24px)', borderTop: '4px solid var(--theme-primary)', borderRadius: '14px' }}>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
-                                    <h4 style={{ fontSize: '1.15rem', fontWeight: '900', color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                      <span style={{ fontSize: '1.2rem' }}>♂️</span> {root} (남자부)
-                                    </h4>
-                                    <span style={{ fontSize: '0.78rem', background: 'var(--theme-primary)', color: 'white', padding: '3px 10px', borderRadius: '12px', fontWeight: '800' }}>
-                                      {effectiveMale.length}명 출전
+                            return (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                {/* 전체 종합 vs 클라스별 보기 모드 전환 탭 */}
+                                {hasSubclasses && (
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f1f5f9', padding: '6px 12px', borderRadius: '10px' }}>
+                                    <span style={{ fontSize: '0.82rem', fontWeight: '800', color: '#475569' }}>
+                                      👨 {root} (남자부) 순위 표기 방식:
                                     </span>
+                                    <div style={{ display: 'inline-flex', background: '#e2e8f0', padding: '3px', borderRadius: '8px', gap: '4px' }}>
+                                      <button
+                                        type="button"
+                                        onClick={() => setSelectedLeaderboardViewMode(prev => ({ ...prev, [`${root}_male`]: 'overall' }))}
+                                        style={{
+                                          padding: '4px 12px',
+                                          borderRadius: '6px',
+                                          border: 'none',
+                                          background: currentMode === 'overall' ? 'var(--theme-primary)' : 'transparent',
+                                          color: currentMode === 'overall' ? '#ffffff' : '#475569',
+                                          fontWeight: '800',
+                                          fontSize: '0.78rem',
+                                          cursor: 'pointer',
+                                          transition: 'all 0.15s ease'
+                                        }}
+                                      >
+                                        🏆 전체 통합 순위 (전수 표기)
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => setSelectedLeaderboardViewMode(prev => ({ ...prev, [`${root}_male`]: 'subclass' }))}
+                                        style={{
+                                          padding: '4px 12px',
+                                          borderRadius: '6px',
+                                          border: 'none',
+                                          background: currentMode === 'subclass' ? 'var(--theme-primary)' : 'transparent',
+                                          color: currentMode === 'subclass' ? '#ffffff' : '#475569',
+                                          fontWeight: '800',
+                                          fontSize: '0.78rem',
+                                          cursor: 'pointer',
+                                          transition: 'all 0.15s ease'
+                                        }}
+                                      >
+                                        🏷️ 클라스별 순위 (청년·중년·장년부)
+                                      </button>
+                                    </div>
                                   </div>
-                                  {effectiveMale.length === 0 ? (
-                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '10px 0' }}>
-                                      해당 부서의 등록/확정된 순위표가 없습니다.
-                                    </p>
-                                  ) : renderTable(effectiveMale, maleDivName)}
-                                </div>
-                              )}
-                            </div>
-                          )}
+                                )}
+
+                                {hasSubclasses && currentMode === 'subclass' ? (
+                                  sortedMaleSubclassKeys.map(subclass => {
+                                    const list = maleSubclassMap[subclass] || [];
+                                    const badgeColor =
+                                      subclass === '청년부'
+                                        ? '#0284c7'
+                                        : subclass === '중년부'
+                                        ? '#059669'
+                                        : subclass === '장년부'
+                                        ? '#d97706'
+                                        : 'var(--theme-primary)';
+
+                                    return (
+                                      <div key={subclass} className="glass-panel" style={{ background: 'white', padding: 'clamp(14px, 3vw, 24px) clamp(10px, 2.5vw, 24px)', borderTop: `4px solid ${badgeColor}`, borderRadius: '14px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
+                                          <h4 style={{ fontSize: '1.15rem', fontWeight: '900', color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <span style={{ color: badgeColor }}>🏷️</span> {root} (남자부) - <span style={{ color: badgeColor }}>{subclass}</span>
+                                          </h4>
+                                          <span style={{ fontSize: '0.78rem', background: badgeColor, color: 'white', padding: '3px 10px', borderRadius: '12px', fontWeight: '800' }}>
+                                            {list.length}명 출전
+                                          </span>
+                                        </div>
+                                        {renderTable(list, maleDivName, subclass)}
+                                      </div>
+                                    );
+                                  })
+                                ) : (
+                                  <div className="glass-panel" style={{ background: 'white', padding: 'clamp(14px, 3vw, 24px) clamp(10px, 2.5vw, 24px)', borderTop: '4px solid var(--theme-primary)', borderRadius: '14px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
+                                      <h4 style={{ fontSize: '1.15rem', fontWeight: '900', color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span style={{ fontSize: '1.2rem' }}>♂️</span> {root} (남자부) {hasSubclasses ? '전체 통합 순위' : ''}
+                                      </h4>
+                                      <span style={{ fontSize: '0.78rem', background: 'var(--theme-primary)', color: 'white', padding: '3px 10px', borderRadius: '12px', fontWeight: '800' }}>
+                                        {effectiveMale.length}명 출전 (전체)
+                                      </span>
+                                    </div>
+                                    {effectiveMale.length === 0 ? (
+                                      <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '10px 0' }}>
+                                        해당 부서의 등록/확정된 순위표가 없습니다.
+                                      </p>
+                                    ) : renderTable(effectiveMale, maleDivName)}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
 
                           {/* 여자부 섹션 */}
                           {sortedFemaleSubclassKeys.length > 0 && (
