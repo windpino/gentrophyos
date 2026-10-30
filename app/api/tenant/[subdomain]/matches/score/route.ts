@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db as firestore } from '@/src/lib/firebase';
-import { doc, getDoc, updateDoc, collection, query, where, getDocs, setDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, query, where, getDocs, setDoc, deleteDoc } from 'firebase/firestore';
 import { eventEmitter, EVENTS } from '@/src/lib/events';
 import { authenticateApiRequest } from '@/src/lib/auth';
+import { invalidateMatchesCache } from '@/src/lib/dataSnapshot';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -115,6 +116,14 @@ export async function POST(
       p2Score,
       isCompleted,
     });
+
+    if (matchData.tournamentId) {
+      invalidateMatchesCache(matchData.tournamentId);
+      try {
+        const snapshotRef = doc(firestore, 'tournaments', matchData.tournamentId, 'snapshots', 'matches');
+        await deleteDoc(snapshotRef);
+      } catch (e) {}
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db as firestore } from '@/src/lib/firebase';
 import { doc, getDoc, collection, query, where, getDocs, limit, addDoc } from 'firebase/firestore';
 import { getCachedTenantFull } from '@/src/lib/tenantCache';
+import { getOrBuildRegistrationsSnapshot, invalidateRegistrationsCache } from '@/src/lib/dataSnapshot';
 
 export async function GET(
   req: NextRequest,
@@ -28,115 +29,121 @@ export async function GET(
     }
 
     if (!queryTournamentId) {
-      return NextResponse.json({ registrations: [], formFields: [] });
+      return NextResponse.json({ registrations: [], formFields: [], registeredClubs: [] });
     }
 
-    // 1. 참가 신청 목록 조회 (해당 대회의 신청서만 단일 쿼리)
-    const regsQuery = query(
-      collection(firestore, 'registrations'),
-      where('tournamentId', '==', queryTournamentId)
-    );
-    const regsSnap = await getDocs(regsQuery);
+    // [최적화 핵심] 단일 스냅샷 문서 & 인메모리 캐시 조회 (130+ Reads -> 0~1 Reads)
+    const snapshotResult = await getOrBuildRegistrationsSnapshot(queryTournamentId, async () => {
+      // 스냅샷이 없을 때 최초 1회만 컬렉션 조회
+      const regsQuery = query(
+        collection(firestore, 'registrations'),
+        where('tournamentId', '==', queryTournamentId)
+      );
+      const regsSnap = await getDocs(regsQuery);
 
-    // [최적화 핵심] 테넌트 전체 플레이어 전수 조회(all players query)를 완전히 제거하여 대규모 Read 폭탄 차단.
-    // registrations 문서에 비정규화된 player 정보를 우선 사용하고, 누락된 경우에만 개별 조회.
-    const missingPlayerIds = new Set<string>();
-    regsSnap.docs.forEach(docSnap => {
-      const data = docSnap.data();
-      if (!data.player && data.playerId) {
-        missingPlayerIds.add(data.playerId);
-      }
-    });
-
-    const fallbackPlayersMap = new Map<string, any>();
-    if (missingPlayerIds.size > 0) {
-      const playerPromises = Array.from(missingPlayerIds).map(async (pid) => {
-        try {
-          const pSnap = await getDoc(doc(firestore, 'players', pid));
-          if (pSnap.exists()) {
-            fallbackPlayersMap.set(pid, pSnap.data());
-          }
-        } catch (e) {}
+      const missingPlayerIds = new Set<string>();
+      regsSnap.docs.forEach(docSnap => {
+        const data = docSnap.data();
+        if (!data.player && data.playerId) {
+          missingPlayerIds.add(data.playerId);
+        }
       });
-      await Promise.all(playerPromises);
-    }
 
-    const clubSet = new Set<string>();
+      const fallbackPlayersMap = new Map<string, any>();
+      if (missingPlayerIds.size > 0) {
+        const playerPromises = Array.from(missingPlayerIds).map(async (pid) => {
+          try {
+            const pSnap = await getDoc(doc(firestore, 'players', pid));
+            if (pSnap.exists()) {
+              fallbackPlayersMap.set(pid, pSnap.data());
+            }
+          } catch (e) {}
+        });
+        await Promise.all(playerPromises);
+      }
 
-    const registrations = regsSnap.docs.map(docSnap => {
-      const data = docSnap.data();
-      const fallbackPlayer = fallbackPlayersMap.get(data.playerId);
+      const clubSet = new Set<string>();
 
-      let phoneFromResponses = '';
-      try {
-        if (data.formResponses) {
-          const extra = typeof data.formResponses === 'string' ? JSON.parse(data.formResponses) : data.formResponses;
-          phoneFromResponses = extra.phone || '';
-          if (extra.club && typeof extra.club === 'string') {
-            const trimmed = extra.club.trim();
-            if (trimmed && trimmed !== '미소속' && trimmed !== '-') {
-              clubSet.add(trimmed);
+      const registrations = regsSnap.docs.map(docSnap => {
+        const data = docSnap.data();
+        const fallbackPlayer = fallbackPlayersMap.get(data.playerId);
+
+        let phoneFromResponses = '';
+        try {
+          if (data.formResponses) {
+            const extra = typeof data.formResponses === 'string' ? JSON.parse(data.formResponses) : data.formResponses;
+            phoneFromResponses = extra.phone || '';
+            if (extra.club && typeof extra.club === 'string') {
+              const trimmed = extra.club.trim();
+              if (trimmed && trimmed !== '미소속' && trimmed !== '-') {
+                clubSet.add(trimmed);
+              }
             }
           }
-        }
-      } catch (e) {}
+        } catch (e) {}
 
-      if (data.player?.club) {
-        const trimmed = String(data.player.club).trim();
-        if (trimmed && trimmed !== '미소속' && trimmed !== '-') {
-          clubSet.add(trimmed);
+        if (data.player?.club) {
+          const trimmed = String(data.player.club).trim();
+          if (trimmed && trimmed !== '미소속' && trimmed !== '-') {
+            clubSet.add(trimmed);
+          }
         }
+
+        const phone = phoneFromResponses || data.player?.phone || fallbackPlayer?.phone || '';
+
+        return {
+          ...data,
+          id: docSnap.id,
+          createdAt: typeof data.createdAt === 'string' ? data.createdAt : new Date(data.createdAt || Date.now()).toISOString(),
+          player: {
+            ...(data.player || {}),
+            id: data.playerId,
+            name: data.player?.name || fallbackPlayer?.name || '',
+            phone,
+          }
+        };
+      }).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+      // 2. 동적 신청 폼 설정 조회
+      const formConfigsQuery = query(
+        collection(firestore, `tournaments/${queryTournamentId}/formConfigs`),
+        limit(1)
+      );
+      const formConfigsSnap = await getDocs(formConfigsQuery);
+      let formFields = [];
+      if (!formConfigsSnap.empty) {
+        const formConfig = formConfigsSnap.docs[0].data();
+        formFields = formConfig.fields ? JSON.parse(formConfig.fields) : [];
       }
 
-      const phone = phoneFromResponses || data.player?.phone || fallbackPlayer?.phone || '';
+      // 3. 기등록된 소속 협회/클럽명 추천 목록
+      const defaultClubs = [
+        '통영윈드서핑협회',
+        '통영윈드서핑클럽',
+        '경남윈드서핑카이트보딩협회',
+        '대한윈드서핑카이트보딩협회',
+        '부산윈드서핑클럽',
+        '거제윈드서핑클럽',
+        '창원마산윈드서핑클럽',
+        '서울뚝섬윈드서핑클럽',
+        '여수윈드서핑클럽',
+        '울산윈드서핑클럽',
+        '포항윈드서핑클럽',
+        '제주윈드서핑클럽'
+      ];
+      defaultClubs.forEach(c => clubSet.add(c));
 
-      return {
-        ...data,
-        id: docSnap.id,
-        createdAt: new Date(data.createdAt),
-        player: {
-          ...(data.player || {}),
-          id: data.playerId,
-          name: data.player?.name || fallbackPlayer?.name || '',
-          phone,
-        }
-      };
-    }).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      const registeredClubs = Array.from(clubSet);
+      return { registrations, formFields, registeredClubs };
+    });
 
-    // 2. 동적 신청 폼 설정 조회
-    const formConfigsQuery = query(
-      collection(firestore, `tournaments/${queryTournamentId}/formConfigs`),
-      limit(1)
-    );
-    const formConfigsSnap = await getDocs(formConfigsQuery);
-    let formFields = [];
-    if (!formConfigsSnap.empty) {
-      const formConfig = formConfigsSnap.docs[0].data();
-      formFields = formConfig.fields ? JSON.parse(formConfig.fields) : [];
-    }
-
-    // 3. 기등록된 소속 협회/클럽명 추천 목록
-    const defaultClubs = [
-      '통영윈드서핑협회',
-      '통영윈드서핑클럽',
-      '경남윈드서핑카이트보딩협회',
-      '대한윈드서핑카이트보딩협회',
-      '부산윈드서핑클럽',
-      '거제윈드서핑클럽',
-      '창원마산윈드서핑클럽',
-      '서울뚝섬윈드서핑클럽',
-      '여수윈드서핑클럽',
-      '울산윈드서핑클럽',
-      '포항윈드서핑클럽',
-      '제주윈드서핑클럽'
-    ];
-    defaultClubs.forEach(c => clubSet.add(c));
-
-    const registeredClubs = Array.from(clubSet);
-
-    return NextResponse.json({ registrations, formFields, registeredClubs }, {
+    return NextResponse.json({
+      registrations: snapshotResult.registrations,
+      formFields: snapshotResult.formFields,
+      registeredClubs: snapshotResult.registeredClubs
+    }, {
       headers: {
-        'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=29',
+        'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=59',
       }
     });
   } catch (error: any) {
@@ -274,6 +281,8 @@ export async function POST(
       paymentStatus: 'PENDING',
       status: 'PENDING',
     };
+
+    invalidateRegistrationsCache(tournamentId);
 
     return NextResponse.json({ success: true, registration, player });
   } catch (error: any) {

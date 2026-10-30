@@ -680,10 +680,13 @@ export default function TenantPortalPage({
     };
   }, [subdomain, activeTab, activeTournamentId]);
 
-  // 탭 및 대회 ID 변경시 로드
+  // 탭 및 대회 ID 변경시 로드 (15초 내 탭 재진입 시 중복 호출 방지하여 Firestore Read 절감)
+  const lastLiveFetchRef = React.useRef<number>(0);
   useEffect(() => {
-    if (activeTournamentId) {
-      if (activeTab === 'live') {
+    if (activeTournamentId && activeTab === 'live') {
+      const now = Date.now();
+      if (now - lastLiveFetchRef.current > 15000) {
+        lastLiveFetchRef.current = now;
         fetchLeaderboard(activeTournamentId);
         fetchMatches(activeTournamentId);
         fetchRegistrations(activeTournamentId);
@@ -857,11 +860,36 @@ export default function TenantPortalPage({
   const fetchLeaderboard = async (tId: string) => {
     setLeaderboardLoading(true);
     try {
+      // 1. 단일 통합 호출 우선 시도 (all=true: 1회 요청으로 전체 8개 종목 순위표 일괄 수신 & 0~1 Read 최적화)
+      try {
+        const singleRes = await fetch(`/api/tenant/${subdomain}/leaderboard?tournamentId=${tId}&all=true`);
+        const singleData = await singleRes.json();
+        if (singleData.leaderboards && Object.keys(singleData.leaderboards).length > 0) {
+          const newLeaderboards: Record<string, any[]> = {};
+          const newRounds: Record<string, any[]> = {};
+          const newRules: Record<string, 'FINISHER_PLUS_ONE' | 'REGISTERED_PLUS_ONE'> = {};
+
+          Object.entries(singleData.leaderboards).forEach(([div, val]: [string, any]) => {
+            newLeaderboards[div] = val.list || [];
+            if (val.rounds) newRounds[div] = val.rounds;
+            if (val.dnsDnfRule) newRules[div] = val.dnsDnfRule;
+          });
+
+          setLeaderboards(newLeaderboards);
+          setLeaderboardRounds(newRounds);
+          setLeaderboardDnsDnfRules(newRules);
+          return;
+        }
+      } catch (err) {
+        console.warn('통합 리더보드 조회 실패, 개별 조회로 전환:', err);
+      }
+
+      // 2. Fallback: 개별 조회
       const divisionList = getDivisionTabs();
       const results = await Promise.all(
         divisionList.map(async (div: string) => {
           try {
-            const res = await fetch(`/api/tenant/${subdomain}/leaderboard?tournamentId=${tId}&division=${encodeURIComponent(div)}&_t=${Date.now()}`, { cache: 'no-store' });
+            const res = await fetch(`/api/tenant/${subdomain}/leaderboard?tournamentId=${tId}&division=${encodeURIComponent(div)}`);
             const data = await res.json();
             return { division: div, list: data.leaderboard || [], rounds: data.rounds || null, dnsDnfRule: data.dnsDnfRule || null };
           } catch (e) {
@@ -896,7 +924,7 @@ export default function TenantPortalPage({
   const fetchRegistrations = async (tId: string) => {
     setRegsLoading(true);
     try {
-      const res = await fetch(`/api/tenant/${subdomain}/registrations?tournamentId=${tId}&_t=${Date.now()}`, { cache: 'no-store' });
+      const res = await fetch(`/api/tenant/${subdomain}/registrations?tournamentId=${tId}`);
       const data = await res.json();
       if (data.registrations) {
         const approved = data.registrations.filter((r: any) => r.status === 'APPROVED');
@@ -914,7 +942,7 @@ export default function TenantPortalPage({
 
   const fetchMatches = async (tId: string) => {
     try {
-      const res = await fetch(`/api/tenant/${subdomain}/matches?tournamentId=${tId}&_t=${Date.now()}`, { cache: 'no-store' });
+      const res = await fetch(`/api/tenant/${subdomain}/matches?tournamentId=${tId}`);
       const data = await res.json();
       if (data.matches) {
         setMatches(data.matches);

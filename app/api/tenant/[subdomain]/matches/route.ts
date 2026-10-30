@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db as firestore } from '@/src/lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { getCachedTenantFull } from '@/src/lib/tenantCache';
+import { getOrBuildMatchesSnapshot } from '@/src/lib/dataSnapshot';
 
 export async function GET(
   req: NextRequest,
@@ -29,23 +30,26 @@ export async function GET(
       return NextResponse.json({ matches: [] });
     }
 
-    const matchesQuery = query(
-      collection(firestore, 'matches'),
-      where('tournamentId', '==', queryTournamentId)
-    );
-    const matchesSnap = await getDocs(matchesQuery);
-    const matches = matchesSnap.docs.map(docSnap => {
-      const data = docSnap.data();
-      return {
-        ...data,
-        id: docSnap.id,
-        createdAt: new Date(data.createdAt),
-      };
-    }).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    // [최적화] 대진표 & 경기결과 스냅샷 및 인메모리 캐시 (0~1 Read)
+    const matches = await getOrBuildMatchesSnapshot(queryTournamentId, async () => {
+      const matchesQuery = query(
+        collection(firestore, 'matches'),
+        where('tournamentId', '==', queryTournamentId)
+      );
+      const matchesSnap = await getDocs(matchesQuery);
+      return matchesSnap.docs.map(docSnap => {
+        const data = docSnap.data();
+        return {
+          ...data,
+          id: docSnap.id,
+          createdAt: typeof data.createdAt === 'string' ? data.createdAt : new Date(data.createdAt || Date.now()).toISOString(),
+        };
+      }).sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    });
 
     return NextResponse.json({ matches }, {
       headers: {
-        'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=29',
+        'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=59',
       }
     });
   } catch (error: any) {

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db as firestore } from '@/src/lib/firebase';
-import { writeBatch, doc, collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { writeBatch, doc, collection, query, where, getDocs, limit, deleteDoc } from 'firebase/firestore';
 import { authenticateApiRequest } from '@/src/lib/auth';
 import { getCachedTenantFull } from '@/src/lib/tenantCache';
+import { invalidateRegistrationsCache } from '@/src/lib/dataSnapshot';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -190,6 +191,13 @@ export async function POST(
     }
 
     await commitBatchIfNeeded(true);
+
+    // 스냅샷 문서 및 인메모리 캐시 무효화 -> 다음 요청 시 최신 데이터로 스냅샷 재구축
+    invalidateRegistrationsCache(tournamentId);
+    try {
+      const snapshotRef = doc(firestore, 'tournaments', tournamentId, 'snapshots', 'registrations');
+      await deleteDoc(snapshotRef);
+    } catch (e) {}
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

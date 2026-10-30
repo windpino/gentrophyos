@@ -3,6 +3,12 @@ import { db as firestore } from '@/src/lib/firebase';
 import { doc, getDoc, collection, query, where, getDocs, orderBy, limit, setDoc } from 'firebase/firestore';
 import { sortPlayersByRules, assignRanks, PlayerRankInput, MatchResult } from '@/src/lib/tieBreaker';
 import { getCachedTenantFull } from '@/src/lib/tenantCache';
+import {
+  getMemoryLeaderboard,
+  setMemoryLeaderboard,
+  getConsolidatedLeaderboardSnapshot,
+  saveLeaderboardDivisionSnapshot
+} from '@/src/lib/dataSnapshot';
 
 export async function GET(
   req: NextRequest,
@@ -36,20 +42,77 @@ export async function GET(
     }
 
     const divisionParam = searchParams.get('division');
+    const isAll = searchParams.get('all') === 'true' || !divisionParam;
 
-    // 2. 만약 저장된 커스텀 리더보드가 있다면 우선 반환
+    // 1. [최적화] 전체 종목 리더보드 일괄 조회 (all=true: 8번 분할 호출 -> 1번 단일 호출 & 0~1 Read)
+    if (isAll) {
+      const memAll = getMemoryLeaderboard(tournament.id, 'ALL');
+      if (memAll) {
+        return NextResponse.json({
+          tournamentTitle: tournament.title,
+          leaderboards: memAll.divisions || {},
+          isCustom: true
+        }, {
+          headers: { 'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=29' }
+        });
+      }
+
+      const consolidated = await getConsolidatedLeaderboardSnapshot(tournament.id);
+      if (consolidated && consolidated.divisions) {
+        return NextResponse.json({
+          tournamentTitle: tournament.title,
+          leaderboards: consolidated.divisions,
+          isCustom: true
+        }, {
+          headers: { 'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=29' }
+        });
+      }
+    }
+
+    // 2. 특정 종목 조회 (메모리 -> 스냅샷 -> 개별 문서 순서)
     if (divisionParam) {
+      const memDiv = getMemoryLeaderboard(tournament.id, divisionParam);
+      if (memDiv) {
+        return NextResponse.json({
+          tournamentTitle: tournament.title,
+          leaderboard: memDiv.list || [],
+          rounds: memDiv.rounds || null,
+          dnsDnfRule: memDiv.dnsDnfRule || null,
+          isCustom: true
+        }, {
+          headers: { 'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=29' }
+        });
+      }
+
+      const consolidated = await getConsolidatedLeaderboardSnapshot(tournament.id);
+      if (consolidated?.divisions && consolidated.divisions[divisionParam]) {
+        const divData = consolidated.divisions[divisionParam];
+        setMemoryLeaderboard(tournament.id, divisionParam, divData);
+        return NextResponse.json({
+          tournamentTitle: tournament.title,
+          leaderboard: divData.list || [],
+          rounds: divData.rounds || null,
+          dnsDnfRule: divData.dnsDnfRule || null,
+          isCustom: true
+        }, {
+          headers: { 'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=29' }
+        });
+      }
+
       const savedLeaderboardDoc = await getDoc(
         doc(firestore, `tournaments/${tournament.id}/leaderboards`, divisionParam)
       );
       if (savedLeaderboardDoc.exists()) {
         const savedData = savedLeaderboardDoc.data();
+        setMemoryLeaderboard(tournament.id, divisionParam, savedData);
         return NextResponse.json({
           tournamentTitle: tournament.title,
           leaderboard: savedData.list || [],
           rounds: savedData.rounds || null,
           dnsDnfRule: savedData.dnsDnfRule || null,
           isCustom: true
+        }, {
+          headers: { 'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=29' }
         });
       }
     }
@@ -247,6 +310,9 @@ export async function POST(
     }
 
     await setDoc(leaderboardRef, updatePayload);
+
+    // 통합 스냅샷 문서 및 인메모리 캐시 동시 저장 (방문자 Read 1회로 전체 종목 제공)
+    await saveLeaderboardDivisionSnapshot(tournamentId, division, updatePayload);
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
