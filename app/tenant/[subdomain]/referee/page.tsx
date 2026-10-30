@@ -716,64 +716,117 @@ export default function RefereeMobilePage({
         return activeRounds[0]?.key || 'r1';
       });
 
+      const isOldDummyTeams = (list: any[]) =>
+        Array.isArray(list) &&
+        list.length === 4 &&
+        list.every((t: any, idx: number) =>
+          (t.id === `team_${idx + 1}` || !t.id) &&
+          ['통영윈드서핑클럽', '거제요트클럽', '부산세일링클럽', '창원윈드클럽'].includes(t.name)
+        );
+
       let sourceList: any[] = [];
       if (isSimulationMode && typeof window !== 'undefined') {
         const simSavedStr = localStorage.getItem(getSimStorageKey(tId, divisionName));
         if (simSavedStr) {
           try {
             const parsedSim = JSON.parse(simSavedStr);
-            if (Array.isArray(parsedSim) && parsedSim.length > 0) {
-              sourceList = parsedSim;
+            if (Array.isArray(parsedSim)) {
+              if (divisionName === '단체전' && isOldDummyTeams(parsedSim)) {
+                localStorage.removeItem(getSimStorageKey(tId, divisionName));
+              } else {
+                sourceList = parsedSim;
+              }
             }
           } catch (e) {}
         }
       }
-      if (sourceList.length === 0 && data.leaderboard && data.leaderboard.length > 0) {
-        sourceList = data.leaderboard;
+
+      const serverLeaderboard = divisionName === '단체전' && isOldDummyTeams(data.leaderboard || [])
+        ? []
+        : (data.leaderboard || []);
+
+      if (sourceList.length === 0 && serverLeaderboard.length > 0) {
+        sourceList = serverLeaderboard;
       }
 
-      if (sourceList.length > 0) {
-        const parseSavedRoundVal = (val: any) => {
-          if (val === undefined || val === null || val === '') return null;
-          if (val === 'DNS' || val === 'DNF') return val;
-          const num = Number(val);
-          return isNaN(num) ? null : num;
-        };
-
-        let preliminary: any[] = [];
-        if (divisionName === '단체전') {
-          preliminary = sourceList.map((team: any, idx: number) => {
-            const updated = { ...team };
-            if (!updated.id) updated.id = `team_${idx + 1}`;
-            if (!updated.name) updated.name = team.club || `팀 ${idx + 1}`;
-            if (!updated.club) updated.club = updated.name;
-            if (!updated.bibNumber) updated.bibNumber = `T${idx + 1}`;
-            activeRounds.forEach(r => {
-              updated[r.key] = parseSavedRoundVal(team[r.key]);
-            });
-            return updated;
-          });
-        } else {
-          preliminary = baseRegistrations.map((player) => {
-            const savedRow = sourceList.find((lItem: any) => lItem.id === player.id || lItem.name === player.name);
-            const updated: any = { ...player };
-            if (savedRow) {
-              updated.bibNumber = savedRow.bibNumber || player.bibNumber;
-              updated.rank = savedRow.rank || '-';
-              if (savedRow.subclass && savedRow.subclass !== '통합부') {
-                updated.subclass = savedRow.subclass;
+      // 단체전의 경우: 사용자가 삭제하거나 직접 추가한 로컬 스토리지 팀 목록이 최우선 기준 (삭제한 팀이 부활하지 않도록 보장)
+      let localTeamsForTeamDiv: any[] | null = null;
+      if (divisionName === '단체전' && typeof window !== 'undefined') {
+        const teamStorageKey = `gentrophy_${tId}_teams_단체전`;
+        const savedTeamsStr = localStorage.getItem(teamStorageKey);
+        if (savedTeamsStr !== null) {
+          try {
+            const parsed = JSON.parse(savedTeamsStr);
+            if (Array.isArray(parsed)) {
+              if (isOldDummyTeams(parsed)) {
+                localStorage.removeItem(teamStorageKey);
+                localStorage.removeItem(getSimStorageKey(tId, '단체전'));
+                localTeamsForTeamDiv = [];
+              } else {
+                localTeamsForTeamDiv = parsed;
               }
-              activeRounds.forEach(r => {
-                updated[r.key] = parseSavedRoundVal(savedRow[r.key]);
-              });
-            } else {
-              activeRounds.forEach(r => {
-                updated[r.key] = null;
-              });
             }
-            return updated;
-          });
+          } catch (e) {}
         }
+      }
+
+      const parseSavedRoundVal = (val: any) => {
+        if (val === undefined || val === null || val === '') return null;
+        if (val === 'DNS' || val === 'DNF') return val;
+        const num = Number(val);
+        return isNaN(num) ? null : num;
+      };
+
+      let preliminary: any[] = [];
+      if (divisionName === '단체전') {
+        const teamsToUse = localTeamsForTeamDiv !== null
+          ? localTeamsForTeamDiv
+          : (sourceList.length > 0 ? sourceList : baseRegistrations);
+
+        preliminary = teamsToUse.map((team: any, idx: number) => {
+          const updated = { ...team };
+          if (!updated.id) updated.id = `team_${idx + 1}`;
+          if (!updated.name) updated.name = team.club || `팀 ${idx + 1}`;
+          if (!updated.club) updated.club = updated.name;
+          if (!updated.bibNumber) updated.bibNumber = `T${idx + 1}`;
+
+          const savedRow = (sourceList.length > 0 ? sourceList : serverLeaderboard).find(
+            (lItem: any) => lItem.id === updated.id || lItem.name === updated.name
+          );
+          activeRounds.forEach(r => {
+            if (savedRow && savedRow[r.key] !== undefined) {
+              updated[r.key] = parseSavedRoundVal(savedRow[r.key]);
+            } else if (team[r.key] !== undefined) {
+              updated[r.key] = parseSavedRoundVal(team[r.key]);
+            } else {
+              updated[r.key] = null;
+            }
+          });
+          return updated;
+        });
+      } else if (sourceList.length > 0) {
+        preliminary = baseRegistrations.map((player) => {
+          const savedRow = sourceList.find((lItem: any) => lItem.id === player.id || lItem.name === player.name);
+          const updated: any = { ...player };
+          if (savedRow) {
+            updated.bibNumber = savedRow.bibNumber || player.bibNumber;
+            updated.rank = savedRow.rank || '-';
+            if (savedRow.subclass && savedRow.subclass !== '통합부') {
+              updated.subclass = savedRow.subclass;
+            }
+            activeRounds.forEach(r => {
+              updated[r.key] = parseSavedRoundVal(savedRow[r.key]);
+            });
+          } else {
+            activeRounds.forEach(r => {
+              updated[r.key] = null;
+            });
+          }
+          return updated;
+        });
+      }
+
+      if (preliminary.length > 0) {
 
         const hasScores = preliminary.some(p => activeRounds.some(r => p[r.key] !== null && p[r.key] !== undefined && p[r.key] !== ''));
         let mapped = preliminary;
@@ -801,14 +854,18 @@ export default function RefereeMobilePage({
         }
         setParticipants(mapped);
       } else {
-        const initialized = baseRegistrations.map(p => {
-          const obj: any = { ...p };
-          activeRounds.forEach(r => { obj[r.key] = null; });
-          obj.total = 0;
-          obj.rank = '-';
-          return obj;
-        });
-        setParticipants(initialized);
+        if (divisionName === '단체전') {
+          setParticipants([]);
+        } else {
+          const initialized = baseRegistrations.map(p => {
+            const obj: any = { ...p };
+            activeRounds.forEach(r => { obj[r.key] = null; });
+            obj.total = 0;
+            obj.rank = '-';
+            return obj;
+          });
+          setParticipants(initialized);
+        }
       }
     } catch (e) {
       console.error(e);
@@ -830,15 +887,16 @@ export default function RefereeMobilePage({
         if (savedTeamsStr) {
           try {
             const parsed = JSON.parse(savedTeamsStr);
-            if (Array.isArray(parsed) && parsed.length > 0) {
+            if (Array.isArray(parsed)) {
               const isOldDummyTeams = parsed.length === 4 && parsed.every((t: any, idx: number) =>
-                t.id === `team_${idx + 1}` && ['통영윈드서핑클럽', '거제요트클럽', '부산세일링클럽', '창원윈드클럽'].includes(t.name)
+                (t.id === `team_${idx + 1}` || !t.id) && ['통영윈드서핑클럽', '거제요트클럽', '부산세일링클럽', '창원윈드클럽'].includes(t.name)
               );
               if (!isOldDummyTeams) {
                 defaultTeams = parsed;
               } else {
                 localStorage.removeItem(teamStorageKey);
                 localStorage.removeItem(getSimStorageKey(activeTournament.id, '단체전'));
+                defaultTeams = [];
               }
             }
           } catch (e) {}
@@ -877,7 +935,7 @@ export default function RefereeMobilePage({
   }, [activeDivisionTab, rawRegistrations, activeTournament, includePendingApplicants, isSimulationMode]);
 
   // ── [단체전 전용: 출전 팀 추가 및 삭제 핸들러] ──
-  const handleAddTeamFromClub = (clubOrTeamName: string) => {
+  const handleAddTeamFromClub = async (clubOrTeamName: string) => {
     const trimmed = clubOrTeamName.trim();
     if (!trimmed) return;
 
@@ -905,9 +963,27 @@ export default function RefereeMobilePage({
 
     if (activeTournament) {
       if (typeof window !== 'undefined') {
-        localStorage.setItem(`gentrophy_${activeTournament.id}_teams_단체전`, JSON.stringify(recalculated));
-        if (isSimulationMode) {
-          localStorage.setItem(getSimStorageKey(activeTournament.id, '단체전'), JSON.stringify(recalculated));
+        const teamStorageKey = `gentrophy_${activeTournament.id}_teams_단체전`;
+        localStorage.setItem(teamStorageKey, JSON.stringify(recalculated));
+        localStorage.setItem(getSimStorageKey(activeTournament.id, '단체전'), JSON.stringify(recalculated));
+      }
+
+      if (!isSimulationMode) {
+        try {
+          await fetch(`/api/tenant/${subdomain}/leaderboard`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              tournamentId: activeTournament.id,
+              division: '단체전',
+              rounds: rounds,
+              list: recalculated,
+              dnsDnfRule: dnsDnfRule,
+              isConfirmed: isRankConfirmed
+            })
+          });
+        } catch (err) {
+          console.error('Failed to sync added team to server:', err);
         }
       }
     }
@@ -918,7 +994,7 @@ export default function RefereeMobilePage({
     });
   };
 
-  const handleDeleteTeam = (teamId: string, teamName: string) => {
+  const handleDeleteTeam = async (teamId: string, teamName: string) => {
     if (!window.confirm(`정말 [${teamName}] 팀을 출전 목록에서 제외하시겠습니까?`)) {
       return;
     }
@@ -929,15 +1005,33 @@ export default function RefereeMobilePage({
 
     if (activeTournament) {
       if (typeof window !== 'undefined') {
-        localStorage.setItem(`gentrophy_${activeTournament.id}_teams_단체전`, JSON.stringify(recalculated));
-        if (isSimulationMode) {
-          localStorage.setItem(getSimStorageKey(activeTournament.id, '단체전'), JSON.stringify(recalculated));
+        const teamStorageKey = `gentrophy_${activeTournament.id}_teams_단체전`;
+        localStorage.setItem(teamStorageKey, JSON.stringify(recalculated));
+        localStorage.setItem(getSimStorageKey(activeTournament.id, '단체전'), JSON.stringify(recalculated));
+      }
+
+      if (!isSimulationMode) {
+        try {
+          await fetch(`/api/tenant/${subdomain}/leaderboard`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              tournamentId: activeTournament.id,
+              division: '단체전',
+              rounds: rounds,
+              list: recalculated,
+              dnsDnfRule: dnsDnfRule,
+              isConfirmed: isRankConfirmed
+            })
+          });
+        } catch (err) {
+          console.error('Failed to sync deleted team to server:', err);
         }
       }
     }
 
     setInputFeedback({
-      text: `🗑️ [${teamName}] 팀이 출전 목록에서 제외되었습니다. (현재 출전: 총 ${updated.length}개 팀)`,
+      text: `🗑️ [${teamName}] 팀이 출전 목록에서 완전히 제외되었습니다. (현재 출전: 총 ${updated.length}개 팀)`,
       isError: false
     });
   };
@@ -977,6 +1071,10 @@ export default function RefereeMobilePage({
       defaultRounds.forEach(r => { next[r.key] = null; });
       return next;
     });
+
+    if (activeDivisionTab === '단체전' && typeof window !== 'undefined') {
+      localStorage.setItem(`gentrophy_${activeTournament.id}_teams_단체전`, JSON.stringify(resetParticipants));
+    }
 
     setRounds(defaultRounds);
     setSelectedRound('r1');
