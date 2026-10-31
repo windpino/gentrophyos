@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db as firestore } from '@/src/lib/firebase';
 import { doc, getDoc, collection, query, where, getDocs, orderBy, limit, setDoc } from 'firebase/firestore';
 import { sortPlayersByRules, assignRanks, PlayerRankInput, MatchResult } from '@/src/lib/tieBreaker';
-import { getCachedTenantFull } from '@/src/lib/tenantCache';
+import { getCachedTenantFull, invalidateTenantCache } from '@/src/lib/tenantCache';
 import {
   getMemoryLeaderboard,
   setMemoryLeaderboard,
@@ -288,7 +288,30 @@ export async function POST(
   try {
     const { subdomain } = await params;
     const body = await req.json();
-    const { tournamentId, division, list, rounds, dnsDnfRule, isReset } = body;
+    const { tournamentId, division, list, rounds, dnsDnfRule, isReset, togglePublish, isPublished } = body;
+
+    // 1. 홈페이지 공개/비공개 토글 전용 요청 처리
+    if (togglePublish) {
+      const publishVal = Boolean(isPublished);
+      const tenantRef = doc(firestore, 'tenants', subdomain);
+      const tenantSnap = await getDoc(tenantRef);
+      if (tenantSnap.exists()) {
+        const existingData = tenantSnap.data();
+        const existingConfig = existingData.overviewConfig || {};
+        const updatedOverview = {
+          ...existingConfig,
+          bracketsPublished: publishVal,
+          leaderboardPublished: publishVal,
+          bracketsPublishedAt: publishVal ? new Date().toISOString() : (existingConfig.bracketsPublishedAt || null),
+        };
+        await setDoc(tenantRef, {
+          overviewConfig: updatedOverview,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+        invalidateTenantCache(subdomain);
+      }
+      return NextResponse.json({ success: true, isPublished: publishVal });
+    }
 
     if (!tournamentId || !division) {
       return NextResponse.json({ error: '대회 ID와 종목은 필수입니다.' }, { status: 400 });
@@ -320,6 +343,28 @@ export async function POST(
 
     // 통합 스냅샷 문서 및 인메모리 캐시 동시 저장 (방문자 Read 1회로 전체 종목 제공)
     await saveLeaderboardDivisionSnapshot(tournamentId, division, updatePayload);
+
+    // 만약 isPublished가 함께 전달된 경우 overviewConfig도 함께 갱신
+    if (isPublished !== undefined) {
+      const publishVal = Boolean(isPublished);
+      const tenantRef = doc(firestore, 'tenants', subdomain);
+      const tenantSnap = await getDoc(tenantRef);
+      if (tenantSnap.exists()) {
+        const existingData = tenantSnap.data();
+        const existingConfig = existingData.overviewConfig || {};
+        const updatedOverview = {
+          ...existingConfig,
+          bracketsPublished: publishVal,
+          leaderboardPublished: publishVal,
+          bracketsPublishedAt: publishVal ? new Date().toISOString() : (existingConfig.bracketsPublishedAt || null),
+        };
+        await setDoc(tenantRef, {
+          overviewConfig: updatedOverview,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+        invalidateTenantCache(subdomain);
+      }
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

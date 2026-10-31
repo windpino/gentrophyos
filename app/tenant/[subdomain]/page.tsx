@@ -2687,16 +2687,16 @@ export default function TenantPortalPage({
                   <RefreshCw className="animate-spin" size={32} style={{ color: 'var(--theme-primary)', margin: '0 auto 12px auto' }} />
                   <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>리더보드 집계 정보를 불러오는 중입니다...</p>
                 </div>
-              ) : !overview.bracketsPublished ? (
+              ) : !(overview.bracketsPublished || overview.leaderboardPublished) ? (
                 <div className="glass-panel" style={{ background: 'white', padding: '70px 24px', textAlign: 'center', color: 'var(--text-muted)', borderTop: '4px solid #cbd5e1' }}>
                   <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto', fontSize: '1.8rem' }}>
                     🏆
                   </div>
                   <p style={{ fontSize: '1.15rem', fontWeight: '800', color: 'var(--text-main)', margin: '0 0 8px 0' }}>
-                    실시간 리더보드 및 대진표가 아직 공개되지 않았습니다.
+                    실시간 리더보드가 아직 공개되지 않았습니다.
                   </p>
                   <p style={{ fontSize: '0.9rem', margin: 0, lineHeight: '1.6' }}>
-                    대회 운영본부에서 대진표 및 조 편성을 최종 확정한 후 실시간 순위표가 공식 공개됩니다.
+                    대회 심판부 및 운영본부에서 순위를 검토 중이며, 공식 공개 후 실시간 순위표가 표시됩니다.
                   </p>
                 </div>
               ) : (

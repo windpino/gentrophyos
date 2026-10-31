@@ -214,6 +214,10 @@ export default function RefereeMobilePage({
   const [isRankConfirmed, setIsRankConfirmed] = useState(false);
   const [confirmedTime, setConfirmedTime] = useState<string | null>(null);
 
+  // 홈페이지 노출 공개 / 비공개 상태 관리
+  const [isPublicLeaderboard, setIsPublicLeaderboard] = useState<boolean>(false);
+  const [togglingPublish, setTogglingPublish] = useState<boolean>(false);
+
   // 시뮬레이션(사전 시연) 모드 및 대상 필터 상태
   // true: 홈페이지 공개/대진표 확정 전에도 서버 반영 없이 안전하게 순위 입력 시연 가능
   const [isSimulationMode, setIsSimulationMode] = useState<boolean>(true);
@@ -306,9 +310,10 @@ export default function RefereeMobilePage({
 
       if (tenantData.tenant) {
         setTenant(tenantData.tenant);
-        // ERP에서 대진표가 이미 확정 공개된 상태라면 실전 모드를 기본으로, 확정 전이라면 시뮬레이션 모드를 기본으로 설정
-        const bracketsPublished = !!tenantData.tenant.overviewConfig?.bracketsPublished;
-        setIsSimulationMode(!bracketsPublished);
+        // 홈페이지 공개 여부 확인
+        const bracketsPublished = !!(tenantData.tenant.overviewConfig?.bracketsPublished || tenantData.tenant.overviewConfig?.leaderboardPublished);
+        setIsPublicLeaderboard(bracketsPublished);
+        setIsSimulationMode(false);
 
         const savedRule =
           (typeof window !== 'undefined' ? localStorage.getItem(`gentrophy_dns_dnf_rule_${subdomain}`) : null) ||
@@ -1795,32 +1800,27 @@ export default function RefereeMobilePage({
     );
   };
 
-  // 최종 리더보드 서버 저장 또는 시뮬레이션 확정
+  // 최종 순위 확정 및 서버 DB 저장
   const handleConfirmLeaderboard = async () => {
-    logAnalyticsEvent('referee_confirm_leaderboard', { division: activeDivisionTab, isSimulation: isSimulationMode });
+    logAnalyticsEvent('referee_confirm_leaderboard', { division: activeDivisionTab, isPublic: isPublicLeaderboard });
 
     // 확정 시에도 등수 미입력자는 모두 DNS로 변환 및 총점/순위 재계산 보장
     const sorted = sortAndRankParticipants(participants, rounds, dnsDnfRule, false);
-
     setParticipants(sorted);
 
-    if (isSimulationMode || !tenant?.overviewConfig?.bracketsPublished) {
-      if (typeof window !== 'undefined' && activeTournament) {
-        localStorage.setItem(getSimStorageKey(activeTournament.id, activeDivisionTab), JSON.stringify(sorted));
-      }
-      setIsRankConfirmed(true);
-      setConfirmedTime(new Date().toLocaleString('ko-KR') + ' (시뮬레이션 시연)');
-      alert(
-        '🧪 [시뮬레이션 확정 완료]\n\n' +
-        '• 등수 미입력자는 모두 DNS로 간주되어 설정된 DNS/DNF 벌점 규정이 총점에 반영되었습니다.\n' +
-        '• 홈페이지 실시간 리더보드 및 대진표, 참가자 원본 데이터에는 전혀 영향을 주지 않고 심판 제어기 내에서만 안전하게 확정 시연되었습니다.\n' +
-        '• [공식 순위표 인쇄] 버튼을 눌러 A4 결과 보고서 출력까지 그대로 테스트해 보실 수 있습니다.'
-      );
+    // 1. 로컬 캐시 즉시 백업 (네트워크 지연/오류 대비)
+    if (typeof window !== 'undefined' && activeTournament) {
+      localStorage.setItem(getSimStorageKey(activeTournament.id, activeDivisionTab), JSON.stringify(sorted));
+    }
+
+    if (!activeTournament) {
+      alert('진행 중인 대회가 없습니다.');
       return;
     }
 
     setSubmitting(true);
     try {
+      // 2. 서버 DB에 순위 데이터 확정 저장 (항상 저장!)
       const res = await fetch(`/api/tenant/${subdomain}/leaderboard`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1832,6 +1832,7 @@ export default function RefereeMobilePage({
           dnsDnfRule: dnsDnfRule
         })
       });
+
       if (res.ok) {
         if (hasSubclasses(activeDivisionTab)) {
           const maleMembers = sorted.filter((p: any) => p.gender !== '여자');
@@ -1870,15 +1871,73 @@ export default function RefereeMobilePage({
 
         setIsRankConfirmed(true);
         setConfirmedTime(new Date().toLocaleString('ko-KR'));
-        alert('순위가 공식 확정되었으며 홈페이지 실시간 리더보드에 즉시 반영되었습니다!\n\n[공식 순위표 인쇄] 버튼을 눌러 A4 규격 공식 결과표로 인쇄하거나 PDF로 저장하실 수 있습니다.');
+        alert(
+          `💾 [순위 확정 완료 및 저장 성공]\n\n` +
+          `• '${activeDivisionTab}' 종목의 공식 순위와 라운드 점수가 서버에 안전하게 저장되었습니다.\n` +
+          `• 현재 홈페이지 노출 상태: ${isPublicLeaderboard ? '🟢 [홈페이지 공개 중]' : '🔒 [홈페이지 비공개 상태]'}\n\n` +
+          (isPublicLeaderboard
+            ? '• 홈페이지 실시간 리더보드에 즉시 노출 반영되었습니다.'
+            : '• 홈페이지에 순위를 노출하시려면 [공개/비공개] 버튼을 눌러 공개로 전환해 주세요.')
+        );
       } else {
-        const err = await res.json();
-        alert(err.error || '저장 실패');
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || '순위 저장에 실패했습니다.');
       }
     } catch (e: any) {
-      alert(e.message);
+      alert(`저장 중 오류 발생: ${e.message}`);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  // 홈페이지 공개 / 비공개 토글 전환 핸들러
+  const handleTogglePublish = async () => {
+    if (!activeTournament) return;
+    const nextState = !isPublicLeaderboard;
+    const confirmMsg = nextState
+      ? '🌐 홈페이지 실시간 리더보드에 순위를 [공개]하시겠습니까?\n\n일반 관람객 및 참가자들이 홈페이지에서 실시간 순위표를 확인할 수 있게 됩니다.'
+      : '🔒 홈페이지 실시간 리더보드를 [비공개]로 전환하시겠습니까?\n\n홈페이지에서는 순위표가 숨겨지며, 저장된 순위 데이터는 안전하게 유지됩니다.';
+
+    if (!window.confirm(confirmMsg)) return;
+
+    setTogglingPublish(true);
+    try {
+      const res = await fetch(`/api/tenant/${subdomain}/leaderboard`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tournamentId: activeTournament.id,
+          division: activeDivisionTab,
+          togglePublish: true,
+          isPublished: nextState
+        })
+      });
+
+      if (res.ok) {
+        setIsPublicLeaderboard(nextState);
+        setTenant((prev: any) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            overviewConfig: {
+              ...(prev.overviewConfig || {}),
+              bracketsPublished: nextState,
+              leaderboardPublished: nextState,
+              bracketsPublishedAt: nextState ? new Date().toISOString() : null
+            }
+          };
+        });
+        alert(nextState
+          ? '✅ 홈페이지에 순위가 공식 공개되었습니다!\n홈페이지 실시간 리더보드에서 누구나 순위를 확인할 수 있습니다.'
+          : '🔒 홈페이지에서 순위가 비공개 처리되었습니다.');
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || '공개 상태 변경에 실패했습니다.');
+      }
+    } catch (e: any) {
+      alert(`상태 변경 중 오류: ${e.message}`);
+    } finally {
+      setTogglingPublish(false);
     }
   };
 
@@ -2237,13 +2296,13 @@ export default function RefereeMobilePage({
 
       <div className="no-print referee-screen-content referee-screen-ui" style={{ maxWidth: '850px', margin: '0 auto', padding: '16px 12px 140px 12px' }}>
 
-        {/* ── [0] 시뮬레이션(사전 시연) 모드 & 실전 모드 전환 제어 배너 ── */}
+        {/* ── [0] 홈페이지 순위 노출 공개 / 비공개 및 초기화 제어 배너 ── */}
         <div
           style={{
-            background: isSimulationMode
-              ? 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)'
-              : 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
-            border: isSimulationMode ? '2px solid #f59e0b' : '2px solid #10b981',
+            background: isPublicLeaderboard
+              ? 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)'
+              : 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+            border: isPublicLeaderboard ? '2px solid #10b981' : '2px solid #3b82f6',
             borderRadius: '16px',
             padding: '14px 16px',
             marginBottom: '16px',
@@ -2255,64 +2314,71 @@ export default function RefereeMobilePage({
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
               <span
                 style={{
-                  background: isSimulationMode ? '#d97706' : '#059669',
+                  background: isPublicLeaderboard ? '#059669' : '#2563eb',
                   color: 'white',
-                  fontSize: '0.75rem',
+                  fontSize: '0.8rem',
                   fontWeight: '900',
-                  padding: '4px 10px',
+                  padding: '5px 12px',
                   borderRadius: '20px',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '4px'
+                  gap: '4px',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
                 }}
               >
-                {isSimulationMode ? '🧪 시뮬레이션(사전 시연) 모드' : '🟢 실전 홈페이지 연동 모드'}
+                {isPublicLeaderboard ? '🟢 홈페이지 실시간 순위 [공개 중]' : '🔒 홈페이지 실시간 순위 [비공개]'}
               </span>
-              <span style={{ fontSize: '0.82rem', fontWeight: '800', color: isSimulationMode ? '#92400e' : '#065f46' }}>
-                {tenant?.overviewConfig?.bracketsPublished
-                  ? '(ERP 홈페이지 공개됨)'
-                  : '(ERP 홈페이지 비공개 - 시뮬레이션만 가능)'}
+              <span style={{ fontSize: '0.82rem', fontWeight: '800', color: isPublicLeaderboard ? '#065f46' : '#1e40af' }}>
+                {isPublicLeaderboard
+                  ? '• 대회 홈페이지 실시간 리더보드에 공식 순위가 노출되고 있습니다.'
+                  : '• 홈페이지에는 순위가 노출되지 않으며 안전하게 검토·수정 중입니다.'}
               </span>
             </div>
 
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
               <button
                 type="button"
-                onClick={() => {
-                  if (isSimulationMode && !tenant?.overviewConfig?.bracketsPublished) {
-                    alert(
-                      '🔒 현재 운영진 ERP에서 홈페이지 비공개(시뮬레이션 전용) 상태입니다.\n\n' +
-                      '• [참가자관리]에서 참가확정 체크를 하더라도 홈페이지 리더보드 및 대진표는 공개되지 않으며 시뮬레이션만 가능합니다.\n' +
-                      '• 실제 홈페이지 리더보드에 점수를 공개 반영하려면 운영진 ERP [대진표 및 조 편성표] 메뉴에서 [대진표 확정 및 홈페이지 공개]를 먼저 실행해 주세요.'
-                    );
-                    return;
-                  }
-                  setIsSimulationMode(prev => !prev);
-                }}
+                onClick={handleTogglePublish}
+                disabled={togglingPublish}
                 style={{
-                  padding: '6px 12px',
+                  padding: '7px 14px',
                   borderRadius: '8px',
-                  border: isSimulationMode ? '1px solid #059669' : '1px solid #d97706',
-                  background: 'white',
-                  color: isSimulationMode ? '#059669' : '#d97706',
-                  fontSize: '0.78rem',
-                  fontWeight: '800',
+                  border: isPublicLeaderboard ? '1px solid #059669' : '1px solid #2563eb',
+                  background: isPublicLeaderboard ? '#059669' : '#2563eb',
+                  color: 'white',
+                  fontSize: '0.82rem',
+                  fontWeight: '900',
                   cursor: 'pointer',
-                  opacity: isSimulationMode && !tenant?.overviewConfig?.bracketsPublished ? 0.65 : 1
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
                 }}
               >
-                {isSimulationMode ? '실전 모드로 전환' : '시뮬레이션 모드로 전환'}
+                {togglingPublish ? (
+                  <>
+                    <RefreshCw className="animate-spin" size={13} /> 처리 중...
+                  </>
+                ) : isPublicLeaderboard ? (
+                  <>
+                    🔒 홈페이지 비공개로 전환
+                  </>
+                ) : (
+                  <>
+                    🌐 홈페이지에 순위 공개하기
+                  </>
+                )}
               </button>
               <button
                 type="button"
                 onClick={handleResetRankings}
                 style={{
-                  padding: '6px 12px',
+                  padding: '7px 12px',
                   borderRadius: '8px',
                   border: '1px solid #fca5a5',
                   background: '#fef2f2',
                   color: '#dc2626',
-                  fontSize: '0.78rem',
+                  fontSize: '0.8rem',
                   fontWeight: '800',
                   cursor: 'pointer',
                   display: 'inline-flex',
@@ -2320,15 +2386,13 @@ export default function RefereeMobilePage({
                   gap: '4px'
                 }}
               >
-                <RotateCcw size={12} /> {isSimulationMode ? '시연 점수 초기화' : (isRankConfirmed ? '확정 취소 및 순위 초기화' : '점수/순위 초기화')}
+                <RotateCcw size={12} /> {isRankConfirmed ? '확정 취소 및 순위 초기화' : '점수/순위 초기화'}
               </button>
             </div>
           </div>
 
-          <p style={{ margin: '8px 0 10px 0', fontSize: '0.79rem', color: isSimulationMode ? '#78350f' : '#065f46', lineHeight: '1.45', fontWeight: '600' }}>
-            {isSimulationMode
-              ? '• ERP [참가자관리]에서 [참가확정]을 체크해도 홈페이지(리더보드 및 대진표)에는 공개되지 않으며, 이곳에서 1위부터 순위 입력·자동 정렬·A4 결과표 인쇄까지 안전하게 시뮬레이션만 진행할 수 있습니다.'
-              : '• 실전 모드입니다. [순위 최종 확정] 시 홈페이지 실시간 리더보드에 즉시 공식 점수가 반영됩니다.'}
+          <p style={{ margin: '8px 0 10px 0', fontSize: '0.79rem', color: isPublicLeaderboard ? '#065f46' : '#1e40af', lineHeight: '1.45', fontWeight: '600' }}>
+            💡 <strong>순위 확정 완료 버튼</strong>을 누르면 심판이 입력한 모든 경기 점수와 DNS/DNF 벌점이 <strong>서버에 안전하게 저장</strong>되며, <strong>공개/비공개 버튼</strong>으로 홈페이지 노출 여부를 자유롭게 On/Off 할 수 있습니다.
           </p>
 
           {/* 참가자 불러오기 범위 선택 (전체 접수자 포함 시연 vs ERP 참가확정 완료자만) */}
@@ -3960,17 +4024,17 @@ export default function RefereeMobilePage({
                 justifyContent: 'space-between',
                 flexWrap: 'wrap',
                 gap: '10px',
-                background: '#ecfdf5',
-                border: '1px solid #a7f3d0',
+                background: isPublicLeaderboard ? '#ecfdf5' : '#eff6ff',
+                border: `1px solid ${isPublicLeaderboard ? '#a7f3d0' : '#bfdbfe'}`,
                 padding: '12px 18px',
                 borderRadius: '12px',
-                color: '#065f46',
+                color: isPublicLeaderboard ? '#065f46' : '#1e40af',
                 fontSize: '0.9rem'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <CheckCircle2 size={20} color="#10b981" />
+                  <CheckCircle2 size={20} color={isPublicLeaderboard ? '#10b981' : '#3b82f6'} />
                   <span>
-                    <strong>[{activeDivisionTab}]</strong> 순위가 공식 확정되었습니다! (확정일시: {confirmedTime})
+                    <strong>[{activeDivisionTab}]</strong> 순위가 확정·저장되었습니다! (저장일시: {confirmedTime}) · <strong>{isPublicLeaderboard ? '🟢 홈페이지 실시간 노출 중' : '🔒 홈페이지 비공개 상태'}</strong>
                   </span>
                 </div>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -4044,7 +4108,7 @@ export default function RefereeMobilePage({
                 disabled={submitting}
                 className="btn-primary"
                 style={{
-                  flex: '1 1 180px',
+                  flex: '1 1 170px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -4054,18 +4118,70 @@ export default function RefereeMobilePage({
                   fontWeight: '800',
                   cursor: 'pointer',
                   borderRadius: '10px',
-                  background: isSimulationMode
-                    ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
-                    : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                  boxShadow: isSimulationMode
-                    ? '0 2px 8px rgba(245,158,11,0.3)'
-                    : '0 2px 8px rgba(16,185,129,0.3)'
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  boxShadow: '0 2px 8px rgba(16,185,129,0.3)'
                 }}
               >
-                <CheckCircle2 size={18} />
-                {isSimulationMode
-                  ? (isRankConfirmed ? '🧪 시뮬레이션 재확정 (비공개 시연)' : '🧪 시뮬레이션 확정 테스트 (비공개)')
-                  : (isRankConfirmed ? '순위 확정 완료 (재확정)' : '순위 최종 확정 (공개)')}
+                {submitting ? (
+                  <>
+                    <RefreshCw className="animate-spin" size={18} />
+                    <span>저장 중...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 size={18} />
+                    <span>{isRankConfirmed ? '순위 확정 완료 (재저장)' : '순위 확정 완료 (저장)'}</span>
+                  </>
+                )}
+              </button>
+
+              {/* 홈페이지 노출 공개 / 비공개 버튼 */}
+              <button
+                type="button"
+                onClick={handleTogglePublish}
+                disabled={togglingPublish}
+                style={{
+                  flex: '1 1 190px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  padding: '13px',
+                  fontSize: '0.92rem',
+                  fontWeight: '900',
+                  cursor: 'pointer',
+                  borderRadius: '10px',
+                  border: isPublicLeaderboard ? '2px solid #059669' : '2px solid #2563eb',
+                  background: isPublicLeaderboard
+                    ? 'linear-gradient(135deg, #059669 0%, #047857 100%)'
+                    : 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                  color: 'white',
+                  boxShadow: isPublicLeaderboard
+                    ? '0 2px 8px rgba(5,150,105,0.35)'
+                    : '0 2px 8px rgba(37,99,235,0.35)',
+                  transition: 'all 0.2s'
+                }}
+              >
+                {togglingPublish ? (
+                  <>
+                    <RefreshCw className="animate-spin" size={18} />
+                    <span>전환 처리 중...</span>
+                  </>
+                ) : isPublicLeaderboard ? (
+                  <>
+                    <span>🟢 홈페이지 공개 중</span>
+                    <span style={{ fontSize: '0.72rem', background: 'rgba(0,0,0,0.3)', padding: '2px 7px', borderRadius: '10px', fontWeight: '800' }}>
+                      비공개 전환
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span>🔒 홈페이지 비공개</span>
+                    <span style={{ fontSize: '0.72rem', background: 'rgba(255,255,255,0.25)', padding: '2px 7px', borderRadius: '10px', fontWeight: '800' }}>
+                      공개 전환
+                    </span>
+                  </>
+                )}
               </button>
               <button
                 type="button"
