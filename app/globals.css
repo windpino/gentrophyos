@@ -1082,7 +1082,7 @@ button, input, select, textarea {
   display: none !important;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .board-card-header {
     padding: 12px 14px !important;
     flex-direction: column !important;

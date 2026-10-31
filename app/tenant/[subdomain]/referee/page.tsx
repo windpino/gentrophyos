@@ -163,7 +163,13 @@ export default function RefereeMobilePage({
   // 참가자 목록 및 종목 선택
   const [rawRegistrations, setRawRegistrations] = useState<any[]>([]);
   const [participants, setParticipants] = useState<any[]>([]);
-  const [activeDivisionTab, setActiveDivisionTab] = useState<string>('윈드포일');
+  const [activeDivisionTab, setActiveDivisionTab] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(`gentrophy_referee_active_tab_${subdomain}`);
+      if (saved) return saved;
+    }
+    return '윈드포일';
+  });
   // 단체전 출전 클럽(팀) 관리 상태
   const [selectedClubToAdd, setSelectedClubToAdd] = useState<string>('');
   const [customTeamNameToAdd, setCustomTeamNameToAdd] = useState<string>('');
@@ -789,7 +795,10 @@ export default function RefereeMobilePage({
         );
 
       let sourceList: any[] = [];
-      if (isSimulationMode && typeof window !== 'undefined') {
+      if (typeof window !== 'undefined') {
+        const mergedMap = new Map<string, any>();
+
+        // 1. 현재 선택된 종목명으로 저장된 데이터 로드
         const simSavedStr = localStorage.getItem(getSimStorageKey(tId, divisionName));
         if (simSavedStr) {
           try {
@@ -798,10 +807,100 @@ export default function RefereeMobilePage({
               if (divisionName === '단체전' && isOldDummyTeams(parsedSim)) {
                 localStorage.removeItem(getSimStorageKey(tId, divisionName));
               } else {
-                sourceList = parsedSim;
+                parsedSim.forEach((item: any) => {
+                  const key = item.id || (item.name ? item.name.trim() : null);
+                  if (key) mergedMap.set(key, item);
+                });
               }
             }
           } catch (e) {}
+        }
+
+        // 2. 종목명 통합(남녀 단일 통합 탭) 이전의 분할 저장 키(예: '혼합오픈 (남자부)', '혼합오픈 (여자부)' 등) 자동 탐색 및 복원
+        const candidateKeys: string[] = [
+          getSimStorageKey(tId, `${divisionName} (남자부)`),
+          getSimStorageKey(tId, `${divisionName} (여자부)`),
+        ];
+        if (divisionName.includes('펀')) {
+          candidateKeys.push(
+            getSimStorageKey(tId, '펀&포뮬러'),
+            getSimStorageKey(tId, '펀&포뮬러 (남자부)'),
+            getSimStorageKey(tId, '펀&포뮬러 (여자부)'),
+            getSimStorageKey(tId, '펀엔포뮬러 (남자부)'),
+            getSimStorageKey(tId, '펀엔포뮬러 (여자부)')
+          );
+        }
+        if (divisionName.includes('혼합오픈')) {
+          candidateKeys.push(
+            getSimStorageKey(tId, '혼합오픈 (남자부)'),
+            getSimStorageKey(tId, '혼합오픈 (여자부)')
+          );
+        }
+        if (divisionName.includes('윙포일')) {
+          candidateKeys.push(
+            getSimStorageKey(tId, '윙포일 (남자부)'),
+            getSimStorageKey(tId, '윙포일 (여자부)')
+          );
+        }
+        if (divisionName.includes('윈드포일')) {
+          candidateKeys.push(
+            getSimStorageKey(tId, '윈드포일'),
+            getSimStorageKey(tId, '윈드포일 (남녀오픈)')
+          );
+        }
+
+        // localStorage 전체 키 순회하여 해당 종목명 키워드가 들어간 모든 심판 점수 데이터 탐색
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith(`gentrophy_sim_scores_${subdomain}_${tId}_`)) {
+            const storedDiv = k.replace(`gentrophy_sim_scores_${subdomain}_${tId}_`, '');
+            const rootTarget = divisionName.replace(/\s+/g, '').replace(/\(.*?\)/g, '');
+            const rootStored = storedDiv.replace(/\s+/g, '').replace(/\(.*?\)/g, '');
+            if (rootStored === rootTarget || (rootTarget.includes('펀') && rootStored.includes('펀'))) {
+              if (!candidateKeys.includes(k)) {
+                candidateKeys.push(k);
+              }
+            }
+          }
+        }
+
+        candidateKeys.forEach(k => {
+          const raw = localStorage.getItem(k);
+          if (raw) {
+            try {
+              const parsed = JSON.parse(raw);
+              if (Array.isArray(parsed)) {
+                parsed.forEach(item => {
+                  if (item) {
+                    const key = item.id || (item.name ? item.name.trim() : null);
+                    if (key) {
+                      const existing = mergedMap.get(key);
+                      const hasScores = Object.keys(item).some(x => /^r\d+$/.test(x) && item[x] !== null && item[x] !== undefined && item[x] !== '');
+                      if (!existing) {
+                        mergedMap.set(key, item);
+                      } else if (hasScores) {
+                        Object.keys(item).forEach(x => {
+                          if (/^r\d+$/.test(x) && item[x] !== null && item[x] !== undefined && item[x] !== '') {
+                            existing[x] = item[x];
+                          }
+                        });
+                        if (item.total && (!existing.total || existing.total === 0)) {
+                          existing.total = item.total;
+                        }
+                        if (item.rank && item.rank !== '-' && (!existing.rank || existing.rank === '-')) {
+                          existing.rank = item.rank;
+                        }
+                      }
+                    }
+                  }
+                });
+              }
+            } catch (e) {}
+          }
+        });
+
+        if (mergedMap.size > 0) {
+          sourceList = Array.from(mergedMap.values());
         }
       }
 
@@ -811,6 +910,34 @@ export default function RefereeMobilePage({
 
       if (sourceList.length === 0 && serverLeaderboard.length > 0) {
         sourceList = serverLeaderboard;
+      }
+
+      // 저장된 점수 데이터에서 라운드 키들 추가 탐색 (r1, r2, r3...)
+      if (sourceList.length > 0) {
+        let addedAnyRound = false;
+        sourceList.forEach((item: any) => {
+          Object.keys(item).forEach(k => {
+            if (/^r\d+$/.test(k) && item[k] !== null && item[k] !== undefined && item[k] !== '') {
+              if (!activeRounds.some(r => r.key === k)) {
+                const num = parseInt(k.replace('r', ''), 10);
+                activeRounds.push({
+                  key: k,
+                  label: `${num}라운드 (${num}R)`,
+                  short: `${num}R`
+                });
+                addedAnyRound = true;
+              }
+            }
+          });
+        });
+        if (addedAnyRound) {
+          activeRounds.sort((a, b) => {
+            const numA = parseInt(a.key.replace('r', ''), 10);
+            const numB = parseInt(b.key.replace('r', ''), 10);
+            return numA - numB;
+          });
+          setRounds(activeRounds);
+        }
       }
 
       // 단체전의 경우: 사용자가 삭제하거나 직접 추가한 로컬 스토리지 팀 목록이 최우선 기준 (삭제한 팀이 부활하지 않도록 보장)
@@ -870,7 +997,11 @@ export default function RefereeMobilePage({
         });
       } else if (sourceList.length > 0) {
         preliminary = baseRegistrations.map((player) => {
-          const savedRow = sourceList.find((lItem: any) => lItem.id === player.id || lItem.name === player.name);
+          const savedRow = sourceList.find((lItem: any) =>
+            lItem.id === player.id ||
+            (player.name && lItem.name && lItem.name.trim() === player.name.trim()) ||
+            (player.bibNumber && lItem.bibNumber && formatBibShortDisplay(lItem.bibNumber) === formatBibShortDisplay(player.bibNumber))
+          );
           const updated: any = { ...player };
           if (savedRow) {
             updated.bibNumber = savedRow.bibNumber || player.bibNumber;
@@ -917,6 +1048,9 @@ export default function RefereeMobilePage({
           setConfirmedTime(null);
         }
         setParticipants(mapped);
+        if (typeof window !== 'undefined' && hasScores) {
+          localStorage.setItem(getSimStorageKey(tId, divisionName), JSON.stringify(mapped));
+        }
       } else {
         if (divisionName === '단체전') {
           setParticipants([]);
@@ -1333,7 +1467,13 @@ export default function RefereeMobilePage({
     setParticipants(prev => {
       const nextList = prev.map(p => (p.id === id ? { ...p, [roundKey]: val } : p));
       // 완주자 수(DNF 점수 기준)나 라운드 진행 여부가 달라질 수 있으므로 전체 참가자 총점을 일괄 재계산
-      return recalculateAllParticipants(nextList, rounds, dnsDnfRule);
+      const recalculated = recalculateAllParticipants(nextList, rounds, dnsDnfRule);
+      if (typeof window !== 'undefined' && activeTournament) {
+        try {
+          localStorage.setItem(getSimStorageKey(activeTournament.id, activeDivisionTab), JSON.stringify(recalculated));
+        } catch (e) {}
+      }
+      return recalculated;
     });
   };
 
@@ -1344,7 +1484,13 @@ export default function RefereeMobilePage({
       const target = prev.find(p => p.id === id);
       if (target && (target[roundKey] === null || target[roundKey] === undefined || target[roundKey] === '')) {
         const nextList = prev.map(p => (p.id === id ? { ...p, [roundKey]: 'DNS' } : p));
-        return recalculateAllParticipants(nextList, rounds, dnsDnfRule);
+        const recalculated = recalculateAllParticipants(nextList, rounds, dnsDnfRule);
+        if (typeof window !== 'undefined' && activeTournament) {
+          try {
+            localStorage.setItem(getSimStorageKey(activeTournament.id, activeDivisionTab), JSON.stringify(recalculated));
+          } catch (e) {}
+        }
+        return recalculated;
       }
       return prev;
     });
@@ -1364,7 +1510,13 @@ export default function RefereeMobilePage({
         }
         return p;
       });
-      return recalculateAllParticipants(nextList, rounds, dnsDnfRule);
+      const recalculated = recalculateAllParticipants(nextList, rounds, dnsDnfRule);
+      if (typeof window !== 'undefined' && activeTournament) {
+        try {
+          localStorage.setItem(getSimStorageKey(activeTournament.id, activeDivisionTab), JSON.stringify(recalculated));
+        } catch (e) {}
+      }
+      return recalculated;
     });
   };
 
@@ -2059,7 +2211,15 @@ export default function RefereeMobilePage({
             </div>
             <select
               value={activeDivisionTab}
-              onChange={(e) => setActiveDivisionTab(e.target.value)}
+              onChange={(e) => {
+                const nextDiv = e.target.value;
+                setActiveDivisionTab(nextDiv);
+                if (typeof window !== 'undefined') {
+                  try {
+                    localStorage.setItem(`gentrophy_referee_active_tab_${subdomain}`, nextDiv);
+                  } catch (e) {}
+                }
+              }}
               style={{
                 width: '100%',
                 padding: '12px 16px',
