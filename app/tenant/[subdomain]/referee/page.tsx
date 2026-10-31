@@ -3803,8 +3803,8 @@ export default function RefereeMobilePage({
                         <th style={{ padding: '10px 6px', width: '60px', textAlign: 'center' }}>{activeDivisionTab === '단체전' ? '팀배번' : '배번'}</th>
                         <th style={{ padding: '10px 6px', width: '70px', textAlign: 'center' }}>{activeDivisionTab === '단체전' ? '소속협회' : '생년월일'}</th>
                         {rounds.map(r => {
-                          const conducted = isRoundConducted(r.key, screenParticipants);
-                          const finishers = getRoundFinishedCount(r.key, screenParticipants);
+                          const conducted = isRoundConducted(r.key, participants);
+                          const finishers = getRoundFinishedCount(r.key, participants);
                           return (
                             <th key={r.key} style={{ padding: '8px 4px', width: '58px', textAlign: 'center', color: '#1e293b' }}>
                               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
@@ -3831,7 +3831,8 @@ export default function RefereeMobilePage({
                       ) : (
                         screenParticipants.map((p) => {
                           // 4경기 이상 진행 시 제외되는 최악 성적 라운드 인덱스 파악
-                          const roundNumericScores = rounds.map(r => getRoundScoreValue(p[r.key], r.key, screenParticipants, dnsDnfRule));
+                          // DNS/DNF 및 라운드 점수는 부서 전체 출전 인원(participants)을 기준으로 산출 (클라스별로 보더라도 전체 레이스 점수 체계 100% 동일 유지)
+                          const roundNumericScores = rounds.map(r => getRoundScoreValue(p[r.key], r.key, participants, dnsDnfRule));
                           const validCount = roundNumericScores.filter(v => v !== null).length;
                           let discardIdx = -1;
                           if (validCount >= 4) {
@@ -3889,7 +3890,7 @@ export default function RefereeMobilePage({
                               {/* 라운드 스코어들 (직접 수정 가능, 등수 미입력은 진행된 라운드에서 자동 DNS 간주) */}
                               {rounds.map((rItem, rIdx) => {
                                 const rKey = rItem.key;
-                                const conducted = isRoundConducted(rKey, screenParticipants);
+                                const conducted = isRoundConducted(rKey, participants);
                                 const rawCellVal = p[rKey];
                                 const isFocused = activeCell?.id === p.id && activeCell?.roundKey === rKey;
                                 // 등수 입력이 없는 경우 진행된 라운드에서는 DNS로 간주하여 표시
@@ -4206,7 +4207,7 @@ export default function RefereeMobilePage({
                             {p.club || '-'}
                           </td>
                           {rounds.map(r => {
-                            const conducted = isRoundConducted(r.key, rankedList);
+                            const conducted = isRoundConducted(r.key, participants);
                             const rawVal = p[r.key];
                             const effective =
                               rawVal === null || rawVal === undefined || rawVal === ''

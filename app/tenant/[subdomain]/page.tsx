@@ -2728,7 +2728,10 @@ export default function TenantPortalPage({
                       return fuzzy || `${root} (${gender})`;
                     };
 
-                    const renderTable = (list: any[], divKey?: string, subclassLabel?: string) => {
+                    const renderTable = (list: any[], divKey?: string, subclassLabel?: string, fullRoster?: any[]) => {
+                      // 점수 및 DNS/DNF 계산의 기준이 되는 전체 선수 명단 (클라스로 필터링되어 들어온 경우에도 부서 전체 출전 명단 기준 유지)
+                      const referenceList = (fullRoster && fullRoster.length > 0) ? fullRoster : list;
+
                       // 리더보드 데이터에서 활성 라운드 키 동적 추출 (r1, r2, ... rN)
                       const customRounds = divKey && leaderboardRounds[divKey] ? leaderboardRounds[divKey] : null;
                       let activeRoundKeys: string[] = [];
@@ -2737,7 +2740,7 @@ export default function TenantPortalPage({
                         activeRoundKeys = customRounds.map((r: any) => r.key);
                       } else {
                         const discoveredKeys = new Set<string>();
-                        list.forEach((row: any) => {
+                        referenceList.forEach((row: any) => {
                           Object.keys(row).forEach(k => {
                             if (/^r\d+$/.test(k) && row[k] !== undefined && row[k] !== null) {
                               discoveredKeys.add(k);
@@ -2760,13 +2763,13 @@ export default function TenantPortalPage({
                         'FINISHER_PLUS_ONE';
 
                       const isRoundConducted = (rKey: string) =>
-                        list.some((item: any) => {
+                        referenceList.some((item: any) => {
                           const val = item[rKey];
                           return val !== null && val !== undefined && String(val).trim() !== '';
                         });
 
                       const getRoundFinishedCount = (rKey: string) =>
-                        list.filter((item: any) => {
+                        referenceList.filter((item: any) => {
                           const val = item[rKey];
                           if (val === null || val === undefined || val === '') return false;
                           if (String(val).toUpperCase() === 'DNS' || String(val).toUpperCase() === 'DNF') return false;
@@ -2774,11 +2777,11 @@ export default function TenantPortalPage({
                           return !isNaN(num) && num > 0;
                         }).length;
 
-                      const dnsScore = list.length + 1;
+                      const dnsScore = referenceList.length + 1;
                       const getDnfScore = (rKey: string) => {
-                        if (activeRule === 'REGISTERED_PLUS_ONE') return list.length + 1;
+                        if (activeRule === 'REGISTERED_PLUS_ONE') return referenceList.length + 1;
                         const finished = getRoundFinishedCount(rKey);
-                        return finished > 0 ? finished + 1 : list.length + 1;
+                        return finished > 0 ? finished + 1 : referenceList.length + 1;
                       };
 
                       const anyRoundConducted = activeRoundKeys.some(rKey => isRoundConducted(rKey));
@@ -2813,9 +2816,16 @@ export default function TenantPortalPage({
                           }
                         }
 
-                        const computedTotal = validScoresCount >= 4
-                          ? numericScores.reduce<number>((acc, val, i) => (val !== null && i !== discardIdx ? acc + val : acc), 0)
-                          : numericScores.reduce<number>((acc, val) => (val !== null ? acc + val : acc), 0);
+                        // 심판입력기에서 확정된 공식 총점(row.total)이 존재하면 해당 총점을 100% 최우선 보존
+                        const officialTotal = (row.total !== undefined && row.total !== null && row.total !== '' && !isNaN(Number(row.total)))
+                          ? Number(row.total)
+                          : null;
+
+                        const computedTotal = officialTotal !== null
+                          ? officialTotal
+                          : (validScoresCount >= 4
+                              ? numericScores.reduce<number>((acc, val, i) => (val !== null && i !== discardIdx ? acc + val : acc), 0)
+                              : numericScores.reduce<number>((acc, val) => (val !== null ? acc + val : acc), 0));
 
                         return {
                           ...row,
@@ -2832,6 +2842,9 @@ export default function TenantPortalPage({
                           if (a.computedTotal !== b.computedTotal) {
                             return a.computedTotal - b.computedTotal;
                           }
+                          const rA = Number(a.rank) || 999;
+                          const rB = Number(b.rank) || 999;
+                          if (rA !== rB) return rA - rB;
                           return String(a.bibNumber).localeCompare(String(b.bibNumber), undefined, { numeric: true });
                         });
                       }
@@ -3202,7 +3215,7 @@ export default function TenantPortalPage({
                                             {list.length}명 출전
                                           </span>
                                         </div>
-                                        {renderTable(list, maleDivName, subclass)}
+                                        {renderTable(list, maleDivName, subclass, effectiveMale)}
                                       </div>
                                     );
                                   })
@@ -3220,7 +3233,7 @@ export default function TenantPortalPage({
                                       <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '10px 0' }}>
                                         해당 부서의 등록/확정된 순위표가 없습니다.
                                       </p>
-                                    ) : renderTable(effectiveMale, maleDivName)}
+                                    ) : renderTable(effectiveMale, maleDivName, undefined, effectiveMale)}
                                   </div>
                                 )}
                               </div>
@@ -3243,7 +3256,7 @@ export default function TenantPortalPage({
                                           {list.length}명 출전
                                         </span>
                                       </div>
-                                      {renderTable(list, femaleDivName, subclass)}
+                                      {renderTable(list, femaleDivName, subclass, effectiveFemale)}
                                     </div>
                                   );
                                 })
@@ -3261,7 +3274,7 @@ export default function TenantPortalPage({
                                     <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '10px 0' }}>
                                       해당 부서의 등록/확정된 순위표가 없습니다.
                                     </p>
-                                  ) : renderTable(effectiveFemale, femaleDivName)}
+                                  ) : renderTable(effectiveFemale, femaleDivName, undefined, effectiveFemale)}
                                 </div>
                               )}
                             </div>
