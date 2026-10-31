@@ -703,6 +703,14 @@ export default function TenantPortalPage({
   }, [activeTab, activeTournamentId]);
 
   useEffect(() => {
+    if (activeTournamentId && activeTab === 'live' && activeSubTab === 'live-brackets') {
+      if (registrations.length === 0 && !regsLoading) {
+        fetchRegistrations(activeTournamentId, true);
+      }
+    }
+  }, [activeTournamentId, activeTab, activeSubTab, registrations.length, regsLoading]);
+
+  useEffect(() => {
     if (selectedArchiveId && activeTab === 'archive') {
       fetchArchiveData(selectedArchiveId);
     }
@@ -929,14 +937,23 @@ export default function TenantPortalPage({
     }
   };
 
-  const fetchRegistrations = async (tId: string) => {
+  const lastRegsFetchRef = React.useRef<number>(0);
+  const fetchRegistrations = async (tId: string, force = false) => {
+    const now = Date.now();
+    if (!force && now - lastRegsFetchRef.current < 5000 && registrations.length > 0) {
+      return;
+    }
+    lastRegsFetchRef.current = now;
     setRegsLoading(true);
     try {
       const res = await fetch(`/api/tenant/${subdomain}/registrations?tournamentId=${tId}`);
       const data = await res.json();
-      if (data.registrations) {
-        const approved = data.registrations.filter((r: any) => r.status === 'APPROVED');
-        setRegistrations(approved);
+      if (data.registrations && Array.isArray(data.registrations)) {
+        const validRegs = data.registrations.filter((r: any) => r.status !== 'CANCELLED' && r.status !== 'REJECTED');
+        const approved = validRegs.filter((r: any) => r.status === 'APPROVED');
+        // 참가확정 전(사전 조편성) 포함 운영을 위해 승인 선수가 없을 경우 접수된 유효 신청자 전체 표출
+        const targetList = approved.length > 0 ? approved : validRegs;
+        setRegistrations(targetList);
       }
       if (data.registeredClubs && Array.isArray(data.registeredClubs)) {
         setAvailableClubs(prev => Array.from(new Set([...data.registeredClubs, ...prev])));
@@ -1113,6 +1130,17 @@ export default function TenantPortalPage({
 
   const ongoingTournament = tenant.tournaments.find((t) => t.status === 'ONGOING');
   const archivedTournaments = tenant.tournaments.filter((t) => t.status === 'ARCHIVED');
+
+  const isBracketPublic = Boolean(
+    overview.bracketsPublished === true ||
+    overview.bracketsPublished === 'true' ||
+    overview.bracketsPublishedAt ||
+    tenant?.overviewConfig?.bracketsPublished === true ||
+    tenant?.overviewConfig?.bracketsPublished === 'true' ||
+    tenant?.overviewConfig?.bracketsPublishedAt ||
+    (ongoingTournament as any)?.overviewConfig?.bracketsPublished === true ||
+    (ongoingTournament as any)?.overviewConfig?.bracketsPublished === 'true'
+  );
 
   const themeStyles = {
     '--theme-primary': tenant.primaryColor,
@@ -2069,14 +2097,14 @@ export default function TenantPortalPage({
             },
             {
               id: 'live',
-              label: '경기운영',
+              label: '대진표 · 경기운영',
               icon: (
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                   <circle cx="12" cy="12" r="10"></circle>
                   <polyline points="12 6 12 12 16 14"></polyline>
                 </svg>
               ),
-              defaultSubTab: 'live-leaderboard',
+              defaultSubTab: isBracketPublic && !overview.leaderboardPublished ? 'live-brackets' : 'live-leaderboard',
               disabled: !ongoingTournament
             },
             {
@@ -2288,15 +2316,18 @@ export default function TenantPortalPage({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
               {[
                 { id: 'overview', label: '대회 요강', icon: '📋', defaultSubTab: '' },
+                { id: 'live-brackets-direct', label: '대진표 및 조 편성표 (공식)', icon: '⛵', defaultSubTab: 'live-brackets', disabled: !ongoingTournament },
+                { id: 'live', label: '실시간 경기운영 / 순위', icon: '⏱️', defaultSubTab: 'live-leaderboard', disabled: !ongoingTournament },
                 { id: 'announcements', label: '공지사항 (알림)', icon: '🔔', defaultSubTab: '' },
                 { id: 'qna', label: 'Q&A 문의게시판', icon: '💬', defaultSubTab: '' },
-                { id: 'intro', label: '대회소개 및 일정', icon: '⛵', defaultSubTab: 'intro-greeting' },
-                { id: 'live', label: '실시간 경기운영 / 순위', icon: '⏱️', defaultSubTab: 'live-leaderboard', disabled: !ongoingTournament },
+                { id: 'intro', label: '대회소개 및 일정', icon: '📍', defaultSubTab: 'intro-greeting' },
                 { id: 'gallery', label: '미디어 & 갤러리', icon: '📸', defaultSubTab: 'gallery-photos' },
                 { id: 'archive', label: '역대 기록관', icon: '🏆', defaultSubTab: 'archive-home' },
                 { id: 'notice', label: '개최공시서', icon: '📄', defaultSubTab: '' },
               ].map((item) => {
-                const isActive = activeTab === item.id;
+                const isActive = item.id === 'live-brackets-direct'
+                  ? (activeTab === 'live' && activeSubTab === 'live-brackets')
+                  : (activeTab === item.id);
                 return (
                   <button
                     key={item.id}
@@ -2304,8 +2335,16 @@ export default function TenantPortalPage({
                     disabled={item.disabled}
                     onClick={() => {
                       if (!item.disabled) {
-                        setActiveTab(item.id as any);
-                        setActiveSubTab(item.defaultSubTab);
+                        if (item.id === 'live-brackets-direct') {
+                          setActiveTab('live');
+                          setActiveSubTab('live-brackets');
+                          if (activeTournamentId && registrations.length === 0) {
+                            fetchRegistrations(activeTournamentId, true);
+                          }
+                        } else {
+                          setActiveTab(item.id as any);
+                          setActiveSubTab(item.defaultSubTab);
+                        }
                         setIsMobileMenuOpen(false);
                       }
                     }}
@@ -2465,7 +2504,7 @@ export default function TenantPortalPage({
             이순신 장군의 한산도 바다 위, 거북선 엠블럼과 함께 수륙해수욕장에서 화려하게 펼쳐지는 대한민국 윈드서핑 축제.
           </p>
 
-          <div className="hero-buttons">
+          <div className="hero-buttons" style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
             <button
               onClick={() => {
                 if (!isRegistrationOpen) {
@@ -2477,8 +2516,8 @@ export default function TenantPortalPage({
               }}
               className="btn-primary"
               style={{
-                padding: '16px 32px',
-                fontSize: '1rem',
+                padding: '16px 28px',
+                fontSize: '0.96rem',
                 textTransform: 'uppercase',
                 fontWeight: '800',
                 background: isRegistrationOpen ? 'linear-gradient(135deg, var(--theme-gold) 0%, #b39366 100%)' : '#64748b',
@@ -2495,11 +2534,38 @@ export default function TenantPortalPage({
             <button
               onClick={() => {
                 setActiveTab('live');
+                setActiveSubTab('live-brackets');
+                if (activeTournamentId && registrations.length === 0) {
+                  fetchRegistrations(activeTournamentId, true);
+                }
+              }}
+              style={{
+                padding: '16px 28px',
+                fontSize: '0.96rem',
+                fontWeight: '900',
+                background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                border: 'none',
+                borderRadius: '8px',
+                color: '#ffffff',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+                boxShadow: '0 4px 20px rgba(2, 132, 199, 0.55)',
+                transition: 'all 0.2s ease-in-out',
+              }}
+            >
+              <span>📋</span>
+              <span>대진표 및 조 편성표 {isBracketPublic ? '(공식 확정)' : ''}</span>
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('live');
                 setActiveSubTab('live-leaderboard');
               }}
               style={{
-                padding: '16px 32px',
-                fontSize: '1rem',
+                padding: '16px 28px',
+                fontSize: '0.96rem',
                 textTransform: 'uppercase',
                 fontWeight: '900',
                 background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
@@ -2565,12 +2631,17 @@ export default function TenantPortalPage({
               ))}
 
               {activeTab === 'live' && [
-                { id: 'live-leaderboard', label: '실시간 리더보드 🟢' },
-                { id: 'live-brackets', label: '대진표 및 조 편성표' }
+                { id: 'live-brackets', label: '대진표 및 조 편성표 ⛵' },
+                { id: 'live-leaderboard', label: '실시간 리더보드 🏆' }
               ].map(sub => (
                 <button
                   key={sub.id}
-                  onClick={() => setActiveSubTab(sub.id)}
+                  onClick={() => {
+                    setActiveSubTab(sub.id);
+                    if (sub.id === 'live-brackets' && activeTournamentId && registrations.length === 0) {
+                      fetchRegistrations(activeTournamentId, true);
+                    }
+                  }}
                   style={{
                     padding: '8px 16px',
                     fontSize: '0.85rem',
@@ -2687,7 +2758,7 @@ export default function TenantPortalPage({
                   <RefreshCw className="animate-spin" size={32} style={{ color: 'var(--theme-primary)', margin: '0 auto 12px auto' }} />
                   <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>리더보드 집계 정보를 불러오는 중입니다...</p>
                 </div>
-              ) : !(overview.bracketsPublished || overview.leaderboardPublished) ? (
+              ) : !(isBracketPublic || overview.leaderboardPublished || tenant?.overviewConfig?.leaderboardPublished) ? (
                 <div className="glass-panel" style={{ background: 'white', padding: '70px 24px', textAlign: 'center', color: 'var(--text-muted)', borderTop: '4px solid #cbd5e1' }}>
                   <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto', fontSize: '1.8rem' }}>
                     🏆
@@ -3310,7 +3381,7 @@ export default function TenantPortalPage({
                   <RefreshCw className="animate-spin" size={30} style={{ color: 'var(--theme-primary)', margin: '0 auto 12px auto' }} />
                   <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: 0 }}>참가 선수 및 조 편성표 데이터를 불러오는 중입니다...</p>
                 </div>
-              ) : !overview.bracketsPublished ? (
+              ) : !isBracketPublic ? (
                 <div className="glass-panel" style={{ background: 'white', padding: '60px 20px', textAlign: 'center', color: 'var(--text-muted)', borderTop: '4px solid #cbd5e1', borderRadius: '14px' }}>
                   <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px auto', fontSize: '1.6rem' }}>
                     📋
@@ -3324,14 +3395,14 @@ export default function TenantPortalPage({
                 </div>
               ) : registrations.length === 0 ? (
                 <div className="glass-panel" style={{ background: 'white', padding: '50px 0', textAlign: 'center', color: 'var(--text-muted)', borderRadius: '14px' }}>
-                  <p style={{ fontSize: '0.95rem', fontWeight: '700', margin: '0 0 4px 0' }}>승인 완료된 참가 선수가 없습니다.</p>
-                  <p style={{ fontSize: '0.82rem', margin: 0 }}>대회 주최측에서 참가 신청을 승인하면 대진 및 조 편성이 여기에 실시간으로 표시됩니다.</p>
+                  <p style={{ fontSize: '0.95rem', fontWeight: '700', margin: '0 0 4px 0' }}>등록된 대진 및 참가 선수가 없습니다.</p>
+                  <p style={{ fontSize: '0.82rem', margin: 0 }}>대회 주최측에서 조 편성을 업데이트하면 대진 및 조 편성이 여기에 실시간으로 표시됩니다.</p>
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                  {overview.bracketsPublishedAt && (
+                  {(overview.bracketsPublishedAt || tenant?.overviewConfig?.bracketsPublishedAt) && (
                     <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '6px', fontSize: '0.78rem', color: '#059669', fontWeight: '700', padding: '0 4px', marginBottom: '-10px' }}>
-                      <CheckCircle2 size={14} /> 운영진 공식 확정 일시: {formatKoreanDateTime(overview.bracketsPublishedAt)}
+                      <CheckCircle2 size={14} /> 운영진 공식 확정 일시: {formatKoreanDateTime(overview.bracketsPublishedAt || tenant?.overviewConfig?.bracketsPublishedAt)}
                     </div>
                   )}
                   {(() => {
