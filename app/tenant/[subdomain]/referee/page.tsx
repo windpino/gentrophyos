@@ -93,14 +93,64 @@ export function parseBirthNum(rawBirth: string): number {
   return parseInt(digits, 10) || 0;
 }
 
-export function isAgeSplitDivision(divName?: string): boolean {
-  if (!divName) return false;
+export function getDivisionSubclasses(divName?: string): string[] {
+  if (!divName) return [];
   const d = divName.replace(/\s+/g, '');
-  return (
-    (d.includes('혼합오픈') || d.includes('펀엔포뮬러') || d.includes('펀&포뮬러') || d.includes('포뮬러')) &&
-    (d.includes('남자') || !d.includes('여자'))
-  );
+  if (d.includes('혼합오픈') || d.includes('펀엔포뮬러') || d.includes('펀&포뮬러') || d.includes('포뮬러')) {
+    return ['청년부', '중년부', '장년부', '여자부'];
+  }
+  if (d.includes('윙포일')) {
+    return ['남자부', '여자부'];
+  }
+  return [];
 }
+
+export function hasSubclasses(divName?: string): boolean {
+  return getDivisionSubclasses(divName).length > 0;
+}
+
+export function isAgeSplitDivision(divName?: string): boolean {
+  return hasSubclasses(divName);
+}
+
+// 특정 라운드에서 해당 선수의 소속 클라스(부문) 내 순위 계산 (동시 출전 경기 피니시 착순 기반 자동 산출)
+export const getClassRankForRound = (player: any, roundKey: string, allPlayers: any[]): number | null => {
+  if (!player) return null;
+  const pVal = player[roundKey];
+  if (pVal === null || pVal === undefined || pVal === '' || pVal === 'DNS' || pVal === 'DNF') return null;
+  const pNum = Number(pVal);
+  if (isNaN(pNum)) return null;
+
+  const targetSubclass = player.subclass || (player.gender === '여자' ? '여자부' : '통합부');
+  const peers = allPlayers.filter(
+    other => (other.subclass === targetSubclass || (!other.subclass && targetSubclass === '통합부')) &&
+             other[roundKey] !== null &&
+             other[roundKey] !== undefined &&
+             other[roundKey] !== '' &&
+             other[roundKey] !== 'DNS' &&
+             other[roundKey] !== 'DNF'
+  );
+  peers.sort((a, b) => Number(a[roundKey]) - Number(b[roundKey]));
+  const classIndex = peers.findIndex(p => p.id === player.id);
+  return classIndex >= 0 ? classIndex + 1 : null;
+};
+
+// 클라스별 인쇄 및 순위표 산출 시 전체 착순을 해당 클라스 내 상대 순위(1위, 2위...)로 매핑 변환
+export const mapToClassScores = (classMembers: any[], allPlayers: any[], roundsList: RoundItem[]) => {
+  return classMembers.map(member => {
+    const copy = { ...member };
+    roundsList.forEach(r => {
+      const raw = member[r.key];
+      if (raw !== null && raw !== undefined && raw !== '' && raw !== 'DNS' && raw !== 'DNF') {
+        const clsRank = getClassRankForRound(member, r.key, allPlayers);
+        if (clsRank !== null) {
+          copy[r.key] = clsRank;
+        }
+      }
+    });
+    return copy;
+  });
+};
 
 export default function RefereeMobilePage({
   params,
@@ -309,16 +359,29 @@ export default function RefereeMobilePage({
 
             const d = String(division).trim();
             const isFemale = d.includes('여자') || gender === '여자';
-            const suffix = isFemale ? ' (여자부)' : ' (남자부)';
             if (d.includes('윈드포일')) {
               division = '윈드포일';
-            } else if (!['윙포일 (남자부)', '윙포일 (여자부)', '혼합오픈 (남자부)', '혼합오픈 (여자부)', '펀엔포뮬러 (남자부)', '펀엔포뮬러 (여자부)'].includes(d)) {
-              if (d.includes('윙포일')) division = `윙포일${suffix}`;
-              else if (d.includes('혼합오픈')) division = `혼합오픈${suffix}`;
-              else if (d.includes('펀엔포뮬러') || d.includes('펀&포뮬러')) division = `펀엔포뮬러${suffix}`;
-              else division = d;
+            } else if (d.includes('윙포일')) {
+              division = '윙포일';
+            } else if (d.includes('혼합오픈')) {
+              division = '혼합오픈';
+            } else if (d.includes('펀엔포뮬러') || d.includes('펀&포뮬러')) {
+              division = '펀엔포뮬러';
             } else {
               division = d;
+            }
+
+            // 성별 및 기본 클라스 동기화 (경기는 남여 함께 치르고 등수는 클라스별 구분)
+            if (isFemale) {
+              gender = '여자';
+              subclass = '여자부';
+            } else {
+              gender = '남자';
+              if (division === '윙포일') {
+                subclass = '남자부';
+              } else if (division === '윈드포일') {
+                subclass = '통합부';
+              }
             }
 
             const baseObj: any = {
@@ -342,9 +405,9 @@ export default function RefereeMobilePage({
             return baseObj;
           });
 
-        // 혼합오픈 (남자부) 및 펀엔포뮬러 (남자부) 세부 클라스(청년부·중년부·장년부) 연령 1/3 균등분할 적용
-        ['혼합오픈 (남자부)', '펀엔포뮬러 (남자부)'].forEach(targetDiv => {
-          const divMalePlayers = parsed.filter((p: any) => p.division === targetDiv);
+        // 혼합오픈 및 펀엔포뮬러 남자 선수 세부 클라스(청년부·중년부·장년부) 연령 1/3 균등분할 적용
+        ['혼합오픈', '펀엔포뮬러'].forEach(targetDiv => {
+          const divMalePlayers = parsed.filter((p: any) => p.division === targetDiv && p.gender !== '여자');
           const needsAutoSplit = divMalePlayers.length > 0 && divMalePlayers.every((p: any) => !p.subclass || p.subclass === '통합부');
           if (needsAutoSplit) {
             const sortedByBirth = [...divMalePlayers].sort((a: any, b: any) => {
@@ -364,6 +427,14 @@ export default function RefereeMobilePage({
               else if (idx < cut2) p.subclass = '중년부';
               else p.subclass = '장년부';
             });
+          }
+        });
+
+        // 여성 참가자는 항상 여자부로 확정
+        parsed.forEach((p: any) => {
+          if (p.gender === '여자' || (p.division && p.division.includes('여자'))) {
+            p.gender = '여자';
+            p.subclass = '여자부';
           }
         });
 
@@ -921,6 +992,15 @@ export default function RefereeMobilePage({
         if (activeDivisionTab === '윈드포일') {
           return r.division === '윈드포일' || (r.division && r.division.includes('윈드포일'));
         }
+        if (activeDivisionTab === '윙포일') {
+          return r.division === '윙포일' || (r.division && r.division.includes('윙포일'));
+        }
+        if (activeDivisionTab === '혼합오픈') {
+          return r.division === '혼합오픈' || (r.division && r.division.includes('혼합오픈'));
+        }
+        if (activeDivisionTab === '펀엔포뮬러' || activeDivisionTab === '펀&포뮬러') {
+          return r.division === '펀엔포뮬러' || (r.division && (r.division.includes('펀') || r.division.includes('포뮬러')));
+        }
         return r.division === activeDivisionTab;
       });
       loadLeaderboardForDivision(activeTournament.id, activeDivisionTab, filteredBase);
@@ -1101,6 +1181,34 @@ export default function RefereeMobilePage({
           })
         });
         if (res.ok) {
+          if (hasSubclasses(activeDivisionTab)) {
+            await fetch(`/api/tenant/${subdomain}/leaderboard`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                tournamentId: activeTournament.id,
+                division: `${activeDivisionTab} (남자부)`,
+                rounds: defaultRounds,
+                list: [],
+                dnsDnfRule: dnsDnfRule,
+                isReset: true
+              })
+            }).catch(console.error);
+
+            await fetch(`/api/tenant/${subdomain}/leaderboard`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                tournamentId: activeTournament.id,
+                division: `${activeDivisionTab} (여자부)`,
+                rounds: defaultRounds,
+                list: [],
+                dnsDnfRule: dnsDnfRule,
+                isReset: true
+              })
+            }).catch(console.error);
+          }
+
           logAnalyticsEvent('referee_reset_leaderboard', { division: activeDivisionTab });
           alert(`✅ [${activeDivisionTab}] 순위 및 점수가 성공적으로 초기화되었습니다.\n홈페이지 실시간 리더보드에도 초기화가 즉시 반영되었습니다.`);
         } else {
@@ -1329,7 +1437,7 @@ export default function RefereeMobilePage({
       const matched = matchedList[0];
       assignRankToPlayer(matched.id, selectedRound, currentRankNum);
       setInputFeedback({
-        text: `✅ ${currentRankNum}위에 '${matched.name}' 선수(배번 ${formatBibShortDisplay(matched.bibNumber)})가 등록되었습니다!`,
+        text: `✅ ${currentRankNum}착에 '${matched.name}' 선수(배번 ${formatBibShortDisplay(matched.bibNumber)})가 등록되었습니다!`,
         isError: false,
       });
       setBibInput('');
@@ -1340,7 +1448,7 @@ export default function RefereeMobilePage({
       }
     } else if (matchedList.length > 1) {
       setInputFeedback({
-        text: `💡 동일 번호/이름 선수가 ${matchedList.length}명 검색되었습니다. 아래 목록에서 배정할 선수의 [${currentRankNum}위 배정] 버튼을 터치해주세요.`,
+        text: `💡 동일 번호/이름 선수가 ${matchedList.length}명 검색되었습니다. 아래 목록에서 배정할 선수의 [${currentRankNum}착 배정] 버튼을 터치해주세요.`,
         isError: false,
       });
     } else {
@@ -1355,7 +1463,7 @@ export default function RefereeMobilePage({
   const handleQuickAssignPlayer = (player: any) => {
     assignRankToPlayer(player.id, selectedRound, currentRankNum);
     setInputFeedback({
-      text: `✅ ${currentRankNum}위에 '${player.name}' 선수가 등록되었습니다!`,
+      text: `✅ ${currentRankNum}착에 '${player.name}' 선수가 등록되었습니다!`,
       isError: false,
     });
     setBibInput('');
@@ -1457,6 +1565,43 @@ export default function RefereeMobilePage({
         })
       });
       if (res.ok) {
+        if (hasSubclasses(activeDivisionTab)) {
+          const maleMembers = sorted.filter((p: any) => p.gender !== '여자');
+          const femaleMembers = sorted.filter((p: any) => p.gender === '여자' || p.subclass === '여자부');
+
+          if (maleMembers.length > 0) {
+            const maleScored = mapToClassScores(maleMembers, sorted, rounds);
+            const maleRanked = sortAndRankParticipants(maleScored, rounds, dnsDnfRule, false);
+            await fetch(`/api/tenant/${subdomain}/leaderboard`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                tournamentId: activeTournament.id,
+                division: `${activeDivisionTab} (남자부)`,
+                rounds: rounds,
+                list: maleRanked,
+                dnsDnfRule: dnsDnfRule
+              })
+            }).catch(console.error);
+          }
+
+          if (femaleMembers.length > 0) {
+            const femaleScored = mapToClassScores(femaleMembers, sorted, rounds);
+            const femaleRanked = sortAndRankParticipants(femaleScored, rounds, dnsDnfRule, false);
+            await fetch(`/api/tenant/${subdomain}/leaderboard`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                tournamentId: activeTournament.id,
+                division: `${activeDivisionTab} (여자부)`,
+                rounds: rounds,
+                list: femaleRanked,
+                dnsDnfRule: dnsDnfRule
+              })
+            }).catch(console.error);
+          }
+        }
+
         setIsRankConfirmed(true);
         setConfirmedTime(new Date().toLocaleString('ko-KR'));
         alert('순위가 공식 확정되었으며 홈페이지 실시간 리더보드에 즉시 반영되었습니다!\n\n[공식 순위표 인쇄] 버튼을 눌러 A4 규격 공식 결과표로 인쇄하거나 PDF로 저장하실 수 있습니다.');
@@ -1602,11 +1747,15 @@ export default function RefereeMobilePage({
     '--theme-primary-rgb': '99, 102, 241',
   } as React.CSSProperties;
 
-  // 종목 옵션 목록 추출 (윈드포일은 남녀 구분 없는 단일 종목으로 정규화)
+  // 종목 옵션 목록 추출 (남여 통합 경기 운영 규정에 맞춰 종목별 통합 메뉴로 정규화)
   const normalizeDivName = (name: string) => {
     if (!name) return '';
     const trimmed = name.trim();
     if (trimmed.includes('윈드포일')) return '윈드포일';
+    if (trimmed.includes('윙포일')) return '윙포일';
+    if (trimmed.includes('혼합오픈')) return '혼합오픈';
+    if (trimmed.includes('펀엔포뮬러') || trimmed.includes('펀&포뮬러') || trimmed.includes('포뮬러')) return '펀엔포뮬러';
+    if (trimmed.includes('단체전')) return '단체전';
     return trimmed;
   };
 
@@ -1617,12 +1766,9 @@ export default function RefereeMobilePage({
   const rawUnique = Array.from(new Set([...configuredDivisions, ...registeredDivisions])).filter(Boolean);
   const standardDivisions = [
     '윈드포일',
-    '윙포일 (남자부)',
-    '윙포일 (여자부)',
-    '혼합오픈 (남자부)',
-    '혼합오픈 (여자부)',
-    '펀엔포뮬러 (남자부)',
-    '펀엔포뮬러 (여자부)',
+    '윙포일',
+    '혼합오픈',
+    '펀엔포뮬러',
     '단체전'
   ];
 
@@ -2535,7 +2681,7 @@ export default function RefereeMobilePage({
                   <form onSubmit={handleAssignBibSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <label style={{ fontSize: '0.9rem', fontWeight: '800', color: '#1e293b' }}>
-                        {currentRankPlayer ? `${currentRankNum}위 선수 변경/교체 (새 배번/이름 입력)` : `${currentRankNum}위 선수 배번(티넘버) 입력`}
+                        {currentRankPlayer ? `${currentRankNum}착 선수 변경/교체 (새 배번/이름 입력)` : `${currentRankNum}착 결승선 통과 배번(티넘버) 입력`}
                       </label>
                     </div>
                     
@@ -2577,7 +2723,7 @@ export default function RefereeMobilePage({
                           boxShadow: '0 2px 8px rgba(99,102,241,0.3)'
                         }}
                       >
-                        <Check size={18} /> {currentRankPlayer ? `${currentRankNum}위 수정` : `${currentRankNum}위 등록`}
+                        <Check size={18} /> {currentRankPlayer ? `${currentRankNum}착 수정` : `${currentRankNum}착 등록`}
                       </button>
                     </div>
 
@@ -2724,7 +2870,7 @@ export default function RefereeMobilePage({
                     <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px dashed #cbd5e1' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                         <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#475569' }}>
-                          ⚡ 미입력 선수 빠른 선택 (터치 시 즉시 {currentRankNum}위 배정):
+                          ⚡ 미입력 선수 빠른 선택 (터치 시 즉시 {currentRankNum}착 배정):
                         </span>
                         <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
                           {unassignedPlayers.length}명 대기중
@@ -2747,12 +2893,24 @@ export default function RefereeMobilePage({
                               cursor: 'pointer',
                               display: 'flex',
                               alignItems: 'center',
-                              gap: '4px',
+                              gap: '5px',
                               transition: 'all 0.1s'
                             }}
                           >
-                            {p.bibNumber && <span style={{ color: 'var(--theme-primary)' }}>#{p.bibNumber}</span>}
+                            {p.bibNumber && <span style={{ color: 'var(--theme-primary)', fontWeight: '800' }}>#{formatBibShortDisplay(p.bibNumber)}</span>}
                             <span>{p.name}</span>
+                            {p.subclass && (
+                              <span style={{
+                                fontSize: '0.68rem',
+                                fontWeight: '800',
+                                padding: '1px 5px',
+                                borderRadius: '4px',
+                                background: p.subclass === '여자부' ? '#fdf2f8' : p.subclass === '청년부' ? '#eff6ff' : p.subclass === '중년부' ? '#ecfdf5' : '#fffbeb',
+                                color: p.subclass === '여자부' ? '#be185d' : p.subclass === '청년부' ? '#1d4ed8' : p.subclass === '중년부' ? '#047857' : '#b45309'
+                              }}>
+                                {p.subclass}
+                              </span>
+                            )}
                           </button>
                         ))}
                       </div>
@@ -2811,16 +2969,33 @@ export default function RefereeMobilePage({
                             fontSize: '0.95rem',
                             color: rankNum === 1 ? '#d97706' : rankNum === 2 ? '#475569' : rankNum === 3 ? '#ea580c' : '#64748b'
                           }}>
-                            {rankNum}위
+                            {activeDivisionTab === '단체전' ? `${rankNum}위` : `${rankNum}착`}
                           </span>
                           {assigned ? (
-                            <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                               <span style={{ fontWeight: '800', fontSize: '0.95rem', color: '#0f172a' }}>
                                 {assigned.name}
                               </span>
                               {assigned.bibNumber && (
-                                <span style={{ marginLeft: '8px', fontSize: '0.8rem', color: 'var(--theme-primary)', fontWeight: '700' }}>
-                                  (배번 #{assigned.bibNumber})
+                                <span style={{ fontSize: '0.8rem', color: 'var(--theme-primary)', fontWeight: '700' }}>
+                                  (배번 #{formatBibShortDisplay(assigned.bibNumber)})
+                                </span>
+                              )}
+                              {assigned.subclass && hasSubclasses(activeDivisionTab) && (
+                                <span style={{
+                                  fontSize: '0.72rem',
+                                  fontWeight: '800',
+                                  padding: '2px 7px',
+                                  borderRadius: '5px',
+                                  background: assigned.subclass === '청년부' ? '#eff6ff' : assigned.subclass === '중년부' ? '#ecfdf5' : assigned.subclass === '여자부' ? '#fdf2f8' : '#fffbeb',
+                                  color: assigned.subclass === '청년부' ? '#1d4ed8' : assigned.subclass === '중년부' ? '#047857' : assigned.subclass === '여자부' ? '#be185d' : '#b45309',
+                                  border: `1px solid ${assigned.subclass === '청년부' ? '#bfdbfe' : assigned.subclass === '중년부' ? '#a7f3d0' : assigned.subclass === '여자부' ? '#fbcfe8' : '#fde68a'}`
+                                }}>
+                                  {assigned.subclass}
+                                  {(() => {
+                                    const clsRk = getClassRankForRound(assigned, selectedRound, participants);
+                                    return clsRk ? ` ${clsRk}위` : '';
+                                  })()}
                                 </span>
                               )}
                             </div>
@@ -3374,7 +3549,7 @@ export default function RefereeMobilePage({
                 }}
               >
                 <Printer size={18} /> {(() => {
-                  if (!isAgeSplitDivision(activeDivisionTab)) return '🖨️ 공식 순위표 인쇄';
+                  if (!hasSubclasses(activeDivisionTab)) return '🖨️ 공식 순위표 인쇄';
                   if (selectedSubclassTab === 'all') return '🖨️ 공식 순위표 인쇄 (전체 + 클라스별 일괄)';
                   if (selectedSubclassTab === 'overall') return '🖨️ 공식 순위표 인쇄 (전체 종합만)';
                   return `🖨️ 공식 순위표 인쇄 (${selectedSubclassTab}만)`;
@@ -3382,8 +3557,8 @@ export default function RefereeMobilePage({
               </button>
             </div>
 
-            {/* 혼합오픈 (남자부) / 펀엔포뮬러 (남자부) 전용 클라스별 보기 및 출력 전환 탭 */}
-            {isAgeSplitDivision(activeDivisionTab) && (
+            {/* 세부 클라스별 보기 및 출력 전환 탭 */}
+            {hasSubclasses(activeDivisionTab) && (
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '14px', background: '#f8fafc', padding: '10px 14px', borderRadius: '12px', border: '1px solid #e2e8f0', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.82rem', fontWeight: '800', color: '#1e293b', marginRight: '4px' }}>
                   🏷️ 클라스별 보기 및 인쇄:
@@ -3420,9 +3595,10 @@ export default function RefereeMobilePage({
                 >
                   📊 전체 종합만
                 </button>
-                {['청년부', '중년부', '장년부'].map(sc => {
+                {getDivisionSubclasses(activeDivisionTab).map(sc => {
                   const cnt = participants.filter(p => p.subclass === sc).length;
                   const isSel = selectedSubclassTab === sc;
+                  const isFemale = sc === '여자부';
                   return (
                     <button
                       key={sc}
@@ -3431,15 +3607,15 @@ export default function RefereeMobilePage({
                       style={{
                         padding: '7px 12px',
                         borderRadius: '8px',
-                        border: '1px solid ' + (isSel ? '#d97706' : '#cbd5e1'),
-                        background: isSel ? '#d97706' : '#ffffff',
-                        color: isSel ? '#ffffff' : '#475569',
+                        border: '1px solid ' + (isSel ? (isFemale ? '#db2777' : '#d97706') : '#cbd5e1'),
+                        background: isSel ? (isFemale ? '#db2777' : '#d97706') : '#ffffff',
+                        color: isSel ? '#ffffff' : (isFemale ? '#db2777' : '#475569'),
                         fontWeight: '800',
                         fontSize: '0.8rem',
                         cursor: 'pointer'
                       }}
                     >
-                      🏷️ {sc} ({cnt}명)
+                      {isFemale ? '👩 ' : '🏃 '}{sc} ({cnt}명)
                     </button>
                   );
                 })}
@@ -3448,7 +3624,8 @@ export default function RefereeMobilePage({
 
             {/* 전체 참가자 & 라운드별 점수 스프레드시트 테이블 (직접 수정 가능) */}
             {(() => {
-              const isSplit = isAgeSplitDivision(activeDivisionTab);
+              const isSplit = hasSubclasses(activeDivisionTab);
+              const subclasses = getDivisionSubclasses(activeDivisionTab);
               let screenParticipants = participants;
               let showClassColumn = false;
 
@@ -3456,11 +3633,12 @@ export default function RefereeMobilePage({
                 if (selectedSubclassTab === 'all' || selectedSubclassTab === 'overall') {
                   showClassColumn = true;
                   screenParticipants = participants;
-                } else if (['청년부', '중년부', '장년부'].includes(selectedSubclassTab)) {
+                } else if (subclasses.includes(selectedSubclassTab)) {
                   const classMembers = participants.filter(p => p.subclass === selectedSubclassTab);
                   const hasScores = classMembers.some(p => rounds.some(r => p[r.key] !== null && p[r.key] !== undefined && p[r.key] !== ''));
+                  const classScored = mapToClassScores(classMembers, participants, rounds);
                   screenParticipants = hasScores
-                    ? sortAndRankParticipants(classMembers, rounds, dnsDnfRule, false)
+                    ? sortAndRankParticipants(classScored, rounds, dnsDnfRule, false)
                     : classMembers.map((p, idx) => ({ ...p, rank: idx + 1 }));
                 }
               }
@@ -3532,9 +3710,9 @@ export default function RefereeMobilePage({
                                     fontWeight: '800',
                                     padding: '2px 6px',
                                     borderRadius: '6px',
-                                    background: p.subclass === '청년부' ? '#eff6ff' : p.subclass === '중년부' ? '#ecfdf5' : '#fffbeb',
-                                    color: p.subclass === '청년부' ? '#1d4ed8' : p.subclass === '중년부' ? '#047857' : '#b45309',
-                                    border: `1px solid ${p.subclass === '청년부' ? '#bfdbfe' : p.subclass === '중년부' ? '#a7f3d0' : '#fde68a'}`
+                                    background: p.subclass === '청년부' ? '#eff6ff' : p.subclass === '중년부' ? '#ecfdf5' : p.subclass === '여자부' ? '#fdf2f8' : '#fffbeb',
+                                    color: p.subclass === '청년부' ? '#1d4ed8' : p.subclass === '중년부' ? '#047857' : p.subclass === '여자부' ? '#be185d' : '#b45309',
+                                    border: `1px solid ${p.subclass === '청년부' ? '#bfdbfe' : p.subclass === '중년부' ? '#a7f3d0' : p.subclass === '여자부' ? '#fbcfe8' : '#fde68a'}`
                                   }}>
                                     {p.subclass || '일반'}
                                   </span>
@@ -3917,7 +4095,7 @@ export default function RefereeMobilePage({
           );
         };
 
-        if (!isSplit) {
+        if (!hasSubclasses(activeDivisionTab)) {
           return renderPrintTableSheet({
             titleDivision: activeDivisionTab,
             sheetParticipants: participants,
@@ -3926,7 +4104,7 @@ export default function RefereeMobilePage({
           });
         }
 
-        const subclasses = ['청년부', '중년부', '장년부'];
+        const subclasses = getDivisionSubclasses(activeDivisionTab);
 
         if (selectedSubclassTab === 'overall') {
           return renderPrintTableSheet({
@@ -3939,10 +4117,11 @@ export default function RefereeMobilePage({
 
         if (subclasses.includes(selectedSubclassTab)) {
           const classMembers = participants.filter(p => p.subclass === selectedSubclassTab);
+          const classScored = mapToClassScores(classMembers, participants, rounds);
           return renderPrintTableSheet({
             titleDivision: activeDivisionTab,
             subclassLabel: selectedSubclassTab,
-            sheetParticipants: classMembers,
+            sheetParticipants: classScored,
             showClassColumn: false,
             isFirstPage: true
           });
@@ -3959,10 +4138,11 @@ export default function RefereeMobilePage({
             })}
             {subclasses.map(sc => {
               const classMembers = participants.filter(p => p.subclass === sc);
+              const classScored = mapToClassScores(classMembers, participants, rounds);
               return renderPrintTableSheet({
                 titleDivision: activeDivisionTab,
                 subclassLabel: sc,
-                sheetParticipants: classMembers,
+                sheetParticipants: classScored,
                 showClassColumn: false,
                 isFirstPage: false
               });
