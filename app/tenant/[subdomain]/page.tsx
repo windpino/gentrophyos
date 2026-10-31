@@ -124,7 +124,7 @@ export function getBibBadgeStyle(bibNumber?: string) {
   };
 }
 
-// 배번 표시용 정제 함수: "연두35번" -> "연두35", "흰색 1번" -> "흰색 1", "배번 12번" -> "12" 처럼 접미사 '번' 및 불필요한 공백 제거
+// 배번 표시용 정제 함수: 한 자리 숫자는 01, 02 등 두 자리로 표시, "연두35번" -> "연두35", "흰색 1번" -> "흰색 01" 등 정돈
 export function formatBibShortDisplay(bibNumber?: string): string {
   if (!bibNumber) return '-';
   const trimmed = bibNumber.trim();
@@ -135,6 +135,8 @@ export function formatBibShortDisplay(bibNumber?: string): string {
   clean = clean.replace(/(\d+)\s*번$/, '$1');
   // 색상과 숫자 사이 불필요한 연속 공백 정돈
   clean = clean.replace(/\s+/g, ' ').trim();
+  // 한 자리 숫자인 경우 앞에 0을 붙여 01, 02 등으로 표시 (예: "1" -> "01", "빨강 1" -> "빨강 01")
+  clean = clean.replace(/(^|[^\d])(\d)(?!\d)/g, '$10$2');
   return clean || trimmed;
 }
 

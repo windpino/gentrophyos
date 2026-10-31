@@ -59,11 +59,17 @@ const DEFAULT_TEAM_ROUNDS: RoundItem[] = [
 
 export function formatBibShortDisplay(bibNumber?: string): string {
   if (!bibNumber) return '-';
-  return bibNumber
-    .trim()
-    .replace(/\s*번\b|\s*번$/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
+  const trimmed = String(bibNumber).trim();
+  if (!trimmed || trimmed === '-') return '-';
+
+  let clean = trimmed.replace(/^배번\s*/, '');
+  clean = clean.replace(/(\d+)\s*번$/, '$1');
+  clean = clean.replace(/\s+/g, ' ').trim();
+
+  // 한 자리 숫자인 경우 앞에 0을 붙여 01, 02 등으로 표시 (예: "1" -> "01", "빨강 1" -> "빨강 01", "#1" -> "#01")
+  clean = clean.replace(/(^|[^\d])(\d)(?!\d)/g, '$10$2');
+
+  return clean || trimmed;
 }
 
 export function formatRankDisplay(rank: any, isTeam: boolean = false): string {
@@ -183,6 +189,8 @@ export default function RefereeMobilePage({
 
   // 확정란 셀 선택 상태 (모바일 키패드/DNS/DNF 바용)
   const [activeCell, setActiveCell] = useState<{ id: string; roundKey: string } | null>(null);
+  // 확정란 원터치 도장 모드: 'none' | 'DNS' | 'DNF' (활성화 시 표 스크롤하며 셀 터치 즉시 해당 코드로 변경)
+  const [confirmStampMode, setConfirmStampMode] = useState<'none' | 'DNS' | 'DNF'>('none');
 
   // 인증 게이트
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -1581,17 +1589,19 @@ export default function RefereeMobilePage({
         .replace(/^파랑|^파란/, '파')
         .replace(/^흰색/, '흰');
 
-    const normB = normalize(b);
-    const normQ = normalize(q);
+    const normB = normalize(b).replace(/(^|[^\d])(\d)(?!\d)/g, '$10$2');
+    const normQ = normalize(q).replace(/(^|[^\d])(\d)(?!\d)/g, '$10$2');
     if (normB === normQ || normB.includes(normQ)) return true;
 
-    // 3. 숫자 검색: 사용자가 숫자(예: '7' 또는 '7번')를 입력했을 때,
-    // 해당 종목 출전 선수 중 색상이 달라도 같은 번호를 가진 모든 선수를 매칭
-    // (예: '7' 입력 시 '흰색 7', '연두 7', '주황 7', '노랑 7' 모두 검색)
+    // 3. 숫자 검색: 사용자가 숫자(예: '7', '07', '7번')를 입력했을 때,
+    // 1번과 01번 호환 및 색상이 달라도 같은 번호를 가진 모든 선수를 매칭
     const bDigits = b.replace(/[^0-9]/g, '');
     const qDigits = q.replace(/[^0-9]/g, '');
-    if (qDigits.length > 0 && bDigits === qDigits) {
-      return true;
+    if (qDigits.length > 0) {
+      if (bDigits === qDigits) return true;
+      const bNum = Number(bDigits);
+      const qNum = Number(qDigits);
+      if (!isNaN(bNum) && !isNaN(qNum) && bNum === qNum) return true;
     }
 
     return false;
@@ -2741,7 +2751,7 @@ export default function RefereeMobilePage({
                       현재 {currentRankNum}위에 배정된 선수 (수정하려면 아래에 새 배번을 입력하거나 삭제하세요)
                     </div>
                     <div style={{ fontSize: '1.05rem', fontWeight: '900', color: '#065f46' }}>
-                      {currentRankPlayer.name} {currentRankPlayer.bibNumber && `(배번 #${currentRankPlayer.bibNumber})`}
+                      {currentRankPlayer.name} {currentRankPlayer.bibNumber && `(배번 #${formatBibShortDisplay(currentRankPlayer.bibNumber)})`}
                     </div>
                   </div>
                   <button
@@ -3939,9 +3949,246 @@ export default function RefereeMobilePage({
               }
 
               return (
-                <div style={{ overflowX: 'auto', width: '100%', border: '1px solid #e2e8f0', borderRadius: '12px' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                    <thead>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {/* ── [순위 확정란] 상하 스크롤을 항상 따라다니는 DNS / DNF 퀵 컨트롤 툴바 ── */}
+                  <div style={{
+                    position: 'sticky',
+                    top: '8px',
+                    zIndex: 45,
+                    background: '#0f172a',
+                    color: 'white',
+                    padding: '10px 14px',
+                    borderRadius: '12px',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.35)',
+                    border: '2px solid #334155',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                      {/* 좌측: 활성 셀 정보 또는 안내 */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '160px' }}>
+                        <span style={{
+                          background: confirmStampMode === 'DNS' ? '#dc2626' : confirmStampMode === 'DNF' ? '#d97706' : '#38bdf8',
+                          color: confirmStampMode !== 'none' ? 'white' : '#0f172a',
+                          padding: '2px 8px',
+                          borderRadius: '6px',
+                          fontSize: '0.72rem',
+                          fontWeight: '900',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {confirmStampMode === 'DNS' ? '⚡ DNS 도장 ON' : confirmStampMode === 'DNF' ? '⚠️ DNF 도장 ON' : '⚡ DNS/DNF 퀵바'}
+                        </span>
+                        {activeCell ? (() => {
+                          const targetP = participants.find(item => item.id === activeCell.id);
+                          const curVal = targetP ? (targetP as any)[activeCell.roundKey] : null;
+                          return (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: '800' }}>
+                              <span style={{ color: '#f8fafc' }}>
+                                #{formatBibShortDisplay(targetP?.bibNumber)} {targetP?.name}
+                              </span>
+                              <span style={{ color: '#38bdf8' }}>({activeCell.roundKey.toUpperCase()})</span>
+                              <span style={{ fontSize: '0.72rem', color: '#cbd5e1' }}>
+                                현재: <strong style={{ color: curVal === 'DNS' ? '#f87171' : curVal === 'DNF' ? '#fbbf24' : '#67e8f9' }}>{curVal ? `${curVal}` : '미입력'}</strong>
+                              </span>
+                            </div>
+                          );
+                        })() : (
+                          <span style={{ fontSize: '0.78rem', color: '#cbd5e1', fontWeight: '700' }}>
+                            표를 스크롤하며 셀을 터치하거나 아래 버튼으로 DNS/DNF를 즉시 지정하세요
+                          </span>
+                        )}
+                      </div>
+
+                      {/* 우측: 스크롤을 따라다니는 핵심 DNS / DNF 변경 및 도장 버튼들 */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        {/* DNS 즉시 변경 / 도장 토글 */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (activeCell) {
+                              handleScoreInput(activeCell.id, activeCell.roundKey, 'DNS');
+                              const curIdx = screenParticipants.findIndex(p => p.id === activeCell.id);
+                              if (curIdx >= 0 && curIdx < screenParticipants.length - 1) {
+                                setActiveCell({ id: screenParticipants[curIdx + 1].id, roundKey: activeCell.roundKey });
+                              }
+                            } else {
+                              setConfirmStampMode(prev => prev === 'DNS' ? 'none' : 'DNS');
+                            }
+                          }}
+                          style={{
+                            background: confirmStampMode === 'DNS' ? '#ef4444' : '#dc2626',
+                            color: 'white',
+                            border: confirmStampMode === 'DNS' ? '2px solid #ffffff' : 'none',
+                            borderRadius: '8px',
+                            padding: '6px 10px',
+                            fontWeight: '900',
+                            cursor: 'pointer',
+                            fontSize: '0.82rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            boxShadow: '0 2px 8px rgba(220,38,38,0.4)',
+                            whiteSpace: 'nowrap'
+                          }}
+                          title="선택된 셀을 DNS로 변경하거나, 원터치 DNS 도장 모드를 켭니다"
+                        >
+                          <span>⚡ DNS ({getDnsPenaltyScore(participants)}점)</span>
+                        </button>
+
+                        {/* DNF 즉시 변경 / 도장 토글 */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (activeCell) {
+                              handleScoreInput(activeCell.id, activeCell.roundKey, 'DNF');
+                              const curIdx = screenParticipants.findIndex(p => p.id === activeCell.id);
+                              if (curIdx >= 0 && curIdx < screenParticipants.length - 1) {
+                                setActiveCell({ id: screenParticipants[curIdx + 1].id, roundKey: activeCell.roundKey });
+                              }
+                            } else {
+                              setConfirmStampMode(prev => prev === 'DNF' ? 'none' : 'DNF');
+                            }
+                          }}
+                          style={{
+                            background: confirmStampMode === 'DNF' ? '#f59e0b' : '#d97706',
+                            color: 'white',
+                            border: confirmStampMode === 'DNF' ? '2px solid #ffffff' : 'none',
+                            borderRadius: '8px',
+                            padding: '6px 10px',
+                            fontWeight: '900',
+                            cursor: 'pointer',
+                            fontSize: '0.82rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            boxShadow: '0 2px 8px rgba(217,119,6,0.4)',
+                            whiteSpace: 'nowrap'
+                          }}
+                          title="선택된 셀을 DNF로 변경하거나, 원터치 DNF 도장 모드를 켭니다"
+                        >
+                          <span>⚠️ DNF ({getDnfPenaltyScore(activeCell?.roundKey || selectedRound, participants, dnsDnfRule)}점)</span>
+                        </button>
+
+                        {/* 지우기 */}
+                        {activeCell && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleScoreInput(activeCell.id, activeCell.roundKey, '');
+                            }}
+                            style={{
+                              background: '#334155',
+                              color: '#f8fafc',
+                              border: '1px solid #475569',
+                              borderRadius: '8px',
+                              padding: '6px 8px',
+                              fontSize: '0.75rem',
+                              fontWeight: '800',
+                              cursor: 'pointer',
+                              whiteSpace: 'nowrap'
+                            }}
+                            title="선택된 셀 점수 비우기"
+                          >
+                            지우기
+                          </button>
+                        )}
+
+                        {/* 이전 / 다음 선수 이동 */}
+                        {activeCell && (
+                          <div style={{ display: 'flex', gap: '3px' }}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const curIdx = screenParticipants.findIndex(p => p.id === activeCell.id);
+                                if (curIdx > 0) {
+                                  setActiveCell({ id: screenParticipants[curIdx - 1].id, roundKey: activeCell.roundKey });
+                                }
+                              }}
+                              disabled={screenParticipants.findIndex(p => p.id === activeCell.id) <= 0}
+                              style={{
+                                background: '#334155',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                padding: '6px 8px',
+                                fontSize: '0.75rem',
+                                fontWeight: '800',
+                                cursor: 'pointer'
+                              }}
+                              title="이전 선수로 이동"
+                            >
+                              ◀
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const curIdx = screenParticipants.findIndex(p => p.id === activeCell.id);
+                                if (curIdx >= 0 && curIdx < screenParticipants.length - 1) {
+                                  setActiveCell({ id: screenParticipants[curIdx + 1].id, roundKey: activeCell.roundKey });
+                                }
+                              }}
+                              disabled={screenParticipants.findIndex(p => p.id === activeCell.id) >= screenParticipants.length - 1}
+                              style={{
+                                background: '#334155',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                padding: '6px 8px',
+                                fontSize: '0.75rem',
+                                fontWeight: '800',
+                                cursor: 'pointer'
+                              }}
+                              title="다음 선수로 이동"
+                            >
+                              ▶
+                            </button>
+                          </div>
+                        )}
+
+                        {/* 도장 모드 해제 */}
+                        {confirmStampMode !== 'none' && (
+                          <button
+                            type="button"
+                            onClick={() => setConfirmStampMode('none')}
+                            style={{
+                              background: '#475569',
+                              color: '#f8fafc',
+                              border: 'none',
+                              borderRadius: '6px',
+                              padding: '6px 8px',
+                              fontSize: '0.75rem',
+                              fontWeight: '800',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            도장 끄기
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 도장 모드 활성화 시 직관적 안내 배너 */}
+                    {confirmStampMode !== 'none' && (
+                      <div style={{
+                        background: confirmStampMode === 'DNS' ? 'rgba(239, 68, 68, 0.25)' : 'rgba(245, 158, 11, 0.25)',
+                        border: confirmStampMode === 'DNS' ? '1px solid #ef4444' : '1px solid #f59e0b',
+                        borderRadius: '8px',
+                        padding: '4px 8px',
+                        fontSize: '0.74rem',
+                        color: confirmStampMode === 'DNS' ? '#fca5a5' : '#fde68a',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}>
+                        <span>🎯 <strong>{confirmStampMode} 원터치 도장 모드 작동 중</strong>: 표를 상하로 스크롤하면서 원하는 칸을 터치하면 바로 {confirmStampMode}({confirmStampMode === 'DNS' ? getDnsPenaltyScore(participants) : getDnfPenaltyScore(activeCell?.roundKey || selectedRound, participants, dnsDnfRule)}점)로 설정됩니다! (끝나면 [도장 끄기]를 눌러주세요)</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ overflowX: 'auto', width: '100%', border: '1px solid #e2e8f0', borderRadius: '12px' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                      <thead style={{ position: 'sticky', top: '70px', zIndex: 35, background: '#f8fafc', boxShadow: '0 2px 4px rgba(0,0,0,0.06)' }}>
                       <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
                         <th style={{ padding: '10px 6px', width: '45px', textAlign: 'center' }}>순위</th>
                         {showClassColumn && (
@@ -4022,12 +4269,16 @@ export default function RefereeMobilePage({
                               <td style={{ padding: '6px 4px', textAlign: 'center' }}>
                                 <input
                                   type="text"
-                                  value={p.bibNumber || ''}
+                                  value={p.bibNumber ? formatBibShortDisplay(p.bibNumber) : ''}
                                   onChange={(e) => {
                                     const val = e.target.value;
                                     setParticipants(prev => prev.map(item => item.id === p.id ? { ...item, bibNumber: val } : item));
                                   }}
-                                  placeholder="배번"
+                                  onBlur={(e) => {
+                                    const formatted = formatBibShortDisplay(e.target.value);
+                                    setParticipants(prev => prev.map(item => item.id === p.id ? { ...item, bibNumber: formatted } : item));
+                                  }}
+                                  placeholder="01"
                                   style={{ width: '45px', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '6px', textAlign: 'center', fontSize: '0.8rem', fontWeight: '700' }}
                                 />
                               </td>
@@ -4056,12 +4307,22 @@ export default function RefereeMobilePage({
                                 return (
                                   <td
                                     key={rKey}
-                                    onClick={() => setActiveCell({ id: p.id, roundKey: rKey })}
+                                    onClick={() => {
+                                      if (confirmStampMode === 'DNS') {
+                                        handleScoreInput(p.id, rKey, 'DNS');
+                                        return;
+                                      }
+                                      if (confirmStampMode === 'DNF') {
+                                        handleScoreInput(p.id, rKey, 'DNF');
+                                        return;
+                                      }
+                                      setActiveCell({ id: p.id, roundKey: rKey });
+                                    }}
                                     style={{
                                       padding: '4px',
                                       textAlign: 'center',
                                       verticalAlign: 'top',
-                                      cursor: 'pointer',
+                                      cursor: confirmStampMode !== 'none' ? 'crosshair' : 'pointer',
                                       background: isFocused ? '#eff6ff' : undefined,
                                       borderRadius: '6px',
                                       transition: 'background-color 0.15s ease'
@@ -4073,11 +4334,29 @@ export default function RefereeMobilePage({
                                         value={inputDisplayVal}
                                         onChange={(e) => handleScoreInput(p.id, rKey, e.target.value)}
                                         onFocus={(e) => {
+                                          if (confirmStampMode === 'DNS') {
+                                            handleScoreInput(p.id, rKey, 'DNS');
+                                            e.currentTarget.blur();
+                                            return;
+                                          }
+                                          if (confirmStampMode === 'DNF') {
+                                            handleScoreInput(p.id, rKey, 'DNF');
+                                            e.currentTarget.blur();
+                                            return;
+                                          }
                                           setActiveCell({ id: p.id, roundKey: rKey });
                                           e.currentTarget.select();
                                         }}
                                         onClick={(e) => {
                                           e.stopPropagation();
+                                          if (confirmStampMode === 'DNS') {
+                                            handleScoreInput(p.id, rKey, 'DNS');
+                                            return;
+                                          }
+                                          if (confirmStampMode === 'DNF') {
+                                            handleScoreInput(p.id, rKey, 'DNF');
+                                            return;
+                                          }
                                           setActiveCell({ id: p.id, roundKey: rKey });
                                         }}
                                         onBlur={() => handleScoreCellBlur(p.id, rKey)}
@@ -4141,7 +4420,8 @@ export default function RefereeMobilePage({
                     </tbody>
                   </table>
                 </div>
-              );
+              </div>
+            );
             })()}
 
             {/* 채점 가이드라인 */}
@@ -4209,7 +4489,7 @@ export default function RefereeMobilePage({
                       <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: '700' }}>선택 셀</span>
                     </div>
                     <span style={{ fontSize: '0.88rem', color: '#f8fafc', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {targetPlayer ? `${targetPlayer.name} ${targetPlayer.bibNumber ? `(#${targetPlayer.bibNumber})` : ''}` : ''}
+                      {targetPlayer ? `${targetPlayer.name} ${targetPlayer.bibNumber ? `(#${formatBibShortDisplay(targetPlayer.bibNumber)})` : ''}` : ''}
                     </span>
                     <span style={{ fontSize: '0.7rem', color: '#cbd5e1' }}>
                       현재: <strong style={{ color: currentVal === 'DNS' ? '#f87171' : currentVal === 'DNF' ? '#fbbf24' : '#67e8f9' }}>{currentVal ? `${currentVal}` : '미입력'}</strong>
@@ -4219,11 +4499,15 @@ export default function RefereeMobilePage({
               })()}
 
               {/* DNS / DNF / 지우기 / 닫기 버튼 그룹 */}
-              <div style={{ display: 'flex', gap: '6px', flex: 1, justifyContent: 'flex-end', alignItems: 'center', maxWidth: '520px' }}>
+              <div style={{ display: 'flex', gap: '6px', flex: 1, justifyContent: 'flex-end', alignItems: 'center', maxWidth: '560px' }}>
                 <button
                   type="button"
                   onClick={() => {
                     handleScoreInput(activeCell.id, activeCell.roundKey, 'DNS');
+                    const curIdx = participants.findIndex(p => p.id === activeCell.id);
+                    if (curIdx >= 0 && curIdx < participants.length - 1) {
+                      setActiveCell({ id: participants[curIdx + 1].id, roundKey: activeCell.roundKey });
+                    }
                   }}
                   style={{
                     flex: 1,
@@ -4241,6 +4525,7 @@ export default function RefereeMobilePage({
                     gap: '2px',
                     boxShadow: '0 2px 8px rgba(220,38,38,0.4)'
                   }}
+                  title="선택된 셀을 DNS로 변경하고 다음 선수로 이동"
                 >
                   <span>⚡ DNS</span>
                   <span style={{ fontSize: '0.66rem', opacity: 0.9 }}>{getDnsPenaltyScore(participants)}점</span>
@@ -4250,6 +4535,10 @@ export default function RefereeMobilePage({
                   type="button"
                   onClick={() => {
                     handleScoreInput(activeCell.id, activeCell.roundKey, 'DNF');
+                    const curIdx = participants.findIndex(p => p.id === activeCell.id);
+                    if (curIdx >= 0 && curIdx < participants.length - 1) {
+                      setActiveCell({ id: participants[curIdx + 1].id, roundKey: activeCell.roundKey });
+                    }
                   }}
                   style={{
                     flex: 1,
@@ -4267,6 +4556,7 @@ export default function RefereeMobilePage({
                     gap: '2px',
                     boxShadow: '0 2px 8px rgba(217,119,6,0.4)'
                   }}
+                  title="선택된 셀을 DNF로 변경하고 다음 선수로 이동"
                 >
                   <span>⚠️ DNF</span>
                   <span style={{ fontSize: '0.66rem', opacity: 0.9 }}>{getDnfPenaltyScore(activeCell.roundKey, participants, dnsDnfRule)}점</span>
@@ -4282,7 +4572,7 @@ export default function RefereeMobilePage({
                     color: '#f1f5f9',
                     border: '1px solid #475569',
                     borderRadius: '8px',
-                    padding: '10px 10px',
+                    padding: '8px 8px',
                     fontWeight: '800',
                     cursor: 'pointer',
                     fontSize: '0.78rem',
@@ -4292,6 +4582,55 @@ export default function RefereeMobilePage({
                   지우기
                 </button>
 
+                <div style={{ display: 'flex', gap: '3px' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const curIdx = participants.findIndex(p => p.id === activeCell.id);
+                      if (curIdx > 0) {
+                        setActiveCell({ id: participants[curIdx - 1].id, roundKey: activeCell.roundKey });
+                      }
+                    }}
+                    disabled={participants.findIndex(p => p.id === activeCell.id) <= 0}
+                    style={{
+                      background: '#334155',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '8px 8px',
+                      fontSize: '0.75rem',
+                      fontWeight: '800',
+                      cursor: 'pointer'
+                    }}
+                    title="이전 선수로 이동"
+                  >
+                    ◀
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const curIdx = participants.findIndex(p => p.id === activeCell.id);
+                      if (curIdx >= 0 && curIdx < participants.length - 1) {
+                        setActiveCell({ id: participants[curIdx + 1].id, roundKey: activeCell.roundKey });
+                      }
+                    }}
+                    disabled={participants.findIndex(p => p.id === activeCell.id) >= participants.length - 1}
+                    style={{
+                      background: '#334155',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '8px 8px',
+                      fontSize: '0.75rem',
+                      fontWeight: '800',
+                      cursor: 'pointer'
+                    }}
+                    title="다음 선수로 이동"
+                  >
+                    ▶
+                  </button>
+                </div>
+
                 <button
                   type="button"
                   onClick={() => setActiveCell(null)}
@@ -4300,37 +4639,99 @@ export default function RefereeMobilePage({
                     color: '#94a3b8',
                     border: '1px solid #334155',
                     borderRadius: '8px',
-                    padding: '10px 10px',
+                    padding: '8px 8px',
                     fontWeight: '800',
                     cursor: 'pointer',
                     fontSize: '0.78rem',
                     whiteSpace: 'nowrap'
                   }}
                 >
-                  ✕ 닫기
+                  ✕
                 </button>
               </div>
             </>
           ) : (
-            /* 셀 선택 전 스크롤 중 가이드 & 빠른 일괄 처리 */
+            /* 셀 선택 전 스크롤 중에도 DNS / DNF 변경 버튼 항상 노출 */
             <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{
-                  background: 'rgba(239, 68, 68, 0.2)',
-                  color: '#f87171',
+                  background: confirmStampMode === 'DNS' ? '#dc2626' : confirmStampMode === 'DNF' ? '#d97706' : 'rgba(239, 68, 68, 0.2)',
+                  color: confirmStampMode !== 'none' ? 'white' : '#f87171',
                   border: '1px solid rgba(239, 68, 68, 0.4)',
                   borderRadius: '6px',
                   padding: '4px 8px',
                   fontSize: '0.75rem',
                   fontWeight: '900'
                 }}>
-                  ⚡ DNS / DNF 플로팅 제어기
+                  {confirmStampMode === 'DNS' ? '⚡ DNS 도장 ON' : confirmStampMode === 'DNF' ? '⚠️ DNF 도장 ON' : '⚡ DNS / DNF 플로팅 바'}
                 </span>
                 <span style={{ fontSize: '0.8rem', color: '#cbd5e1', fontWeight: '700' }}>
-                  표의 셀을 터치하면 바로 DNS/DNF로 변경됩니다 (스크롤 유지)
+                  {confirmStampMode !== 'none' ? '표를 스크롤하며 원하는 칸을 터치하세요!' : '표의 셀을 터치하거나 우측 버튼으로 즉시 지정하세요'}
                 </span>
               </div>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => setConfirmStampMode(prev => prev === 'DNS' ? 'none' : 'DNS')}
+                  style={{
+                    background: confirmStampMode === 'DNS' ? '#ef4444' : '#dc2626',
+                    color: 'white',
+                    border: confirmStampMode === 'DNS' ? '2px solid #ffffff' : 'none',
+                    borderRadius: '8px',
+                    padding: '6px 10px',
+                    fontSize: '0.82rem',
+                    fontWeight: '900',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    boxShadow: '0 2px 8px rgba(220,38,38,0.4)',
+                    whiteSpace: 'nowrap'
+                  }}
+                  title="원터치 DNS 도장 모드 토글"
+                >
+                  ⚡ DNS ({getDnsPenaltyScore(participants)}점)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmStampMode(prev => prev === 'DNF' ? 'none' : 'DNF')}
+                  style={{
+                    background: confirmStampMode === 'DNF' ? '#f59e0b' : '#d97706',
+                    color: 'white',
+                    border: confirmStampMode === 'DNF' ? '2px solid #ffffff' : 'none',
+                    borderRadius: '8px',
+                    padding: '6px 10px',
+                    fontSize: '0.82rem',
+                    fontWeight: '900',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    boxShadow: '0 2px 8px rgba(217,119,6,0.4)',
+                    whiteSpace: 'nowrap'
+                  }}
+                  title="원터치 DNF 도장 모드 토글"
+                >
+                  ⚠️ DNF ({getDnfPenaltyScore(selectedRound, participants, dnsDnfRule)}점)
+                </button>
+                {confirmStampMode !== 'none' && (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmStampMode('none')}
+                    style={{
+                      background: '#475569',
+                      color: '#f8fafc',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '6px 8px',
+                      fontSize: '0.75rem',
+                      fontWeight: '800',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    도장 끄기
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={handleSortRankings}
@@ -4339,7 +4740,7 @@ export default function RefereeMobilePage({
                     color: '#f8fafc',
                     border: '1px solid #475569',
                     borderRadius: '8px',
-                    padding: '6px 12px',
+                    padding: '6px 8px',
                     fontSize: '0.75rem',
                     fontWeight: '800',
                     cursor: 'pointer',
@@ -4349,7 +4750,7 @@ export default function RefereeMobilePage({
                     whiteSpace: 'nowrap'
                   }}
                 >
-                  <Sparkles size={13} color="#38bdf8" /> 미입력 전체 DNS 일괄 산정
+                  <Sparkles size={13} color="#38bdf8" /> 일괄 산정
                 </button>
               </div>
             </div>
@@ -4410,7 +4811,7 @@ export default function RefereeMobilePage({
                 </span>
               </div>
               <span style={{ fontSize: '0.85rem', color: '#f8fafc', fontWeight: '800', maxWidth: '140px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {currentRankPlayer ? `${currentRankPlayer.name} (#${currentRankPlayer.bibNumber || '-'})` : (bibInput.trim() ? `입력: ${bibInput.trim()}` : '선수 미배정')}
+                {currentRankPlayer ? `${currentRankPlayer.name} (#${formatBibShortDisplay(currentRankPlayer.bibNumber)})` : (bibInput.trim() ? `입력: ${bibInput.trim()}` : '선수 미배정')}
               </span>
             </div>
 
