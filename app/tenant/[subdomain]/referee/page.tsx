@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, use, useMemo } from 'react';
+import React, { useState, useEffect, use, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   CheckCircle2,
   User,
@@ -187,6 +188,17 @@ export default function RefereeMobilePage({
   const [currentRankNum, setCurrentRankNum] = useState<number>(1);
   const [bibInput, setBibInput] = useState<string>('');
   const [inputFeedback, setInputFeedback] = useState<{ text: string; isError: boolean } | null>(null);
+  const [selectedMatchIndex, setSelectedMatchIndex] = useState<number>(0);
+  const bibInputRef = useRef<HTMLInputElement>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    setSelectedMatchIndex(0);
+  }, [bibInput]);
 
   // 확정란 셀 선택 상태 (모바일 키패드/DNS/DNF 바용)
   const [activeCell, setActiveCell] = useState<{ id: string; roundKey: string } | null>(null);
@@ -1609,6 +1621,7 @@ export default function RefereeMobilePage({
   };
 
   // 배번(티넘버)으로 현재 순위 배정 후 다음 순위로 자동 이동
+  // 1명 매칭 시 [Enter] 즉시 등록, 여러 명 매칭 시 화살표 위아래로 선택 후 [Enter] 등록
   const handleAssignBibSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const cleanBib = bibInput.trim();
@@ -1629,21 +1642,54 @@ export default function RefereeMobilePage({
         isError: false,
       });
       setBibInput('');
+      setSelectedMatchIndex(0);
 
       // 다음 순위 칸으로 자동 전진
       if (currentRankNum < participants.length) {
         setCurrentRankNum(prev => prev + 1);
       }
+      setTimeout(() => bibInputRef.current?.focus(), 50);
     } else if (matchedList.length > 1) {
+      const targetIdx = (selectedMatchIndex >= 0 && selectedMatchIndex < matchedList.length)
+        ? selectedMatchIndex
+        : 0;
+      const matched = matchedList[targetIdx];
+      assignRankToPlayer(matched.id, selectedRound, currentRankNum);
       setInputFeedback({
-        text: `💡 동일 번호/이름 선수가 ${matchedList.length}명 검색되었습니다. 아래 목록에서 배정할 선수의 [${currentRankNum}착 배정] 버튼을 터치해주세요.`,
+        text: `✅ ${currentRankNum}착에 '${matched.name}' 선수(배번 ${formatBibShortDisplay(matched.bibNumber)})가 선택 등록되었습니다!`,
         isError: false,
       });
+      setBibInput('');
+      setSelectedMatchIndex(0);
+
+      // 다음 순위 칸으로 자동 전진
+      if (currentRankNum < participants.length) {
+        setCurrentRankNum(prev => prev + 1);
+      }
+      setTimeout(() => bibInputRef.current?.focus(), 50);
     } else {
       setInputFeedback({
         text: `⚠️ '${cleanBib}'에 일치하는 선수가 없습니다. 등록된 배번이나 이름을 확인해주세요.`,
         isError: true,
       });
+    }
+  };
+
+  // 키보드 방향키(↑, ↓) 및 엔터키 이벤트 핸들러
+  const handleBibInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowDown') {
+      if (matchedTypingPlayers.length > 0) {
+        e.preventDefault();
+        setSelectedMatchIndex(prev => (prev + 1) % matchedTypingPlayers.length);
+      }
+    } else if (e.key === 'ArrowUp') {
+      if (matchedTypingPlayers.length > 0) {
+        e.preventDefault();
+        setSelectedMatchIndex(prev => (prev - 1 + matchedTypingPlayers.length) % matchedTypingPlayers.length);
+      }
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAssignBibSubmit();
     }
   };
 
@@ -1655,9 +1701,11 @@ export default function RefereeMobilePage({
       isError: false,
     });
     setBibInput('');
+    setSelectedMatchIndex(0);
     if (currentRankNum < participants.length) {
       setCurrentRankNum(prev => prev + 1);
     }
+    setTimeout(() => bibInputRef.current?.focus(), 50);
   };
 
   // 특정 순위 비우기 (삭제)
@@ -2115,7 +2163,7 @@ export default function RefereeMobilePage({
   );
 
   return (
-    <div style={themeStyles} className="animate-fade-in">
+    <div style={themeStyles}>
       {/* ── 심판 전용 헤더 ── */}
       <header
         className="no-print"
@@ -2999,10 +3047,12 @@ export default function RefereeMobilePage({
                     
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <input
+                        ref={bibInputRef}
                         type="text"
                         inputMode="numeric"
                         value={bibInput}
                         onChange={(e) => setBibInput(e.target.value)}
+                        onKeyDown={handleBibInputKeyDown}
                         placeholder="예: 27 또는 선수 이름"
                         style={{
                           flex: 1,
@@ -3081,54 +3131,162 @@ export default function RefereeMobilePage({
                       </button>
                     </div>
 
-                    {/* 실시간 매칭 프리뷰 (색상이 달라도 같은 번호인 선수 모두 표시) */}
+                    {/* 실시간 매칭 프리뷰 (1명이면 Enter 즉시 등록, 여러 명이면 화살표 위/아래로 선택 후 Enter) */}
                     {matchedTypingPlayers.length > 0 && (
                       <div style={{
                         background: '#eff6ff',
-                        border: '1px solid #bfdbfe',
-                        padding: '10px 12px',
-                        borderRadius: '10px',
+                        border: '2px solid #93c5fd',
+                        padding: '12px',
+                        borderRadius: '12px',
                         display: 'flex',
                         flexDirection: 'column',
                         gap: '8px'
                       }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: '0.82rem', color: '#1e40af', fontWeight: '800' }}>
-                            🔎 검색된 선수: <strong>{matchedTypingPlayers.length}명</strong>
-                            {matchedTypingPlayers.length > 1 && ' (원하는 선수를 터치하세요)'}
-                          </span>
-                          <span style={{ fontSize: '0.74rem', color: '#3b82f6' }}>
-                            입력: &apos;{bibInput.trim()}&apos;
-                          </span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '0.85rem', color: '#1e40af', fontWeight: '900' }}>
+                              🔎 검색된 선수: <strong>{matchedTypingPlayers.length}명</strong>
+                            </span>
+                            {matchedTypingPlayers.length === 1 ? (
+                              <span style={{
+                                fontSize: '0.74rem',
+                                background: '#dcfce7',
+                                color: '#15803d',
+                                border: '1px solid #86efac',
+                                padding: '2px 8px',
+                                borderRadius: '12px',
+                                fontWeight: '800'
+                              }}>
+                                ↵ [Enter] 입력 시 바로 등록됩니다
+                              </span>
+                            ) : (
+                              <span style={{
+                                fontSize: '0.74rem',
+                                background: '#fef3c7',
+                                color: '#b45309',
+                                border: '1px solid #fcd34d',
+                                padding: '2px 8px',
+                                borderRadius: '12px',
+                                fontWeight: '800'
+                              }}>
+                                키보드 ↑ / ↓ 또는 화살표 버튼으로 선택 후 [Enter]
+                              </span>
+                            )}
+                          </div>
+
+                          {/* 다중 검색 시 모바일 터치 및 마우스용 화살표 선택 버튼과 엔터 등록 버튼 */}
+                          {matchedTypingPlayers.length > 1 && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedMatchIndex(prev => (prev - 1 + matchedTypingPlayers.length) % matchedTypingPlayers.length)}
+                                style={{
+                                  background: '#3b82f6',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  padding: '4px 8px',
+                                  fontSize: '0.75rem',
+                                  fontWeight: '800',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '2px'
+                                }}
+                                title="이전 선수 선택 (키보드 위쪽 화살표)"
+                              >
+                                ▲ 위
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedMatchIndex(prev => (prev + 1) % matchedTypingPlayers.length)}
+                                style={{
+                                  background: '#3b82f6',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  padding: '4px 8px',
+                                  fontSize: '0.75rem',
+                                  fontWeight: '800',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '2px'
+                                }}
+                                title="다음 선수 선택 (키보드 아래쪽 화살표)"
+                              >
+                                ▼ 아래
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleAssignBibSubmit()}
+                                style={{
+                                  background: '#10b981',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  padding: '4px 10px',
+                                  fontSize: '0.75rem',
+                                  fontWeight: '900',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '2px'
+                                }}
+                                title="선택된 선수 등록 (엔터키)"
+                              >
+                                ↵ 선택 등록
+                              </button>
+                            </div>
+                          )}
                         </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          {matchedTypingPlayers.map((p) => {
+                          {matchedTypingPlayers.map((p, idx) => {
                             const curScore = p[selectedRound];
                             const isAssigned = curScore !== null && curScore !== undefined && curScore !== '';
                             const isAssignedCurrentRank = curScore === currentRankNum;
+                            const isSelected = idx === selectedMatchIndex;
 
                             return (
                               <div
                                 key={p.id}
+                                onClick={() => setSelectedMatchIndex(idx)}
                                 style={{
-                                  background: isAssignedCurrentRank ? '#dbeafe' : '#ffffff',
-                                  border: `1px solid ${isAssignedCurrentRank ? '#3b82f6' : '#cbd5e1'}`,
+                                  background: isSelected ? '#dbeafe' : isAssignedCurrentRank ? '#f1f5f9' : '#ffffff',
+                                  border: isSelected ? '2px solid #2563eb' : isAssignedCurrentRank ? '1px solid #3b82f6' : '1px solid #cbd5e1',
                                   borderRadius: '8px',
                                   padding: '8px 10px',
                                   display: 'flex',
                                   alignItems: 'center',
                                   justifyContent: 'space-between',
                                   gap: '8px',
-                                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                                  boxShadow: isSelected ? '0 0 0 2px rgba(37,99,235,0.25), 0 2px 6px rgba(0,0,0,0.08)' : '0 1px 3px rgba(0,0,0,0.05)',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.15s'
                                 }}
                               >
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0, flexWrap: 'wrap' }}>
+                                  {isSelected && (
+                                    <span style={{
+                                      fontSize: '0.72rem',
+                                      background: '#2563eb',
+                                      color: 'white',
+                                      fontWeight: '900',
+                                      padding: '2px 6px',
+                                      borderRadius: '4px',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '2px'
+                                    }}>
+                                      👉 선택됨 (Enter)
+                                    </span>
+                                  )}
                                   <span style={{
                                     fontSize: '0.84rem',
                                     fontWeight: '900',
                                     color: '#0f172a',
-                                    background: '#f1f5f9',
+                                    background: isSelected ? '#ffffff' : '#f1f5f9',
                                     padding: '2px 7px',
                                     borderRadius: '6px',
                                     border: '1px solid #cbd5e1',
@@ -3136,7 +3294,7 @@ export default function RefereeMobilePage({
                                   }}>
                                     #{formatBibShortDisplay(p.bibNumber)}
                                   </span>
-                                  <strong style={{ fontSize: '0.92rem', color: '#1e293b', whiteSpace: 'nowrap' }}>
+                                  <strong style={{ fontSize: '0.92rem', color: isSelected ? '#1e40af' : '#1e293b', whiteSpace: 'nowrap' }}>
                                     {p.name}
                                   </strong>
                                   {p.subclass && (
@@ -3166,10 +3324,13 @@ export default function RefereeMobilePage({
                                 <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flexShrink: 0 }}>
                                   <button
                                     type="button"
-                                    onClick={() => handleQuickAssignPlayer(p)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleQuickAssignPlayer(p);
+                                    }}
                                     style={{
                                       padding: '6px 10px',
-                                      background: 'var(--theme-primary)',
+                                      background: isSelected ? '#2563eb' : 'var(--theme-primary)',
                                       color: 'white',
                                       border: 'none',
                                       borderRadius: '6px',
@@ -3183,14 +3344,20 @@ export default function RefereeMobilePage({
                                   </button>
                                   <button
                                     type="button"
-                                    onClick={() => handleSetPlayerSpecialScore(p.id, 'DNS')}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleSetPlayerSpecialScore(p.id, 'DNS');
+                                    }}
                                     style={{ padding: '5px 7px', background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '4px', fontSize: '0.72rem', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap' }}
                                   >
                                     DNS
                                   </button>
                                   <button
                                     type="button"
-                                    onClick={() => handleSetPlayerSpecialScore(p.id, 'DNF')}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleSetPlayerSpecialScore(p.id, 'DNF');
+                                    }}
                                     style={{ padding: '5px 7px', background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', borderRadius: '4px', fontSize: '0.72rem', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap' }}
                                   >
                                     DNF
@@ -4323,7 +4490,7 @@ export default function RefereeMobilePage({
       </div>
 
       {/* ── 상하 스크롤을 항상 따라다니는 DNS / DNF 플로팅 액션 바 ── */}
-      {activeMode === 'confirm' && (
+      {isMounted && typeof document !== 'undefined' && activeMode === 'confirm' && createPortal(
         <div className="no-print" style={{
           position: 'fixed',
           bottom: 0,
@@ -4336,8 +4503,8 @@ export default function RefereeMobilePage({
           gap: '10px',
           justifyContent: 'space-between',
           alignItems: 'center',
-          zIndex: 10000,
-          boxShadow: '0 -4px 25px rgba(0,0,0,0.4)',
+          zIndex: 99999,
+          boxShadow: '0 -4px 25px rgba(0,0,0,0.5)',
           backdropFilter: 'blur(8px)'
         }}>
           {activeCell ? (
@@ -4628,11 +4795,12 @@ export default function RefereeMobilePage({
               </div>
             </div>
           )}
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ── 순위 입력란 모드 전용 상하 스크롤 추적 DNS / DNF 플로팅 바 ── */}
-      {activeMode === 'input' && (
+      {isMounted && typeof document !== 'undefined' && activeMode === 'input' && createPortal(
         <div className="no-print" style={{
           position: 'fixed',
           bottom: 0,
@@ -4645,8 +4813,8 @@ export default function RefereeMobilePage({
           gap: '10px',
           justifyContent: 'space-between',
           alignItems: 'center',
-          zIndex: 10000,
-          boxShadow: '0 -4px 25px rgba(0,0,0,0.4)',
+          zIndex: 99999,
+          boxShadow: '0 -4px 25px rgba(0,0,0,0.5)',
           backdropFilter: 'blur(8px)'
         }}>
           {/* 좌측: 현재 순위 번호 및 선수명 + 이전/다음착 이동 */}
@@ -4760,7 +4928,8 @@ export default function RefereeMobilePage({
               <span style={{ fontSize: '0.68rem', opacity: 0.9 }}>{getDnfPenaltyScore(selectedRound, participants, dnsDnfRule)}점</span>
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ── 인쇄 전용 공식 결과 보고서 (화면에서는 숨김, 인쇄 시에만 A4 규격으로 노출) ── */}
