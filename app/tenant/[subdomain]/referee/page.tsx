@@ -135,23 +135,6 @@ export const getClassRankForRound = (player: any, roundKey: string, allPlayers: 
   return classIndex >= 0 ? classIndex + 1 : null;
 };
 
-// 클라스별 인쇄 및 순위표 산출 시 전체 착순을 해당 클라스 내 상대 순위(1위, 2위...)로 매핑 변환
-export const mapToClassScores = (classMembers: any[], allPlayers: any[], roundsList: RoundItem[]) => {
-  return classMembers.map(member => {
-    const copy = { ...member };
-    roundsList.forEach(r => {
-      const raw = member[r.key];
-      if (raw !== null && raw !== undefined && raw !== '' && raw !== 'DNS' && raw !== 'DNF') {
-        const clsRank = getClassRankForRound(member, r.key, allPlayers);
-        if (clsRank !== null) {
-          copy[r.key] = clsRank;
-        }
-      }
-    });
-    return copy;
-  });
-};
-
 export default function RefereeMobilePage({
   params,
 }: {
@@ -624,6 +607,16 @@ export default function RefereeMobilePage({
   ) => {
     const withAutoDns = applyAutoDnsToConductedRounds(list, roundsList, rule, forceSelectedRoundIfNone);
     const sorted = [...withAutoDns].sort((a, b) => compareTiedSailingPlayers(a, b, withAutoDns, roundsList, rule));
+    return sorted.map((p, idx) => ({
+      ...p,
+      rank: idx + 1
+    }));
+  };
+
+  // 클라스별 순위 산정: 전체 입력 합계 점수(total)와 라운드 점수를 100% 동일하게 유지하면서
+  // 해당 클라스 참가자들 간의 순위(1위, 2위, 3위...)만 정렬하여 부여
+  const rankClassMembersPreservingTotal = (classMembers: any[], sourceList: any[] = participants) => {
+    const sorted = [...classMembers].sort((a, b) => compareTiedSailingPlayers(a, b, sourceList, rounds, dnsDnfRule));
     return sorted.map((p, idx) => ({
       ...p,
       rank: idx + 1
@@ -1570,8 +1563,7 @@ export default function RefereeMobilePage({
           const femaleMembers = sorted.filter((p: any) => p.gender === '여자' || p.subclass === '여자부');
 
           if (maleMembers.length > 0) {
-            const maleScored = mapToClassScores(maleMembers, sorted, rounds);
-            const maleRanked = sortAndRankParticipants(maleScored, rounds, dnsDnfRule, false);
+            const maleRanked = rankClassMembersPreservingTotal(maleMembers, sorted);
             await fetch(`/api/tenant/${subdomain}/leaderboard`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -1586,8 +1578,7 @@ export default function RefereeMobilePage({
           }
 
           if (femaleMembers.length > 0) {
-            const femaleScored = mapToClassScores(femaleMembers, sorted, rounds);
-            const femaleRanked = sortAndRankParticipants(femaleScored, rounds, dnsDnfRule, false);
+            const femaleRanked = rankClassMembersPreservingTotal(femaleMembers, sorted);
             await fetch(`/api/tenant/${subdomain}/leaderboard`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -3635,11 +3626,7 @@ export default function RefereeMobilePage({
                   screenParticipants = participants;
                 } else if (subclasses.includes(selectedSubclassTab)) {
                   const classMembers = participants.filter(p => p.subclass === selectedSubclassTab);
-                  const hasScores = classMembers.some(p => rounds.some(r => p[r.key] !== null && p[r.key] !== undefined && p[r.key] !== ''));
-                  const classScored = mapToClassScores(classMembers, participants, rounds);
-                  screenParticipants = hasScores
-                    ? sortAndRankParticipants(classScored, rounds, dnsDnfRule, false)
-                    : classMembers.map((p, idx) => ({ ...p, rank: idx + 1 }));
+                  screenParticipants = rankClassMembersPreservingTotal(classMembers);
                 }
               }
 
@@ -3974,12 +3961,17 @@ export default function RefereeMobilePage({
           showClassColumn?: boolean;
           isFirstPage?: boolean;
         }) => {
-          const hasScores = sheetParticipants.some(p =>
-            rounds.some(r => p[r.key] !== null && p[r.key] !== undefined && p[r.key] !== '')
-          );
-          const rankedList = hasScores
-            ? sortAndRankParticipants(sheetParticipants, rounds, dnsDnfRule, false)
-            : sheetParticipants.map((p, idx) => ({ ...p, rank: p.rank && p.rank !== '-' ? p.rank : idx + 1 }));
+          let rankedList: any[];
+          if (subclassLabel) {
+            rankedList = sheetParticipants;
+          } else {
+            const hasScores = sheetParticipants.some(p =>
+              rounds.some(r => p[r.key] !== null && p[r.key] !== undefined && p[r.key] !== '')
+            );
+            rankedList = hasScores
+              ? sortAndRankParticipants(sheetParticipants, rounds, dnsDnfRule, false)
+              : sheetParticipants.map((p, idx) => ({ ...p, rank: p.rank && p.rank !== '-' ? p.rank : idx + 1 }));
+          }
 
           return (
             <div
@@ -4117,11 +4109,11 @@ export default function RefereeMobilePage({
 
         if (subclasses.includes(selectedSubclassTab)) {
           const classMembers = participants.filter(p => p.subclass === selectedSubclassTab);
-          const classScored = mapToClassScores(classMembers, participants, rounds);
+          const rankedClass = rankClassMembersPreservingTotal(classMembers);
           return renderPrintTableSheet({
             titleDivision: activeDivisionTab,
             subclassLabel: selectedSubclassTab,
-            sheetParticipants: classScored,
+            sheetParticipants: rankedClass,
             showClassColumn: false,
             isFirstPage: true
           });
@@ -4138,11 +4130,11 @@ export default function RefereeMobilePage({
             })}
             {subclasses.map(sc => {
               const classMembers = participants.filter(p => p.subclass === sc);
-              const classScored = mapToClassScores(classMembers, participants, rounds);
+              const rankedClass = rankClassMembersPreservingTotal(classMembers);
               return renderPrintTableSheet({
                 titleDivision: activeDivisionTab,
                 subclassLabel: sc,
-                sheetParticipants: classScored,
+                sheetParticipants: rankedClass,
                 showClassColumn: false,
                 isFirstPage: false
               });
