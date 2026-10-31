@@ -211,6 +211,19 @@ export async function saveLeaderboardDivisionSnapshot(
       updatedAt: new Date().toISOString(),
     };
 
+    // 펀 종목일 경우 '펀&포뮬러'와 '펀엔포뮬러' 명칭 변형을 모두 동기화하여 고스트 데이터 방지
+    if (division.includes('펀')) {
+      const altDivision = division.includes('&')
+        ? division.replace(/펀&포뮬러/g, '펀엔포뮬러')
+        : division.replace(/펀엔포뮬러/g, '펀&포뮬러');
+      divisions[altDivision] = {
+        list: divisionData.list,
+        rounds: divisionData.rounds || null,
+        dnsDnfRule: divisionData.dnsDnfRule || null,
+        updatedAt: new Date().toISOString(),
+      };
+    }
+
     const payload = {
       tournamentId,
       updatedAt: new Date().toISOString(),

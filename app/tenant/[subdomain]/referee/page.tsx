@@ -890,40 +890,32 @@ export default function RefereeMobilePage({
           }
         }
 
-        candidateKeys.forEach(k => {
-          const raw = localStorage.getItem(k);
-          if (raw) {
-            try {
-              const parsed = JSON.parse(raw);
-              if (Array.isArray(parsed)) {
-                parsed.forEach(item => {
-                  if (item) {
-                    const key = item.id || (item.name ? item.name.trim() : null);
-                    if (key) {
-                      const existing = mergedMap.get(key);
-                      const hasScores = Object.keys(item).some(x => /^r\d+$/.test(x) && item[x] !== null && item[x] !== undefined && item[x] !== '');
-                      if (!existing) {
-                        mergedMap.set(key, item);
-                      } else if (hasScores) {
-                        Object.keys(item).forEach(x => {
-                          if (/^r\d+$/.test(x) && item[x] !== null && item[x] !== undefined && item[x] !== '') {
-                            existing[x] = item[x];
-                          }
-                        });
-                        if (item.total && (!existing.total || existing.total === 0)) {
-                          existing.total = item.total;
-                        }
-                        if (item.rank && item.rank !== '-' && (!existing.rank || existing.rank === '-')) {
-                          existing.rank = item.rank;
+        // 현재 종목 데이터가 아직 없는 경우에만 보조 후보 키(예전 명칭)에서 복원
+        if (mergedMap.size === 0) {
+          candidateKeys.forEach(k => {
+            const raw = localStorage.getItem(k);
+            if (raw) {
+              try {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                  const hasAnyScore = parsed.some((item: any) =>
+                    Object.keys(item).some(x => /^r\d+$/.test(x) && item[x] !== null && item[x] !== undefined && item[x] !== '')
+                  );
+                  if (hasAnyScore) {
+                    parsed.forEach(item => {
+                      if (item) {
+                        const key = item.id || (item.name ? item.name.trim() : null);
+                        if (key && !mergedMap.has(key)) {
+                          mergedMap.set(key, item);
                         }
                       }
-                    }
+                    });
                   }
-                });
-              }
-            } catch (e) {}
-          }
-        });
+                }
+              } catch (e) {}
+            }
+          });
+        }
 
         if (mergedMap.size > 0) {
           sourceList = Array.from(mergedMap.values());
@@ -1289,10 +1281,57 @@ export default function RefereeMobilePage({
 
     const defaultRounds = activeDivisionTab === '단체전' ? [...DEFAULT_TEAM_ROUNDS] : [...DEFAULT_ROUNDS];
 
-    // 1. 로컬스토리지 캐시 초기화
+    // 1. 로컬스토리지 캐시 전면 초기화 (관련된 모든 종목명 변형 및 하위 클래스 키 전수 삭제)
     if (typeof window !== 'undefined') {
-      localStorage.removeItem(getSimStorageKey(activeTournament.id, activeDivisionTab));
-      localStorage.removeItem(getRoundsStorageKey(activeTournament.id, activeDivisionTab));
+      const keysToDelete = new Set<string>([
+        getSimStorageKey(activeTournament.id, activeDivisionTab),
+        getRoundsStorageKey(activeTournament.id, activeDivisionTab),
+        getSimStorageKey(activeTournament.id, `${activeDivisionTab} (남자부)`),
+        getSimStorageKey(activeTournament.id, `${activeDivisionTab} (여자부)`),
+      ]);
+
+      const rootDiv = activeDivisionTab.replace(/\s+/g, '').replace(/\(.*?\)/g, '');
+      if (rootDiv.includes('펀')) {
+        [
+          '펀&포뮬러', '펀엔포뮬러',
+          '펀&포뮬러 (남자부)', '펀&포뮬러 (여자부)',
+          '펀엔포뮬러 (남자부)', '펀엔포뮬러 (여자부)'
+        ].forEach(k => {
+          keysToDelete.add(getSimStorageKey(activeTournament.id, k));
+          keysToDelete.add(getRoundsStorageKey(activeTournament.id, k));
+        });
+      } else if (rootDiv.includes('혼합오픈')) {
+        ['혼합오픈', '혼합오픈 (남자부)', '혼합오픈 (여자부)'].forEach(k => {
+          keysToDelete.add(getSimStorageKey(activeTournament.id, k));
+          keysToDelete.add(getRoundsStorageKey(activeTournament.id, k));
+        });
+      } else if (rootDiv.includes('윙포일')) {
+        ['윙포일', '윙포일 (남자부)', '윙포일 (여자부)'].forEach(k => {
+          keysToDelete.add(getSimStorageKey(activeTournament.id, k));
+          keysToDelete.add(getRoundsStorageKey(activeTournament.id, k));
+        });
+      } else if (rootDiv.includes('윈드포일')) {
+        ['윈드포일', '윈드포일 (남녀오픈)'].forEach(k => {
+          keysToDelete.add(getSimStorageKey(activeTournament.id, k));
+          keysToDelete.add(getRoundsStorageKey(activeTournament.id, k));
+        });
+      }
+
+      // localStorage 전체 키 순회하여 해당 종목과 연관된 모든 키 완벽 제거
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i);
+        if (k && (k.startsWith(`gentrophy_sim_scores_${subdomain}_${activeTournament.id}_`) || k.startsWith(`gentrophy_sim_rounds_${subdomain}_${activeTournament.id}_`))) {
+          if (rootDiv.includes('펀') && k.includes('펀')) {
+            keysToDelete.add(k);
+          } else if (k.includes(rootDiv)) {
+            keysToDelete.add(k);
+          }
+        }
+      }
+
+      keysToDelete.forEach(k => {
+        try { localStorage.removeItem(k); } catch (e) {}
+      });
     }
 
     // 2. 참가자(팀) 목록의 라운드 점수와 총점, 순위를 초기 상태로 리셋
@@ -1309,6 +1348,15 @@ export default function RefereeMobilePage({
       localStorage.setItem(`gentrophy_${activeTournament.id}_teams_단체전`, JSON.stringify(resetParticipants));
     }
 
+    // 초기화된 빈 참가자 목록을 로컬스토리지에 명시적으로 기록하여 이전 고스트 점수 복원 방지
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(getSimStorageKey(activeTournament.id, activeDivisionTab), JSON.stringify(resetParticipants));
+      if (activeDivisionTab.includes('펀')) {
+        localStorage.setItem(getSimStorageKey(activeTournament.id, '펀&포뮬러'), JSON.stringify(resetParticipants));
+        localStorage.setItem(getSimStorageKey(activeTournament.id, '펀엔포뮬러'), JSON.stringify(resetParticipants));
+      }
+    }
+
     setRounds(defaultRounds);
     setSelectedRound('r1');
     setParticipants(resetParticipants);
@@ -1317,57 +1365,44 @@ export default function RefereeMobilePage({
     setIsRankConfirmed(false);
     setConfirmedTime(null);
 
-    // 3. 실전 모드이거나 홈페이지 공개 상태인 경우 서버 DB(Firestore)에도 초기화 동기화 반영
-    if (!isSimulationMode && tenant?.overviewConfig?.bracketsPublished) {
+    // 3. 서버 DB(Firestore)에도 초기화 동기화 전면 반영 (관련된 모든 종목명 변형 일괄 초기화)
+    if (activeTournament) {
       setSubmitting(true);
       try {
-        const res = await fetch(`/api/tenant/${subdomain}/leaderboard`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            tournamentId: activeTournament.id,
-            division: activeDivisionTab,
-            rounds: defaultRounds,
-            list: resetParticipants,
-            dnsDnfRule: dnsDnfRule,
-            isReset: true
-          })
-        });
-        if (res.ok) {
-          if (hasSubclasses(activeDivisionTab)) {
-            await fetch(`/api/tenant/${subdomain}/leaderboard`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                tournamentId: activeTournament.id,
-                division: `${activeDivisionTab} (남자부)`,
-                rounds: defaultRounds,
-                list: [],
-                dnsDnfRule: dnsDnfRule,
-                isReset: true
-              })
-            }).catch(console.error);
-
-            await fetch(`/api/tenant/${subdomain}/leaderboard`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                tournamentId: activeTournament.id,
-                division: `${activeDivisionTab} (여자부)`,
-                rounds: defaultRounds,
-                list: [],
-                dnsDnfRule: dnsDnfRule,
-                isReset: true
-              })
-            }).catch(console.error);
-          }
-
-          logAnalyticsEvent('referee_reset_leaderboard', { division: activeDivisionTab });
-          alert(`✅ [${activeDivisionTab}] 순위 및 점수가 성공적으로 초기화되었습니다.\n홈페이지 실시간 리더보드에도 초기화가 즉시 반영되었습니다.`);
-        } else {
-          const err = await res.json();
-          alert(err.error || '서버 초기화 중 오류가 발생했습니다.');
+        const divisionsToReset = [activeDivisionTab];
+        if (activeDivisionTab.includes('펀')) {
+          divisionsToReset.push(
+            '펀&포뮬러', '펀엔포뮬러',
+            '펀&포뮬러 (남자부)', '펀&포뮬러 (여자부)',
+            '펀엔포뮬러 (남자부)', '펀엔포뮬러 (여자부)'
+          );
+        } else if (hasSubclasses(activeDivisionTab)) {
+          divisionsToReset.push(
+            `${activeDivisionTab} (남자부)`,
+            `${activeDivisionTab} (여자부)`
+          );
         }
+
+        const uniqueDivisions = Array.from(new Set(divisionsToReset));
+        await Promise.all(
+          uniqueDivisions.map(div =>
+            fetch(`/api/tenant/${subdomain}/leaderboard`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                tournamentId: activeTournament.id,
+                division: div,
+                rounds: defaultRounds,
+                list: resetParticipants,
+                dnsDnfRule: dnsDnfRule,
+                isReset: true
+              })
+            }).catch(console.error)
+          )
+        );
+
+        logAnalyticsEvent('referee_reset_leaderboard', { division: activeDivisionTab });
+        alert(`✅ [${activeDivisionTab}] 순위 및 점수가 성공적으로 초기화되었습니다.\n홈페이지 실시간 리더보드와 로컬 저장소에서도 완전히 초기화되었습니다.`);
       } catch (e: any) {
         alert('서버 초기화 통신 오류: ' + e.message);
       } finally {
@@ -1463,12 +1498,46 @@ export default function RefereeMobilePage({
     );
     if (!confirmed) return;
 
+    let updatedList: any[] = [];
     setParticipants(prev => {
       const resetList = prev.map(p => ({ ...p, [selectedRound]: null }));
-      return recalculateAllParticipants(resetList, rounds, dnsDnfRule);
+      updatedList = recalculateAllParticipants(resetList, rounds, dnsDnfRule);
+      return updatedList;
     });
     setCurrentRankNum(1);
     setBibInput('');
+
+    // 1. 로컬스토리지에 초기화된 라운드 점수 즉시 저장 및 영구 반영
+    if (typeof window !== 'undefined' && activeTournament) {
+      localStorage.setItem(getSimStorageKey(activeTournament.id, activeDivisionTab), JSON.stringify(updatedList));
+      if (activeDivisionTab.includes('펀')) {
+        localStorage.setItem(getSimStorageKey(activeTournament.id, '펀&포뮬러'), JSON.stringify(updatedList));
+        localStorage.setItem(getSimStorageKey(activeTournament.id, '펀엔포뮬러'), JSON.stringify(updatedList));
+      }
+    }
+
+    // 2. 서버 DB에도 초기화 동기화 반영
+    if (activeTournament) {
+      const syncDivisions = [activeDivisionTab];
+      if (activeDivisionTab.includes('펀')) {
+        syncDivisions.push('펀&포뮬러', '펀엔포뮬러');
+      }
+      Array.from(new Set(syncDivisions)).forEach(div => {
+        fetch(`/api/tenant/${subdomain}/leaderboard`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tournamentId: activeTournament.id,
+            division: div,
+            rounds: rounds,
+            list: updatedList,
+            dnsDnfRule: dnsDnfRule,
+            isReset: false
+          })
+        }).catch(console.error);
+      });
+    }
+
     setInputFeedback({ text: `🧹 [${targetName}] 라운드의 모든 순위가 초기화되었습니다.`, isError: false });
   };
 

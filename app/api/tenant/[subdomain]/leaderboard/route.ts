@@ -87,8 +87,15 @@ export async function GET(
       }
 
       const consolidated = await getConsolidatedLeaderboardSnapshot(tournament.id);
-      if (consolidated?.divisions && consolidated.divisions[divisionParam]) {
-        const divData = consolidated.divisions[divisionParam];
+      let divData = consolidated?.divisions?.[divisionParam];
+      if (!divData && consolidated?.divisions && divisionParam.includes('펀')) {
+        const altKey = divisionParam.includes('&')
+          ? divisionParam.replace(/펀&포뮬러/g, '펀엔포뮬러')
+          : divisionParam.replace(/펀엔포뮬러/g, '펀&포뮬러');
+        divData = consolidated.divisions[altKey];
+      }
+
+      if (divData) {
         setMemoryLeaderboard(tournament.id, divisionParam, divData);
         return NextResponse.json({
           tournamentTitle: tournament.title,
@@ -103,9 +110,18 @@ export async function GET(
         });
       }
 
-      const savedLeaderboardDoc = await getDoc(
+      let savedLeaderboardDoc = await getDoc(
         doc(firestore, `tournaments/${tournament.id}/leaderboards`, divisionParam)
       );
+      if (!savedLeaderboardDoc.exists() && divisionParam.includes('펀')) {
+        const altKey = divisionParam.includes('&')
+          ? divisionParam.replace(/펀&포뮬러/g, '펀엔포뮬러')
+          : divisionParam.replace(/펀엔포뮬러/g, '펀&포뮬러');
+        savedLeaderboardDoc = await getDoc(
+          doc(firestore, `tournaments/${tournament.id}/leaderboards`, altKey)
+        );
+      }
+
       if (savedLeaderboardDoc.exists()) {
         const savedData = savedLeaderboardDoc.data();
         setMemoryLeaderboard(tournament.id, divisionParam, savedData);
@@ -340,6 +356,15 @@ export async function POST(
     }
 
     await setDoc(leaderboardRef, updatePayload);
+
+    // 펀 종목일 경우 '펀&포뮬러'와 '펀엔포뮬러' 문서 둘 다 동일하게 업데이트하여 불일치 방지
+    if (division.includes('펀')) {
+      const altDivision = division.includes('&')
+        ? division.replace(/펀&포뮬러/g, '펀엔포뮬러')
+        : division.replace(/펀엔포뮬러/g, '펀&포뮬러');
+      const altRef = doc(firestore, `tournaments/${tournamentId}/leaderboards`, altDivision);
+      await setDoc(altRef, { ...updatePayload, division: altDivision });
+    }
 
     // 통합 스냅샷 문서 및 인메모리 캐시 동시 저장 (방문자 Read 1회로 전체 종목 제공)
     await saveLeaderboardDivisionSnapshot(tournamentId, division, updatePayload);
