@@ -1465,7 +1465,26 @@ export default function RefereeMobilePage({
     }
 
     setParticipants(prev => {
-      const nextList = prev.map(p => (p.id === id ? { ...p, [roundKey]: val } : p));
+      const targetPlayer = prev.find(p => p.id === id);
+      const prevRank = targetPlayer ? targetPlayer[roundKey] : null;
+
+      // 만약 기존에 숫자 순위(예: 6위)를 가지고 있던 선수가 DNS, DNF, 또는 비우기(null)로 변경된 경우:
+      // World Sailing RRS A6.1 항의 및 벌칙 규정에 따라 해당 선수보다 하위였던 모든 선수(7위, 8위...)의 순위를 1계단씩 앞당김 (7위 -> 6위, 8위 -> 7위)
+      const shouldShiftSubsequent =
+        typeof prevRank === 'number' &&
+        (val === 'DNS' || val === 'DNF' || val === null);
+
+      const nextList = prev.map(p => {
+        if (p.id === id) {
+          return { ...p, [roundKey]: val };
+        }
+        // 하위 순위 자동 당김 (7위 -> 6위, 8위 -> 7위...)
+        if (shouldShiftSubsequent && typeof p[roundKey] === 'number' && (p[roundKey] as number) > prevRank) {
+          return { ...p, [roundKey]: (p[roundKey] as number) - 1 };
+        }
+        return p;
+      });
+
       // 완주자 수(DNF 점수 기준)나 라운드 진행 여부가 달라질 수 있으므로 전체 참가자 총점을 일괄 재계산
       const recalculated = recalculateAllParticipants(nextList, rounds, dnsDnfRule);
       if (typeof window !== 'undefined' && activeTournament) {
@@ -1500,6 +1519,15 @@ export default function RefereeMobilePage({
   // 특정 선수에게 특정 라운드의 순위(점수) 부여
   const assignRankToPlayer = (playerId: string, roundKey: string, scoreOrRank: number | 'DNS' | 'DNF' | null) => {
     setParticipants(prev => {
+      const targetPlayer = prev.find(p => p.id === playerId);
+      const prevRank = targetPlayer ? targetPlayer[roundKey] : null;
+
+      // 만약 기존에 숫자 순위(예: 6위)를 가지고 있던 선수가 DNS, DNF, 또는 비우기(null)로 변경된 경우:
+      // World Sailing RRS A6.1 항의 및 벌칙 규정에 따라 해당 선수보다 하위였던 모든 선수(7위, 8위...)의 순위를 1계단씩 앞당김 (7위 -> 6위, 8위 -> 7위)
+      const shouldShiftSubsequent =
+        typeof prevRank === 'number' &&
+        (scoreOrRank === 'DNS' || scoreOrRank === 'DNF' || scoreOrRank === null);
+
       const nextList = prev.map(p => {
         if (p.id === playerId) {
           return { ...p, [roundKey]: scoreOrRank };
@@ -1507,6 +1535,10 @@ export default function RefereeMobilePage({
         // 만약 다른 선수가 이미 해당 순위 번호를 가지고 있었다면 해제 (중복 방지)
         if (typeof scoreOrRank === 'number' && p[roundKey] === scoreOrRank) {
           return { ...p, [roundKey]: null };
+        }
+        // 하위 순위 자동 당김 (7위 -> 6위, 8위 -> 7위...)
+        if (shouldShiftSubsequent && typeof p[roundKey] === 'number' && (p[roundKey] as number) > prevRank) {
+          return { ...p, [roundKey]: (p[roundKey] as number) - 1 };
         }
         return p;
       });
@@ -1622,7 +1654,10 @@ export default function RefereeMobilePage({
     const holder = participants.find(p => p[selectedRound] === rankNum);
     if (holder) {
       assignRankToPlayer(holder.id, selectedRound, null);
-      setInputFeedback({ text: `🗑️ ${rankNum}위 '${holder.name}' 선수 배정이 취소(삭제)되었습니다.`, isError: false });
+      setInputFeedback({
+        text: `🗑️ ${rankNum}위 '${holder.name}' 선수 배정이 취소되었으며, 하위 순위(${rankNum + 1}위 이하)가 1계단씩 자동 승격되었습니다.`,
+        isError: false
+      });
     }
   };
 
@@ -1630,8 +1665,16 @@ export default function RefereeMobilePage({
   const handleSetPlayerSpecialScore = (playerId: string, code: 'DNS' | 'DNF') => {
     const p = participants.find(item => item.id === playerId);
     if (p) {
+      const prevRank = p[selectedRound];
       assignRankToPlayer(playerId, selectedRound, code);
-      setInputFeedback({ text: `⚠️ '${p.name}' 선수가 ${code}로 처리되었습니다.`, isError: false });
+      if (typeof prevRank === 'number') {
+        setInputFeedback({
+          text: `⚠️ '${p.name}' 선수가 기존 ${prevRank}착에서 ${code}로 변경되었습니다. (하위 ${prevRank + 1}착 이하 선수들의 순위가 1계단씩 자동 승격되어 점수가 재계산되었습니다.)`,
+          isError: false
+        });
+      } else {
+        setInputFeedback({ text: `⚠️ '${p.name}' 선수가 ${code}로 처리되었습니다.`, isError: false });
+      }
     }
   };
 
@@ -4118,6 +4161,7 @@ export default function RefereeMobilePage({
               </p>
               <p style={{ margin: '2px 0 0 0' }}>4. 4경기 이상 진행 시, 가장 성적이 나쁜 경기(가장 큰 숫자 또는 벌점) 1개가 총점에서 자동 제외됩니다.</p>
               <p style={{ margin: '2px 0 0 0' }}>5. <strong>[순위 자동 정렬]</strong>을 누르면 DNS/DNF 점수가 합산된 총점 오름차순(낮은 점수가 상위)으로 순위가 부여되며, <strong>[순위 최종 확정]</strong> 시 리더보드에 반영됩니다.</p>
+              <p style={{ margin: '2px 0 0 0' }}>6. <strong>항의(Protest) 및 순위 자동 승격 (World Sailing RRS A6.1)</strong>: 순위를 받은 선수가 항의 등으로 DNF/DNS 또는 취소 처리되면, 해당 선수보다 하위 순위였던 모든 선수(예: 6위 DNF 시 7위→6위, 8위→7위)의 순위와 라운드 점수가 자동으로 1단계씩 앞당겨져 실시간 재계산됩니다.</p>
             </div>
 
           </div>
