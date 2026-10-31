@@ -4352,7 +4352,7 @@ export default function RefereeMobilePage({
                           <th style={{ padding: '10px 6px', width: '60px', textAlign: 'center' }}>클라스</th>
                         )}
                         <th style={{ padding: '10px 8px', minWidth: '80px', textAlign: 'left' }}>{activeDivisionTab === '단체전' ? '팀명 (소속)' : '이름'}</th>
-                        <th style={{ padding: '10px 6px', width: '60px', textAlign: 'center' }}>{activeDivisionTab === '단체전' ? '팀배번' : '배번'}</th>
+                        <th style={{ padding: '10px 4px', width: '85px', minWidth: '80px', textAlign: 'center' }}>{activeDivisionTab === '단체전' ? '팀배번' : '배번'}</th>
                         <th style={{ padding: '10px 6px', width: '70px', textAlign: 'center' }}>{activeDivisionTab === '단체전' ? '소속협회' : '생년월일'}</th>
                         {rounds.map(r => {
                           const conducted = isRoundConducted(r.key, participants);
@@ -4422,8 +4422,8 @@ export default function RefereeMobilePage({
                               <td style={{ padding: '8px', fontWeight: '800' }}>
                                 {p.name}
                               </td>
-                              {/* 배번 (수정 가능) */}
-                              <td style={{ padding: '6px 4px', textAlign: 'center' }}>
+                              {/* 배번 (수정 가능 - 한글 색상 및 숫자 전체 노출) */}
+                              <td style={{ padding: '6px 4px', textAlign: 'center', whiteSpace: 'nowrap' }}>
                                 <input
                                   type="text"
                                   value={p.bibNumber ? formatBibShortDisplay(p.bibNumber) : ''}
@@ -4436,7 +4436,16 @@ export default function RefereeMobilePage({
                                     setParticipants(prev => prev.map(item => item.id === p.id ? { ...item, bibNumber: formatted } : item));
                                   }}
                                   placeholder="01"
-                                  style={{ width: '45px', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '6px', textAlign: 'center', fontSize: '0.8rem', fontWeight: '700' }}
+                                  style={{
+                                    width: '78px',
+                                    padding: '4px 6px',
+                                    border: '1px solid #cbd5e1',
+                                    borderRadius: '6px',
+                                    textAlign: 'center',
+                                    fontSize: '0.82rem',
+                                    fontWeight: '800',
+                                    boxSizing: 'border-box'
+                                  }}
                                 />
                               </td>
                               {/* 생년월일 */}
