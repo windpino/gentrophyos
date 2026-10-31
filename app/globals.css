@@ -1031,7 +1031,7 @@ button, input, select, textarea {
 
 /* 모바일 공지사항 & Q&A 게시판 반응형 스타일 */
 .board-card-header {
-  padding: 13px 18px;
+  padding: 11px 16px;
   cursor: pointer;
   display: flex;
   align-items: center;

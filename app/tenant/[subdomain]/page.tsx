@@ -4587,6 +4587,7 @@ export default function TenantPortalPage({
                           key={item.id}
                           className="glass-panel"
                           style={{
+                            padding: 0,
                             background: 'white',
                             borderRadius: '10px',
                             border: item.isPinned ? '2px solid rgba(31, 111, 139, 0.35)' : '1px solid var(--border-color)',
@@ -4749,6 +4750,7 @@ export default function TenantPortalPage({
                           key={item.id}
                           className="glass-panel"
                           style={{
+                            padding: 0,
                             background: 'white',
                             borderRadius: '10px',
                             border: isAnswered ? '1px solid rgba(5, 150, 105, 0.2)' : '1px solid var(--border-color)',
