@@ -4,6 +4,7 @@ import React, { useState, useEffect, use, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Award, Calendar, Layers, FileText, CheckCircle2, User, UserPlus, RefreshCw, Archive, Search, Compass, MapPin, Phone, Sparkles, Trophy, Smartphone, ShieldCheck, X, AlertTriangle, Menu, Copy, Check, ExternalLink, Bell, MessageSquare, Megaphone, Lock, Unlock, HelpCircle, Edit3, Trash2, Plus, Clock } from 'lucide-react';
 import { logAnalyticsEvent } from '@/src/lib/analytics';
+import PublicHistoryArchiveView from './PublicHistoryArchiveView';
 
 interface TenantData {
   id: string;
@@ -4946,6 +4947,11 @@ export default function TenantPortalPage({
                   </div>
                 )}
               </div>
+          )}
+
+          {/* ── 역대 기록관 (회별 · 년도별 누적 순위 보관소) ── */}
+          {activeTab === 'archive' && (
+            <PublicHistoryArchiveView subdomain={subdomain} />
           )}
 
         </main>

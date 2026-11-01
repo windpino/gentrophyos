@@ -1,11 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, use, useMemo, useRef } from 'react';
-import { Award, Check, X, Menu, Upload, Download, Plus, Trash2, ArrowUp, ArrowDown, Users, FileText, Settings, Layers, Calendar, RefreshCw, Save, Search, Eye, ExternalLink, Clock, ShieldAlert, AlertCircle, CheckCircle2, Bell, MessageSquare, Megaphone, Lock, Unlock, Edit3, HelpCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Award, Check, X, Menu, Upload, Download, Plus, Trash2, ArrowUp, ArrowDown, Users, FileText, Settings, Layers, Calendar, RefreshCw, Save, Search, Eye, ExternalLink, Clock, ShieldAlert, AlertCircle, CheckCircle2, Bell, MessageSquare, Megaphone, Lock, Unlock, Edit3, HelpCircle, ChevronLeft, ChevronRight, LayoutDashboard, Trophy, History } from 'lucide-react';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '@/src/lib/firebase';
+import HostDashboardView from './HostDashboardView';
+import HostFinalResultsView from './HostFinalResultsView';
+import HostHistoryArchiveView from './HostHistoryArchiveView';
 
-interface GridRow {
+export interface GridRow {
   id: string; // 데이터베이스 registration ID 또는 임시 행의 'temp-...' ID
   playerId: string;
   name: string;
@@ -261,7 +264,7 @@ export default function HostDashboardPage({
   const [tenant, setTenant] = useState<any>(null);
   const [activeTournament, setActiveTournament] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeSection, setActiveSection] = useState<'applicants' | 'brackets' | 'tie-breaker' | 'notice' | 'announcements' | 'qna'>('applicants');
+  const [activeSection, setActiveSection] = useState<'dashboard' | 'applicants' | 'brackets' | 'results' | 'history' | 'tie-breaker' | 'notice' | 'announcements' | 'qna'>('dashboard');
   const [bracketPublishing, setBracketPublishing] = useState(false);
   const [selectedBracketDivision, setSelectedBracketDivision] = useState<string>('전체');
   const [bracketStatusFilter, setBracketStatusFilter] = useState<'all' | 'approved'>('all');
@@ -1448,8 +1451,11 @@ export default function HostDashboardPage({
           </h2>
         </div>
         <div style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--theme-gold)' }}>
-          {activeSection === 'applicants' ? '참가자' : 
+          {activeSection === 'dashboard' ? '대시보드' :
+           activeSection === 'applicants' ? '참가자' : 
            activeSection === 'brackets' ? '대진/조편성' :
+           activeSection === 'results' ? '최종순위' :
+           activeSection === 'history' ? '역대기록관' :
            activeSection === 'tie-breaker' ? '룰설정' :
            activeSection === 'announcements' ? '공지사항' :
            activeSection === 'qna' ? 'Q&A' : '공시서'}
@@ -1476,8 +1482,11 @@ export default function HostDashboardPage({
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {[
+                { id: 'dashboard', label: '대시보드 (현황)', icon: LayoutDashboard },
                 { id: 'applicants', label: '참가자관리', icon: Users },
                 { id: 'brackets', label: '대진표 및 조 편성표', icon: Layers },
+                { id: 'results', label: '최종 성적 결과', icon: Trophy },
+                { id: 'history', label: '역대 기록관', icon: History },
                 { id: 'tie-breaker', label: '동점자 순위 규칙 설정', icon: Award },
                 { id: 'announcements', label: '공지사항(알림) 관리', icon: Bell },
                 { id: 'qna', label: 'Q&A 게시판 관리', icon: MessageSquare },
@@ -1568,8 +1577,11 @@ export default function HostDashboardPage({
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {[
+            { id: 'dashboard', label: '대시보드 (현황)', icon: LayoutDashboard },
             { id: 'applicants', label: '참가자관리', icon: Users },
             { id: 'brackets', label: '대진표 및 조 편성표', icon: Layers },
+            { id: 'results', label: '최종 성적 결과', icon: Trophy },
+            { id: 'history', label: '역대 기록관', icon: History },
             { id: 'tie-breaker', label: '동점자 순위 규칙 설정', icon: Award },
             { id: 'announcements', label: '공지사항(알림) 관리', icon: Bell },
             { id: 'qna', label: 'Q&A 게시판 관리', icon: MessageSquare },
@@ -1651,8 +1663,11 @@ export default function HostDashboardPage({
             </button>
             <div>
               <h1 style={{ fontSize: 'clamp(1.3rem, 3.5vw, 1.9rem)', fontWeight: '800', margin: 0, marginBottom: '4px' }}>
-                {activeSection === 'applicants' ? '참가자관리' : 
+                {activeSection === 'dashboard' ? '대시보드 (종합 현황)' :
+                 activeSection === 'applicants' ? '참가자관리' : 
                  activeSection === 'brackets' ? '대진표 및 조 편성표' :
+                 activeSection === 'results' ? '최종 성적 결과' :
+                 activeSection === 'history' ? '역대 기록관' :
                  activeSection === 'tie-breaker' ? 'Tie-breaker 가중치 제어기' :
                  activeSection === 'announcements' ? '공지사항(알림) 관리' :
                  activeSection === 'qna' ? 'Q&A 질문/답변 게시판 관리' : '개최공시서 업로드'}
@@ -1696,6 +1711,17 @@ export default function HostDashboardPage({
             </a>
           </div>
         </header>
+
+        {/* SECTION 0: 첫 화면 대시보드 (종합 참가 현황 및 그래픽 통계) */}
+        {activeSection === 'dashboard' && (
+          <HostDashboardView
+            gridData={gridData}
+            activeTournament={activeTournament}
+            tenant={tenant}
+            subdomain={subdomain}
+            onNavigateSection={(sec) => setActiveSection(sec as any)}
+          />
+        )}
 
         {/* SECTION A: 참가자 엑셀 스프레드시트 관리 */}
         {activeSection === 'applicants' && (
@@ -2911,6 +2937,22 @@ export default function HostDashboardPage({
             </div>
           );
         })()}
+
+        {/* SECTION: 최종 성적 결과 (공식 리더보드 및 포디움) */}
+        {activeSection === 'results' && (
+          <HostFinalResultsView
+            activeTournament={activeTournament}
+            subdomain={subdomain}
+            onNavigateHistory={() => setActiveSection('history')}
+          />
+        )}
+
+        {/* SECTION: 역대 기록관 (회별 · 년도별 누적 순위 보관소) */}
+        {activeSection === 'history' && (
+          <HostHistoryArchiveView
+            subdomain={subdomain}
+          />
+        )}
 
         {/* SECTION B: 동점자 및 채점 규칙 제어 */}
         {activeSection === 'tie-breaker' && (
