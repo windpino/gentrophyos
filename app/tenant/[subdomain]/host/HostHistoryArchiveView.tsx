@@ -28,6 +28,7 @@ export default function HostHistoryArchiveView({ subdomain }: HostHistoryArchive
   const [editions, setEditions] = useState<TournamentHistoryEdition[]>([]);
   const [selectedEditionId, setSelectedEditionId] = useState<string>('');
   const [selectedDivisionTab, setSelectedDivisionTab] = useState<string>('혼합오픈');
+  const [selectedSubclassTab, setSelectedSubclassTab] = useState<string>('전체 종합');
   const [loading, setLoading] = useState(true);
 
   // 모달 상태 (추가 / 편집)
@@ -61,10 +62,24 @@ export default function HostHistoryArchiveView({ subdomain }: HostHistoryArchive
   // 현재 선택된 대회 기록
   const activeEdition = editions.find(e => e.id === selectedEditionId) || editions[0];
 
-  // 현재 선택된 종목의 포디움 및 순위
-  const activeDivisionData = activeEdition?.divisions?.find(
-    d => d.division === selectedDivisionTab || (selectedDivisionTab.includes('펀') && d.division.includes('펀'))
-  ) || activeEdition?.divisions?.[0];
+  // 사용 가능한 대분류 종목 목록 (예: ['혼합오픈', '펀&포뮬러', '윙포일', '윈드포일', '단체전'])
+  const availableDivisions: string[] = activeEdition?.divisions
+    ? Array.from(new Set(activeEdition.divisions.map(d => d.division)))
+    : [];
+
+  const currentMainDivision = availableDivisions.includes(selectedDivisionTab)
+    ? selectedDivisionTab
+    : (availableDivisions[0] || '혼합오픈');
+
+  // 현재 대분류에 속한 세부 클라스/부문 목록
+  const currentSubclassItems = activeEdition?.divisions
+    ? activeEdition.divisions.filter(d => d.division === currentMainDivision)
+    : [];
+
+  // 현재 선택된 세부 종목 데이터
+  const activeDivisionData = currentSubclassItems.find(
+    d => d.subclass === selectedSubclassTab
+  ) || currentSubclassItems[0] || activeEdition?.divisions?.[0];
 
   // 새 기록 작성 열기
   const handleOpenNewModal = () => {
@@ -82,6 +97,9 @@ export default function HostHistoryArchiveView({ subdomain }: HostHistoryArchive
       divisions: [
         {
           division: '혼합오픈',
+          subclass: '전체 종합',
+          title: '혼합오픈 (전체 종합)',
+          count: 0,
           podium: [
             { rank: 1, name: '', club: '', points: '', note: '1위 (금메달)' },
             { rank: 2, name: '', club: '', points: '', note: '2위 (은메달)' },
@@ -90,6 +108,9 @@ export default function HostHistoryArchiveView({ subdomain }: HostHistoryArchive
         },
         {
           division: '펀&포뮬러',
+          subclass: '전체 종합',
+          title: '펀&포뮬러 (전체 종합)',
+          count: 0,
           podium: [
             { rank: 1, name: '', club: '', points: '', note: '1위 (금메달)' },
             { rank: 2, name: '', club: '', points: '', note: '2위 (은메달)' },
@@ -98,6 +119,9 @@ export default function HostHistoryArchiveView({ subdomain }: HostHistoryArchive
         },
         {
           division: '윈드포일',
+          subclass: '통합부',
+          title: '윈드포일 (통합부)',
+          count: 0,
           podium: [
             { rank: 1, name: '', club: '', points: '', note: '1위 (금메달)' },
             { rank: 2, name: '', club: '', points: '', note: '2위 (은메달)' },
@@ -106,6 +130,9 @@ export default function HostHistoryArchiveView({ subdomain }: HostHistoryArchive
         },
         {
           division: '윙포일',
+          subclass: '전체 종합',
+          title: '윙포일 (전체 종합)',
+          count: 0,
           podium: [
             { rank: 1, name: '', club: '', points: '', note: '1위 (금메달)' },
             { rank: 2, name: '', club: '', points: '', note: '2위 (은메달)' },
@@ -114,6 +141,9 @@ export default function HostHistoryArchiveView({ subdomain }: HostHistoryArchive
         },
         {
           division: '단체전',
+          subclass: '클럽 대항전',
+          title: '단체전 (클럽 대항전)',
+          count: 0,
           podium: [
             { rank: 1, name: '', club: '', points: '', note: '1위 (우승)' },
             { rank: 2, name: '', club: '', points: '', note: '2위 (준우승)' },
@@ -196,7 +226,7 @@ export default function HostHistoryArchiveView({ subdomain }: HostHistoryArchive
   const handleExportAllHistory = () => {
     if (editions.length === 0) return;
 
-    const headers = ['회차', '개최연도', '대회명', '대회기간', '개최장소', '참가인원', '종목', '순위', '선수명', '소속', '기록/점수'];
+    const headers = ['회차', '개최연도', '대회명', '종목', '부문/클라스', '순위', '선수명', '배번', '소속', '기록/점수'];
     const rows: string[][] = [];
 
     editions.forEach(ed => {
@@ -206,12 +236,11 @@ export default function HostHistoryArchiveView({ subdomain }: HostHistoryArchive
             `제${ed.edition}회`,
             `${ed.year}년`,
             ed.title,
-            ed.duration || '',
-            ed.location || '',
-            `${ed.participantCount || 0}명`,
             div.division,
+            div.subclass || p.subclass || '전체',
             `${p.rank}위`,
             p.name,
+            p.bibNumber || '',
             p.club || '',
             String(p.points || '')
           ]);
@@ -315,6 +344,7 @@ export default function HostHistoryArchiveView({ subdomain }: HostHistoryArchive
                 setSelectedEditionId(ed.id);
                 if (ed.divisions && ed.divisions.length > 0) {
                   setSelectedDivisionTab(ed.divisions[0].division);
+                  setSelectedSubclassTab(ed.divisions[0].subclass || '전체 종합');
                 }
               }}
               style={{
@@ -438,37 +468,132 @@ export default function HostHistoryArchiveView({ subdomain }: HostHistoryArchive
         </div>
       )}
 
-      {/* 종목별 포디움 셀렉터 탭 */}
-      {activeEdition?.divisions && activeEdition.divisions.length > 0 && (
-        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto' }}>
-          {activeEdition.divisions.map((div) => {
-            const isTabActive = activeDivisionData?.division === div.division;
-            return (
-              <button
-                key={div.division}
-                onClick={() => setSelectedDivisionTab(div.division)}
-                style={{
-                  padding: '10px 18px',
-                  borderRadius: '10px',
-                  border: isTabActive ? '2px solid var(--theme-primary, #2563eb)' : '1px solid #e2e8f0',
-                  background: isTabActive ? '#eff6ff' : '#ffffff',
-                  color: isTabActive ? 'var(--theme-primary, #2563eb)' : '#64748b',
-                  fontWeight: isTabActive ? '800' : '600',
-                  fontSize: '0.88rem',
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {div.division} 포디움
-              </button>
-            );
-          })}
+      {/* 종목별 포디움 셀렉터 탭 (1단계: 대분류 종목 / 2단계: 세부 클라스 및 남녀 구분) */}
+      {availableDivisions.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {/* 1단계: 대분류 종목 탭 */}
+          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '2px' }}>
+            {availableDivisions.map((divName) => {
+              const isTabActive = currentMainDivision === divName;
+              const mainDivAllItem = activeEdition.divisions.find(d => d.division === divName && d.subclass === '전체 종합')
+                || activeEdition.divisions.find(d => d.division === divName);
+              const count = mainDivAllItem?.count || 0;
+
+              return (
+                <button
+                  key={divName}
+                  onClick={() => {
+                    setSelectedDivisionTab(divName);
+                    const subItems = activeEdition.divisions.filter(d => d.division === divName);
+                    if (subItems.length > 0) {
+                      setSelectedSubclassTab(subItems[0].subclass || '전체 종합');
+                    }
+                  }}
+                  style={{
+                    padding: '10px 18px',
+                    borderRadius: '12px',
+                    border: isTabActive ? '2px solid var(--theme-primary, #2563eb)' : '1px solid #cbd5e1',
+                    background: isTabActive ? '#eff6ff' : '#ffffff',
+                    color: isTabActive ? 'var(--theme-primary, #2563eb)' : '#475569',
+                    fontWeight: isTabActive ? '900' : '700',
+                    fontSize: '0.9rem',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: isTabActive ? '0 2px 8px rgba(37,99,235,0.12)' : 'none',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <span>{divName}</span>
+                  {count > 0 && (
+                    <span
+                      style={{
+                        fontSize: '0.74rem',
+                        padding: '1px 7px',
+                        borderRadius: '12px',
+                        background: isTabActive ? '#2563eb' : '#f1f5f9',
+                        color: isTabActive ? '#ffffff' : '#64748b',
+                        fontWeight: '800',
+                      }}
+                    >
+                      {divName === '단체전' ? `${count}팀` : `${count}명`}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* 2단계: 세부 클라스 및 남녀 구분 필터 (청년부, 중년부, 장년부, 여자부 등) */}
+          {currentSubclassItems.length > 1 && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                flexWrap: 'wrap',
+                background: '#f8fafc',
+                padding: '8px 12px',
+                borderRadius: '10px',
+                border: '1px solid #e2e8f0',
+              }}
+            >
+              <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#64748b', marginRight: '4px' }}>
+                부문 / 클라스 구분:
+              </span>
+              {currentSubclassItems.map((subItem) => {
+                const isSubActive = activeDivisionData?.subclass === subItem.subclass;
+                return (
+                  <button
+                    key={subItem.subclass || '전체'}
+                    onClick={() => setSelectedSubclassTab(subItem.subclass || '전체 종합')}
+                    style={{
+                      padding: '5px 12px',
+                      borderRadius: '8px',
+                      border: isSubActive ? '1.5px solid #2563eb' : '1px solid #cbd5e1',
+                      background: isSubActive ? '#2563eb' : '#ffffff',
+                      color: isSubActive ? '#ffffff' : '#334155',
+                      fontSize: '0.8rem',
+                      fontWeight: isSubActive ? '800' : '600',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <span>{subItem.subclass}</span>
+                    <span
+                      style={{
+                        fontSize: '0.72rem',
+                        opacity: isSubActive ? 0.9 : 0.65,
+                      }}
+                    >
+                      ({subItem.count}{subItem.division === '단체전' ? '팀' : '명'})
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
       {/* 선택된 종목의 명예의 전당 (Top 3 포디움 카드) */}
       {activeDivisionData && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h4 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '900', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>🎖️</span>
+              <span>{activeDivisionData.title || `${activeDivisionData.division} (${activeDivisionData.subclass})`}</span>
+              <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '600' }}>
+                (총 {activeDivisionData.count}{activeDivisionData.division === '단체전' ? '팀' : '명'})
+              </span>
+            </h4>
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
             {activeDivisionData.podium?.map((podium) => {
               const styles = [
@@ -494,15 +619,22 @@ export default function HostHistoryArchiveView({ subdomain }: HostHistoryArchive
                 >
                   <div style={{ fontSize: '2.8rem' }}>{s.icon}</div>
                   <div style={{ flex: 1 }}>
-                    <span style={{ fontSize: '0.74rem', fontWeight: '800', color: s.text, background: 'rgba(255,255,255,0.8)', padding: '2px 8px', borderRadius: '4px' }}>
-                      {s.title}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                      <span style={{ fontSize: '0.74rem', fontWeight: '800', color: s.text, background: 'rgba(255,255,255,0.8)', padding: '2px 8px', borderRadius: '4px' }}>
+                        {s.title}
+                      </span>
+                      {podium.subclass && (
+                        <span style={{ fontSize: '0.7rem', color: '#64748b', background: '#f1f5f9', padding: '1px 6px', borderRadius: '4px', fontWeight: '700' }}>
+                          {podium.subclass}
+                        </span>
+                      )}
+                    </div>
                     <h4 style={{ fontSize: '1.3rem', fontWeight: '900', margin: '4px 0 2px 0', color: '#0f172a' }}>
                       {podium.name || '미등록'}
                     </h4>
                     <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
                       {podium.club ? `소속: ${podium.club}` : '개인 출전'}
-                      {podium.bibNumber ? ` · 배번: #${podium.bibNumber}` : ''}
+                      {podium.bibNumber && podium.bibNumber !== '-' ? ` · 배번: #${podium.bibNumber}` : ''}
                     </div>
                   </div>
                   {podium.points && (
@@ -519,31 +651,42 @@ export default function HostHistoryArchiveView({ subdomain }: HostHistoryArchive
           {/* 하위 순위 전체 목록 테이블 (있는 경우) */}
           {activeDivisionData.fullRankings && activeDivisionData.fullRankings.length > 0 && (
             <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-              <div style={{ padding: '14px 18px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontWeight: '800', fontSize: '0.9rem' }}>
-                {activeDivisionData.division} 전체 공식 순위
+              <div style={{ padding: '14px 18px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontWeight: '800', fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>📋 {activeDivisionData.title || `${activeDivisionData.division} (${activeDivisionData.subclass})`} 공식 순위표</span>
+                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>총 {activeDivisionData.fullRankings.length}{activeDivisionData.division === '단체전' ? '팀' : '명'}</span>
               </div>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                <thead>
-                  <tr style={{ background: '#f1f5f9', borderBottom: '1px solid #cbd5e1' }}>
-                    <th style={{ padding: '10px', textAlign: 'center', width: '60px' }}>순위</th>
-                    <th style={{ padding: '10px', textAlign: 'left' }}>이름</th>
-                    <th style={{ padding: '10px', textAlign: 'center', width: '100px' }}>배번</th>
-                    <th style={{ padding: '10px', textAlign: 'left' }}>소속</th>
-                    <th style={{ padding: '10px', textAlign: 'center', width: '90px' }}>총점</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {activeDivisionData.fullRankings.map((p, idx) => (
-                    <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '8px', textAlign: 'center', fontWeight: '800' }}>{p.rank}등</td>
-                      <td style={{ padding: '8px', fontWeight: '800' }}>{p.name}</td>
-                      <td style={{ padding: '8px', textAlign: 'center', color: '#0284c7' }}>{p.bibNumber || '-'}</td>
-                      <td style={{ padding: '8px', color: '#64748b' }}>{p.club || '-'}</td>
-                      <td style={{ padding: '8px', textAlign: 'center', fontWeight: '800', color: '#2563eb' }}>{p.points || '-'}</td>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                  <thead>
+                    <tr style={{ background: '#f1f5f9', borderBottom: '1px solid #cbd5e1' }}>
+                      <th style={{ padding: '10px', textAlign: 'center', width: '60px' }}>순위</th>
+                      <th style={{ padding: '10px', textAlign: 'left' }}>선수명</th>
+                      <th style={{ padding: '10px', textAlign: 'center', width: '100px' }}>부문/클라스</th>
+                      <th style={{ padding: '10px', textAlign: 'center', width: '110px' }}>배번</th>
+                      <th style={{ padding: '10px', textAlign: 'left' }}>소속 / 출신</th>
+                      <th style={{ padding: '10px', textAlign: 'center', width: '90px' }}>총점</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {activeDivisionData.fullRankings.map((p, idx) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9', background: idx < 3 ? 'rgba(254, 243, 199, 0.15)' : 'transparent' }}>
+                        <td style={{ padding: '8px', textAlign: 'center', fontWeight: '800', color: idx === 0 ? '#b45309' : idx === 1 ? '#475569' : idx === 2 ? '#ea580c' : '#64748b' }}>
+                          {p.rank <= 3 ? (p.rank === 1 ? '🥇 1등' : p.rank === 2 ? '🥈 2등' : '🥉 3등') : `${p.rank}등`}
+                        </td>
+                        <td style={{ padding: '8px', fontWeight: '800', color: '#0f172a' }}>{p.name}</td>
+                        <td style={{ padding: '8px', textAlign: 'center' }}>
+                          <span style={{ fontSize: '0.74rem', padding: '2px 8px', borderRadius: '4px', background: '#f1f5f9', color: '#475569', fontWeight: '700' }}>
+                            {p.subclass || activeDivisionData.subclass}
+                          </span>
+                        </td>
+                        <td style={{ padding: '8px', textAlign: 'center', color: '#0284c7', fontWeight: '700' }}>{p.bibNumber || '-'}</td>
+                        <td style={{ padding: '8px', color: '#64748b' }}>{p.club || '-'}</td>
+                        <td style={{ padding: '8px', textAlign: 'center', fontWeight: '800', color: '#2563eb' }}>{p.points || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>
