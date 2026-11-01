@@ -926,8 +926,24 @@ export default function RefereeMobilePage({
         ? []
         : (data.leaderboard || []);
 
-      if (sourceList.length === 0 && serverLeaderboard.length > 0) {
+      const serverHasScores = serverLeaderboard.some((p: any) =>
+        Object.keys(p).some(k => /^r\d+$/.test(k) && p[k] !== null && p[k] !== undefined && p[k] !== '')
+      );
+      const sourceHasScores = sourceList.some((p: any) =>
+        Object.keys(p).some(k => /^r\d+$/.test(k) && p[k] !== null && p[k] !== undefined && p[k] !== '')
+      );
+
+      // ── [핵심 데이터 보호 및 복구] ──
+      // 서버에 점수 데이터가 존재하는데 로컬스토리지가 비어있거나 점수가 미입력 상태라면, 무조건 서버 데이터를 최우선 채택하여 데이터 유실 복구!
+      if (serverLeaderboard.length > 0 && (sourceList.length === 0 || (!sourceHasScores && serverHasScores))) {
         sourceList = serverLeaderboard;
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(getSimStorageKey(tId, divisionName), JSON.stringify(serverLeaderboard));
+          if (divisionName.includes('펀')) {
+            localStorage.setItem(getSimStorageKey(tId, '펀&포뮬러'), JSON.stringify(serverLeaderboard));
+            localStorage.setItem(getSimStorageKey(tId, '펀엔포뮬러'), JSON.stringify(serverLeaderboard));
+          }
+        }
       }
 
       // 저장된 점수 데이터에서 라운드 키들 추가 탐색 (r1, r2, r3...)
@@ -988,9 +1004,26 @@ export default function RefereeMobilePage({
 
       let preliminary: any[] = [];
       if (divisionName === '단체전') {
-        const teamsToUse = localTeamsForTeamDiv !== null
-          ? localTeamsForTeamDiv
-          : (sourceList.length > 0 ? sourceList : baseRegistrations);
+        const localTeamHasScores = (localTeamsForTeamDiv || []).some((t: any) =>
+          Object.keys(t).some(k => /^r\d+$/.test(k) && t[k] !== null && t[k] !== undefined && t[k] !== '')
+        );
+
+        // 서버에 등록된 단체전 팀이 존재하고 로컬 캐시가 비어있거나 점수가 없다면 서버 데이터로 즉시 복구!
+        let teamsToUse: any[] = [];
+        if (serverLeaderboard.length > 0 && (!localTeamHasScores || !localTeamsForTeamDiv || localTeamsForTeamDiv.length === 0)) {
+          teamsToUse = serverLeaderboard;
+          if (typeof window !== 'undefined') {
+            const teamStorageKey = `gentrophy_${tId}_teams_단체전`;
+            localStorage.setItem(teamStorageKey, JSON.stringify(serverLeaderboard));
+            localStorage.setItem(getSimStorageKey(tId, '단체전'), JSON.stringify(serverLeaderboard));
+          }
+        } else if (localTeamsForTeamDiv && localTeamsForTeamDiv.length > 0) {
+          teamsToUse = localTeamsForTeamDiv;
+        } else if (sourceList.length > 0) {
+          teamsToUse = sourceList;
+        } else {
+          teamsToUse = baseRegistrations;
+        }
 
         preliminary = teamsToUse.map((team: any, idx: number) => {
           const updated = { ...team };
@@ -999,13 +1032,13 @@ export default function RefereeMobilePage({
           if (!updated.club) updated.club = updated.name;
           if (!updated.bibNumber) updated.bibNumber = `T${idx + 1}`;
 
-          const savedRow = (sourceList.length > 0 ? sourceList : serverLeaderboard).find(
+          const savedRow = (serverLeaderboard.length > 0 ? serverLeaderboard : sourceList).find(
             (lItem: any) => lItem.id === updated.id || lItem.name === updated.name
           );
           activeRounds.forEach(r => {
-            if (savedRow && savedRow[r.key] !== undefined) {
+            if (savedRow && savedRow[r.key] !== undefined && savedRow[r.key] !== null) {
               updated[r.key] = parseSavedRoundVal(savedRow[r.key]);
-            } else if (team[r.key] !== undefined) {
+            } else if (team[r.key] !== undefined && team[r.key] !== null) {
               updated[r.key] = parseSavedRoundVal(team[r.key]);
             } else {
               updated[r.key] = null;
@@ -1013,9 +1046,10 @@ export default function RefereeMobilePage({
           });
           return updated;
         });
-      } else if (sourceList.length > 0) {
+      } else {
+        const dataListToUse = sourceList.length > 0 ? sourceList : serverLeaderboard;
         preliminary = baseRegistrations.map((player) => {
-          const savedRow = sourceList.find((lItem: any) =>
+          const savedRow = dataListToUse.find((lItem: any) =>
             lItem.id === player.id ||
             (player.name && lItem.name && lItem.name.trim() === player.name.trim()) ||
             (player.bibNumber && lItem.bibNumber && formatBibShortDisplay(lItem.bibNumber) === formatBibShortDisplay(player.bibNumber))
@@ -1125,7 +1159,6 @@ export default function RefereeMobilePage({
       setCurrentRankNum(1);
       setBibInput('');
       setInputFeedback(null);
-      setIsRankConfirmed(false);
       return;
     }
 
@@ -1153,7 +1186,6 @@ export default function RefereeMobilePage({
       setCurrentRankNum(1);
       setBibInput('');
       setInputFeedback(null);
-      setIsRankConfirmed(false);
     } else {
       setParticipants([]);
     }
@@ -1880,6 +1912,13 @@ export default function RefereeMobilePage({
     // 1. 로컬 캐시 즉시 백업 (네트워크 지연/오류 대비)
     if (typeof window !== 'undefined' && activeTournament) {
       localStorage.setItem(getSimStorageKey(activeTournament.id, activeDivisionTab), JSON.stringify(sorted));
+      if (activeDivisionTab === '단체전') {
+        localStorage.setItem(`gentrophy_${activeTournament.id}_teams_단체전`, JSON.stringify(sorted));
+      }
+      if (activeDivisionTab.includes('펀')) {
+        localStorage.setItem(getSimStorageKey(activeTournament.id, '펀&포뮬러'), JSON.stringify(sorted));
+        localStorage.setItem(getSimStorageKey(activeTournament.id, '펀엔포뮬러'), JSON.stringify(sorted));
+      }
     }
 
     if (!activeTournament) {
@@ -4421,7 +4460,7 @@ export default function RefereeMobilePage({
                           <th style={{ padding: '10px 6px', width: '60px', textAlign: 'center' }}>클라스</th>
                         )}
                         <th style={{ padding: '10px 8px', minWidth: '80px', textAlign: 'left' }}>{activeDivisionTab === '단체전' ? '팀명 (소속)' : '이름'}</th>
-                        <th style={{ padding: '10px 4px', width: '85px', minWidth: '80px', textAlign: 'center' }}>{activeDivisionTab === '단체전' ? '팀배번' : '배번'}</th>
+                        <th style={{ padding: '10px 4px', width: '100px', minWidth: '95px', textAlign: 'center' }}>{activeDivisionTab === '단체전' ? '팀배번' : '배번'}</th>
                         <th style={{ padding: '10px 6px', width: '70px', textAlign: 'center' }}>{activeDivisionTab === '단체전' ? '소속협회' : '생년월일'}</th>
                         {rounds.map(r => {
                           const conducted = isRoundConducted(r.key, participants);
@@ -4506,12 +4545,13 @@ export default function RefereeMobilePage({
                                   }}
                                   placeholder="01"
                                   style={{
-                                    width: '78px',
-                                    padding: '4px 6px',
+                                    width: '92px',
+                                    minWidth: '88px',
+                                    padding: '4px 3px',
                                     border: '1px solid #cbd5e1',
                                     borderRadius: '6px',
                                     textAlign: 'center',
-                                    fontSize: '0.82rem',
+                                    fontSize: '0.84rem',
                                     fontWeight: '800',
                                     boxSizing: 'border-box'
                                   }}
@@ -5045,7 +5085,7 @@ export default function RefereeMobilePage({
                   {selectedRound.toUpperCase()} · {currentRankNum}착
                 </span>
               </div>
-              <span style={{ fontSize: '0.85rem', color: '#f8fafc', fontWeight: '800', maxWidth: '140px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <span style={{ fontSize: '0.85rem', color: '#f8fafc', fontWeight: '800', maxWidth: '220px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {currentRankPlayer ? `${currentRankPlayer.name} (#${formatBibShortDisplay(currentRankPlayer.bibNumber)})` : (bibInput.trim() ? `입력: ${bibInput.trim()}` : '선수 미배정')}
               </span>
             </div>

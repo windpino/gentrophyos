@@ -102,7 +102,7 @@ export const computeAgeSplitSubclasses = (rows: GridRow[]): Record<string, '청�
 
 // 배번티 색상(흰색, 연두색, 오렌지색)에 맞춘 배경 뱃지 스타일 도우미
 export function getBibBadgeStyle(bibNumber?: string) {
-  const bib = (bibNumber || '').trim();
+  let bib = (bibNumber || '').trim();
   if (!bib || bib === '-') {
     return {
       background: '#f8fafc',
@@ -114,6 +114,9 @@ export function getBibBadgeStyle(bibNumber?: string) {
       isAssigned: false,
     };
   }
+
+  // 한 자리 숫자인 경우 01, 02 등으로 표시 (예: "흰색 1번" -> "흰색 01번", "연두 7" -> "연두 07")
+  bib = bib.replace(/(^|[^\d])(\d)(?!\d)/g, '$10$2');
 
   const lower = bib.toLowerCase();
 
@@ -5057,24 +5060,25 @@ function BibManagementModal({
     return true;
   });
 
-  // 배번 텍스트 서식화 (선택된 numberingStyle 옵션 엄격 적용)
+  // 배번 텍스트 서식화 (선택된 numberingStyle 옵션 엄격 적용, 한 자리 숫자는 01, 02 형식 적용)
   const formatBib = (color: 'white' | 'green' | 'orange', num: number, style: string) => {
     const colorKr = color === 'white' ? '흰색' : color === 'green' ? '연두' : '오렌지';
     const prefixKr = color === 'white' ? '흰' : color === 'green' ? '연' : '주';
+    const numStr = num < 10 ? `0${num}` : String(num);
 
     if (style === 'colorWithNum') {
-      return `${colorKr} ${num}번`;
+      return `${colorKr} ${numStr}번`;
     }
     if (style === 'colorShort') {
-      return `${colorKr} ${num}`;
+      return `${colorKr} ${numStr}`;
     }
     if (style === 'colorPrefix') {
-      return `${prefixKr}${num}`;
+      return `${prefixKr}${numStr}`;
     }
     if (style === 'numberOnly') {
-      return String(num);
+      return numStr;
     }
-    return `${colorKr} ${num}번`;
+    return `${colorKr} ${numStr}번`;
   };
 
   // 배번 자동 순차 배정 실행 함수 (흰색 1~50, 연두 1~50, 오렌지 1~50 순)
