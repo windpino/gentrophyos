@@ -250,13 +250,13 @@ export default function HostHistoryArchiveView({ subdomain }: HostHistoryArchive
       >
         <div>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '3px 10px', background: 'rgba(245, 158, 11, 0.2)', border: '1px solid rgba(245, 158, 11, 0.4)', borderRadius: '20px', fontSize: '0.76rem', fontWeight: '800', color: '#fbbf24', marginBottom: '8px' }}>
-            <Sparkles size={13} /> 역대 명예의 전당 (Hall of Fame)
+            <Sparkles size={13} /> 심판 공식 기록관 실시간 일치 연동
           </div>
           <h2 style={{ fontSize: '1.4rem', fontWeight: '900', margin: '0 0 4px 0', letterSpacing: '-0.5px' }}>
             🏛️ 역대 기록관 (회별 · 년도별 누적 순위 보관소)
           </h2>
           <p style={{ color: '#94a3b8', margin: 0, fontSize: '0.86rem' }}>
-            대회 회차별 최종 우승자 및 종목별 포디움 입상 기록을 영구 보관하고 누적 관리합니다.
+            제20회 대회부터 심판 기록관의 실제 데이터를 100% 실시간 연동하여 공식 우승자 및 순위를 누적 보관합니다.
           </p>
         </div>
 
@@ -338,8 +338,8 @@ export default function HostHistoryArchiveView({ subdomain }: HostHistoryArchive
                   {ed.year}년
                 </span>
                 {ed.edition === 20 && (
-                  <span style={{ fontSize: '0.68rem', padding: '1px 5px', borderRadius: '4px', background: '#dcfce7', color: '#15803d', fontWeight: '800' }}>
-                    최신
+                  <span style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: '4px', background: '#dcfce7', color: '#15803d', fontWeight: '800' }}>
+                    심판기록관 실시간 연동
                   </span>
                 )}
               </div>

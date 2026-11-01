@@ -101,9 +101,16 @@ export default function PublicHistoryArchiveView({ subdomain }: PublicHistoryArc
                 transition: 'all 0.2s',
               }}
             >
-              <span style={{ fontSize: '0.76rem', fontWeight: '800', color: isSelected ? 'var(--theme-primary)' : '#94a3b8' }}>
-                {ed.year}년
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                <span style={{ fontSize: '0.76rem', fontWeight: '800', color: isSelected ? 'var(--theme-primary)' : '#94a3b8' }}>
+                  {ed.year}년
+                </span>
+                {ed.edition === 20 && (
+                  <span style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: '4px', background: '#dcfce7', color: '#15803d', fontWeight: '800' }}>
+                    심판기록관 실시간 연동
+                  </span>
+                )}
+              </div>
               <strong style={{ fontSize: '1rem', fontWeight: '900', color: isSelected ? '#0f172a' : '#475569' }}>
                 제{ed.edition}회 대회
               </strong>
