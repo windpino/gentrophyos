@@ -39,6 +39,7 @@ import {
   TieBreakerRuleInput
 } from '@/src/lib/tieBreaker';
 import { logAnalyticsEvent } from '@/src/lib/analytics';
+import RefereeDashboardView from './RefereeDashboardView';
 
 export interface RoundItem {
   key: string;
@@ -164,6 +165,9 @@ export default function RefereeMobilePage({
 
   // 라운드 동적 관리 상태
   const [rounds, setRounds] = useState<RoundItem[]>(DEFAULT_ROUNDS);
+
+  // 심판 화면 모드: 'dashboard' (심판 종합 대시보드) vs 'scoring' (종목별 순위 입력기)
+  const [refereeViewMode, setRefereeViewMode] = useState<'dashboard' | 'scoring'>('dashboard');
 
   // 모드 분리 상태: 'input' (순위 입력란) vs 'confirm' (순위 확정 및 검토란)
   const [activeMode, setActiveMode] = useState<'input' | 'confirm'>('input');
@@ -2514,9 +2518,91 @@ export default function RefereeMobilePage({
         </div>
       </header>
 
-      <div className="no-print referee-screen-content referee-screen-ui" style={{ maxWidth: '850px', margin: '0 auto', padding: '16px 12px 140px 12px' }}>
+      <div className="no-print referee-screen-content referee-screen-ui" style={{ maxWidth: '900px', margin: '0 auto', padding: '16px 12px 140px 12px' }}>
 
-        {/* 접수 대기 이의제기 알림 배너 */}
+        {/* 심판 관제 뷰 전환 탭 (대시보드 vs 순위 입력기) */}
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', background: '#f8fafc', padding: '6px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+          <button
+            type="button"
+            onClick={() => setRefereeViewMode('dashboard')}
+            style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              padding: '11px 16px',
+              borderRadius: '8px',
+              border: 'none',
+              background: refereeViewMode === 'dashboard' ? 'var(--theme-primary, #2563eb)' : 'transparent',
+              color: refereeViewMode === 'dashboard' ? '#ffffff' : '#64748b',
+              fontWeight: '800',
+              fontSize: '0.92rem',
+              cursor: 'pointer',
+              boxShadow: refereeViewMode === 'dashboard' ? '0 2px 8px rgba(37,99,235,0.2)' : 'none',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <span>📊 심판 종합 대시보드</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setRefereeViewMode('scoring')}
+            style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              padding: '11px 16px',
+              borderRadius: '8px',
+              border: 'none',
+              background: refereeViewMode === 'scoring' ? 'var(--theme-primary, #2563eb)' : 'transparent',
+              color: refereeViewMode === 'scoring' ? '#ffffff' : '#64748b',
+              fontWeight: '800',
+              fontSize: '0.92rem',
+              cursor: 'pointer',
+              boxShadow: refereeViewMode === 'scoring' ? '0 2px 8px rgba(37,99,235,0.2)' : 'none',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <span>✍️ 종목별 순위 입력 및 확정</span>
+            <span
+              style={{
+                fontSize: '0.74rem',
+                padding: '2px 8px',
+                borderRadius: '10px',
+                background: refereeViewMode === 'scoring' ? 'rgba(255,255,255,0.25)' : '#e2e8f0',
+                color: refereeViewMode === 'scoring' ? '#ffffff' : '#475569',
+              }}
+            >
+              {activeDivisionTab}
+            </span>
+          </button>
+        </div>
+
+        {refereeViewMode === 'dashboard' ? (
+          <RefereeDashboardView
+            subdomain={subdomain}
+            tenant={tenant}
+            activeTournament={activeTournament}
+            rawRegistrations={rawRegistrations}
+            isPublicLeaderboard={isPublicLeaderboard}
+            onTogglePublish={handleTogglePublish}
+            togglingPublish={togglingPublish}
+            protests={protests}
+            pendingProtestsCount={pendingProtestsCount}
+            onOpenProtestModal={handleSelectProtest}
+            onNavigateToScoring={(div) => {
+              setActiveDivisionTab(div);
+              setRefereeViewMode('scoring');
+            }}
+            dnsDnfRule={dnsDnfRule}
+          />
+        ) : (
+          <>
+            {/* 접수 대기 이의제기 알림 배너 */}
         {pendingProtestsCount > 0 && (
           <div
             onClick={() => setIsProtestModalOpen(true)}
@@ -4882,10 +4968,13 @@ export default function RefereeMobilePage({
           </div>
         )}
 
+          </>
+        )}
+
       </div>
 
       {/* ── 상하 스크롤을 항상 따라다니는 DNS / DNF 플로팅 액션 바 ── */}
-      {isMounted && typeof document !== 'undefined' && activeMode === 'confirm' && createPortal(
+      {isMounted && typeof document !== 'undefined' && refereeViewMode === 'scoring' && activeMode === 'confirm' && createPortal(
         <div className="no-print" style={{
           position: 'fixed',
           bottom: 0,
@@ -5195,7 +5284,7 @@ export default function RefereeMobilePage({
       )}
 
       {/* ── 순위 입력란 모드 전용 상하 스크롤 추적 DNS / DNF 플로팅 바 ── */}
-      {isMounted && typeof document !== 'undefined' && activeMode === 'input' && createPortal(
+      {isMounted && typeof document !== 'undefined' && refereeViewMode === 'scoring' && activeMode === 'input' && createPortal(
         <div className="no-print" style={{
           position: 'fixed',
           bottom: 0,
