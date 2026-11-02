@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { Award, Calendar, Layers, FileText, CheckCircle2, User, UserPlus, RefreshCw, Archive, Search, Compass, MapPin, Phone, Sparkles, Trophy, Smartphone, ShieldCheck, X, AlertTriangle, Menu, Copy, Check, ExternalLink, Bell, MessageSquare, Megaphone, Lock, Unlock, HelpCircle, Edit3, Trash2, Plus, Clock } from 'lucide-react';
 import { logAnalyticsEvent } from '@/src/lib/analytics';
 import PublicHistoryArchiveView from './PublicHistoryArchiveView';
+import PublicProtestView from './PublicProtestView';
 
 interface TenantData {
   id: string;
@@ -2319,6 +2320,7 @@ export default function TenantPortalPage({
                 { id: 'overview', label: '대회 요강', icon: '📋', defaultSubTab: '' },
                 { id: 'live-brackets-direct', label: '대진표 및 조 편성표 (공식)', icon: '⛵', defaultSubTab: 'live-brackets', disabled: !ongoingTournament },
                 { id: 'live', label: '실시간 경기운영 / 순위', icon: '⏱️', defaultSubTab: 'live-leaderboard', disabled: !ongoingTournament },
+                { id: 'live-protest-direct', label: '공식 이의제기 (항의·득점확인)', icon: '⚖️', defaultSubTab: 'live-protest', disabled: !ongoingTournament },
                 { id: 'announcements', label: '공지사항 (알림)', icon: '🔔', defaultSubTab: '' },
                 { id: 'qna', label: 'Q&A 문의게시판', icon: '💬', defaultSubTab: '' },
                 { id: 'intro', label: '대회소개 및 일정', icon: '📍', defaultSubTab: 'intro-greeting' },
@@ -2328,6 +2330,8 @@ export default function TenantPortalPage({
               ].map((item) => {
                 const isActive = item.id === 'live-brackets-direct'
                   ? (activeTab === 'live' && activeSubTab === 'live-brackets')
+                  : item.id === 'live-protest-direct'
+                  ? (activeTab === 'live' && activeSubTab === 'live-protest')
                   : (activeTab === item.id);
                 return (
                   <button
@@ -2342,6 +2346,9 @@ export default function TenantPortalPage({
                           if (activeTournamentId && registrations.length === 0) {
                             fetchRegistrations(activeTournamentId, true);
                           }
+                        } else if (item.id === 'live-protest-direct') {
+                          setActiveTab('live');
+                          setActiveSubTab('live-protest');
                         } else {
                           setActiveTab(item.id as any);
                           setActiveSubTab(item.defaultSubTab);
@@ -2633,7 +2640,8 @@ export default function TenantPortalPage({
 
               {activeTab === 'live' && [
                 { id: 'live-brackets', label: '대진표 및 조 편성표 ⛵' },
-                { id: 'live-leaderboard', label: '실시간 리더보드 🏆' }
+                { id: 'live-leaderboard', label: '실시간 리더보드 🏆' },
+                { id: 'live-protest', label: '공식 이의제기 (항의·점수정정) ⚖️' }
               ].map(sub => (
                 <button
                   key={sub.id}
@@ -2716,11 +2724,32 @@ export default function TenantPortalPage({
           {activeTab === 'live' && activeSubTab === 'live-leaderboard' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               {/* 리더보드 헤더 */}
-              <div className="glass-panel" style={{ background: 'white', padding: '28px 32px', borderTop: '4px solid var(--theme-primary)' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: '900', textAlign: 'center', color: 'var(--text-main)', marginBottom: '4px' }}>
+              <div className="glass-panel" style={{ background: 'white', padding: '24px 28px', borderTop: '4px solid var(--theme-primary)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: '900', textAlign: 'center', color: 'var(--text-main)', margin: 0 }}>
                   {overview.title} 실시간 리더보드
                 </h2>
                 <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>Notice of Race (NOR) / 공식 실시간 순위 및 라운드별 경기 결과</p>
+                <button
+                  type="button"
+                  onClick={() => setActiveSubTab('live-protest')}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 14px',
+                    marginTop: '4px',
+                    background: '#fffbeb',
+                    border: '1px solid #fde68a',
+                    borderRadius: '20px',
+                    fontSize: '0.8rem',
+                    fontWeight: '800',
+                    color: '#b45309',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <span>⚖️ 성적·순위 이상 발견 시 [공식 이의제기 접수] 바로가기</span>
+                </button>
               </div>
 
               {/* 종목 카테고리 필터바 */}
@@ -3580,6 +3609,13 @@ export default function TenantPortalPage({
                   })()}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* LIVE. 경기운영 / 공식 이의제기 및 득점 확인 탭 */}
+          {activeTab === 'live' && activeSubTab === 'live-protest' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <PublicProtestView subdomain={subdomain} defaultDivision={activeDivisionTab} />
             </div>
           )}
 

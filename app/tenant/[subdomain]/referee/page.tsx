@@ -27,7 +27,11 @@ import {
   Trash2,
   AlertCircle,
   Printer,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Scale,
+  MessageSquare,
+  Clock,
+  Send
 } from 'lucide-react';
 import {
   DEFAULT_SAILING_TIE_BREAKER_RULES,
@@ -218,6 +222,80 @@ export default function RefereeMobilePage({
   const [isPublicLeaderboard, setIsPublicLeaderboard] = useState<boolean>(false);
   const [togglingPublish, setTogglingPublish] = useState<boolean>(false);
 
+  // 이의제기(Protest & Scoring Inquiries) 관리 상태
+  const [protests, setProtests] = useState<any[]>([]);
+  const [isProtestModalOpen, setIsProtestModalOpen] = useState<boolean>(false);
+  const [selectedProtest, setSelectedProtest] = useState<any | null>(null);
+  const [answerDecision, setAnswerDecision] = useState<string>('');
+  const [decisionStatus, setDecisionStatus] = useState<string>('ACCEPTED');
+  const [decidedByTitle, setDecidedByTitle] = useState<string>('수석심판관');
+  const [savingDecision, setSavingDecision] = useState<boolean>(false);
+  const [protestFilter, setProtestFilter] = useState<'PENDING' | 'ALL'>('PENDING');
+
+  const pendingProtestsCount = protests.filter(p => p.status === 'PENDING' || p.status === 'IN_REVIEW').length;
+
+  const fetchProtests = async () => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('gentrophy_referee_token') : null;
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`/api/tenant/${subdomain}/protests?_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers
+      });
+      const data = await res.json();
+      if (data.protests) {
+        setProtests(data.protests);
+      }
+    } catch (e) {
+      console.error('이의제기 목록 로드 실패:', e);
+    }
+  };
+
+  const handleSelectProtest = (p: any) => {
+    setSelectedProtest(p);
+    setDecisionStatus(p.status === 'PENDING' ? 'ACCEPTED' : p.status);
+    setAnswerDecision(p.officialDecision || '');
+    setDecidedByTitle(p.decidedBy || '수석심판관');
+  };
+
+  const handleSaveDecision = async (protestId: string) => {
+    if (!answerDecision.trim()) {
+      alert('심의 결정문 및 조치 내용을 입력해 주세요.');
+      return;
+    }
+    setSavingDecision(true);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('gentrophy_referee_token') : null;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const res = await fetch(`/api/tenant/${subdomain}/protests`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({
+          id: protestId,
+          status: decisionStatus,
+          officialDecision: answerDecision,
+          decidedBy: decidedByTitle,
+        })
+      });
+
+      if (res.ok) {
+        alert('이의제기 심의 답변 및 조치 사항이 공식 등록되었습니다.\n대회 홈페이지에 실시간으로 즉시 공개됩니다.');
+        await fetchProtests();
+        setSelectedProtest(null);
+      } else {
+        const err = await res.json();
+        alert(`답변 등록 실패: ${err.error || '권한 오류'}`);
+      }
+    } catch (err: any) {
+      alert(`오류: ${err.message}`);
+    } finally {
+      setSavingDecision(false);
+    }
+  };
+
   // 시뮬레이션(사전 시연) 모드 및 대상 필터 상태
   // true: 홈페이지 공개/대진표 확정 전에도 서버 반영 없이 안전하게 순위 입력 시연 가능
   const [isSimulationMode, setIsSimulationMode] = useState<boolean>(true);
@@ -287,6 +365,14 @@ export default function RefereeMobilePage({
       console.error('로그아웃 오류:', err);
     }
   };
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchProtests();
+      const timer = setInterval(fetchProtests, 15000);
+      return () => clearInterval(timer);
+    }
+  }, [isAuthenticated, subdomain]);
 
   useEffect(() => {
     fetchInitialData();
@@ -2360,6 +2446,32 @@ export default function RefereeMobilePage({
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button
+            onClick={() => setIsProtestModalOpen(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: pendingProtestsCount > 0 ? '#ef4444' : 'rgba(255, 255, 255, 0.1)',
+              color: '#ffffff',
+              padding: '7px 13px',
+              borderRadius: '8px',
+              fontSize: '0.82rem',
+              fontWeight: '800',
+              border: pendingProtestsCount > 0 ? '1px solid #f87171' : '1px solid rgba(255, 255, 255, 0.2)',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              boxShadow: pendingProtestsCount > 0 ? '0 0 10px rgba(239,68,68,0.5)' : 'none',
+            }}
+          >
+            <Scale size={15} />
+            <span>이의제기 접수함</span>
+            {pendingProtestsCount > 0 && (
+              <span style={{ background: '#ffffff', color: '#ef4444', borderRadius: '10px', padding: '1px 6px', fontSize: '0.72rem', fontWeight: '900' }}>
+                {pendingProtestsCount}
+              </span>
+            )}
+          </button>
+          <button
             onClick={handleLogout}
             style={{
               display: 'flex',
@@ -2403,6 +2515,55 @@ export default function RefereeMobilePage({
       </header>
 
       <div className="no-print referee-screen-content referee-screen-ui" style={{ maxWidth: '850px', margin: '0 auto', padding: '16px 12px 140px 12px' }}>
+
+        {/* 접수 대기 이의제기 알림 배너 */}
+        {pendingProtestsCount > 0 && (
+          <div
+            onClick={() => setIsProtestModalOpen(true)}
+            style={{
+              background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
+              border: '2px solid #ef4444',
+              borderRadius: '14px',
+              padding: '12px 18px',
+              marginBottom: '14px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(239, 68, 68, 0.15)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ background: '#ef4444', color: 'white', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Scale size={18} />
+              </div>
+              <div>
+                <strong style={{ color: '#b91c1c', fontSize: '0.9rem', display: 'block' }}>
+                  선수 공식 이의제기(점수정정/규칙항의) {pendingProtestsCount}건이 접수되어 심의 대기 중입니다!
+                </strong>
+                <span style={{ fontSize: '0.78rem', color: '#7f1d1d' }}>
+                  클릭하여 선수의 진술 내용을 확인하고, 심의 결과 및 수정 답변을 등록해 주세요.
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              style={{
+                padding: '6px 14px',
+                background: '#ef4444',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '0.8rem',
+                fontWeight: '800',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              심의·답변하기
+            </button>
+          </div>
+        )}
 
         {/* ── [0] 홈페이지 순위 노출 공개 / 비공개 및 초기화 제어 배너 ── */}
         <div
@@ -5365,6 +5526,419 @@ export default function RefereeMobilePage({
           </>
         );
       })()}
+
+      {/* ── [심판 전용] 공식 이의제기 및 민원 해결 모달 ── */}
+      {isProtestModalOpen && (
+        <div
+          className="no-print"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(5px)',
+            zIndex: 99999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+          }}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '20px',
+              maxWidth: '1050px',
+              width: '100%',
+              maxHeight: '92vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4)',
+              overflow: 'hidden',
+              border: '1px solid #cbd5e1',
+            }}
+          >
+            {/* 모달 상단 헤더 */}
+            <div
+              style={{
+                background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+                color: 'white',
+                padding: '18px 24px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <div>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(245, 158, 11, 0.2)', border: '1px solid rgba(245, 158, 11, 0.4)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.74rem', color: '#fbbf24', fontWeight: '800', marginBottom: '4px' }}>
+                  <Scale size={13} /> 심판 모바일 제어기 연동
+                </div>
+                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '900', letterSpacing: '-0.3px' }}>
+                  ⚖️ 공식 이의제기 및 민원 해결 센터 (Protest Jury Console)
+                </h3>
+                <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>
+                  선수들이 제출한 점수 오기 정정 및 경기 규칙 위반 항의를 심의하고 답변과 수정 조치를 등록합니다.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={fetchProtests}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '8px 12px',
+                    background: 'rgba(255,255,255,0.1)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: '8px',
+                    color: 'white',
+                    fontSize: '0.8rem',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <RefreshCw size={13} /> 새로고침
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsProtestModalOpen(false)}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '8px',
+                    color: 'white',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* 필터 탭 바 */}
+            <div style={{ background: '#f8fafc', padding: '10px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => setProtestFilter('PENDING')}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '16px',
+                  border: protestFilter === 'PENDING' ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                  background: protestFilter === 'PENDING' ? '#fef2f2' : '#ffffff',
+                  color: protestFilter === 'PENDING' ? '#b91c1c' : '#475569',
+                  fontSize: '0.82rem',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                }}
+              >
+                🟡 심의 대기중 ({pendingProtestsCount}건)
+              </button>
+              <button
+                type="button"
+                onClick={() => setProtestFilter('ALL')}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '16px',
+                  border: protestFilter === 'ALL' ? '1.5px solid #2563eb' : '1px solid #cbd5e1',
+                  background: protestFilter === 'ALL' ? '#eff6ff' : '#ffffff',
+                  color: protestFilter === 'ALL' ? '#1d4ed8' : '#475569',
+                  fontSize: '0.82rem',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                }}
+              >
+                전체 접수 내역 ({protests.length}건)
+              </button>
+            </div>
+
+            {/* 모달 본문 (좌측 목록 + 우측 상세 및 심의 작성기) */}
+            <div style={{ display: 'flex', flex: 1, minHeight: '480px', maxHeight: '72vh', overflow: 'hidden' }}>
+
+              {/* 좌측: 접수된 이의제기 목록 */}
+              <div style={{ width: '380px', borderRight: '1px solid #e2e8f0', overflowY: 'auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px', background: '#fafafa' }}>
+                {(() => {
+                  const displayList = protestFilter === 'PENDING'
+                    ? protests.filter(p => p.status === 'PENDING' || p.status === 'IN_REVIEW')
+                    : protests;
+
+                  if (displayList.length === 0) {
+                    return (
+                      <div style={{ padding: '40px 20px', textAlign: 'center', color: '#94a3b8' }}>
+                        <Scale size={32} style={{ margin: '0 auto 8px auto', opacity: 0.5 }} />
+                        <p style={{ margin: 0, fontSize: '0.85rem' }}>
+                          {protestFilter === 'PENDING' ? '심의 대기 중인 이의제기가 없습니다.' : '접수된 이의제기가 없습니다.'}
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  return displayList.map(p => {
+                    const isSelected = selectedProtest?.id === p.id;
+                    const statusConfig = p.status === 'ACCEPTED'
+                      ? { bg: '#dcfce7', color: '#15803d', text: '인용 (수정완료)' }
+                      : p.status === 'REJECTED'
+                      ? { bg: '#fee2e2', color: '#b91c1c', text: '기각' }
+                      : p.status === 'IN_REVIEW'
+                      ? { bg: '#e0f2fe', color: '#0369a1', text: '심의중' }
+                      : p.status === 'RESOLVED'
+                      ? { bg: '#f3e8ff', color: '#7e22ce', text: '답변완료' }
+                      : { bg: '#fef3c7', color: '#b45309', text: '접수대기' };
+
+                    return (
+                      <div
+                        key={p.id}
+                        onClick={() => handleSelectProtest(p)}
+                        style={{
+                          background: isSelected ? '#eff6ff' : '#ffffff',
+                          border: isSelected ? '2px solid #2563eb' : '1px solid #e2e8f0',
+                          borderRadius: '12px',
+                          padding: '12px 14px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '6px',
+                          boxShadow: isSelected ? '0 2px 8px rgba(37,99,235,0.15)' : 'none',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.72rem', fontWeight: '800', padding: '2px 8px', borderRadius: '10px', background: statusConfig.bg, color: statusConfig.color }}>
+                            {statusConfig.text}
+                          </span>
+                          <span style={{ fontSize: '0.74rem', color: '#94a3b8' }}>
+                            {new Date(p.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <strong style={{ fontSize: '0.94rem', color: '#0f172a' }}>{p.applicantName}</strong>
+                          <span style={{ fontSize: '0.8rem', color: '#0284c7', fontWeight: '800' }}>#{p.bibNumber}</span>
+                          <span style={{ fontSize: '0.76rem', color: '#64748b', background: '#f1f5f9', padding: '1px 6px', borderRadius: '4px' }}>
+                            {p.division}
+                          </span>
+                        </div>
+
+                        <div style={{ fontSize: '0.78rem', color: '#475569', fontWeight: '600' }}>
+                          대상: <strong>{p.targetRound}</strong> · {p.protestType === 'SCORING' ? '득점/기록 오기 정정' : p.protestType === 'RULE' ? '경기 규칙 위반 항의' : '기타/장비'}
+                        </div>
+
+                        <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {p.content}
+                        </p>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+
+              {/* 우측: 선택된 이의제기 심의 및 답변 작성 콘솔 */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {!selectedProtest ? (
+                  <div style={{ padding: '80px 20px', textAlign: 'center', color: '#94a3b8' }}>
+                    <MessageSquare size={40} style={{ margin: '0 auto 12px auto', opacity: 0.4 }} />
+                    <h4 style={{ margin: 0, fontSize: '1.05rem', color: '#475569' }}>
+                      심의할 이의제기를 왼쪽 목록에서 선택해 주세요.
+                    </h4>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '0.84rem' }}>
+                      선수의 진술 경위를 확인하고, 심판 판정 결과 및 기록 수정 사항을 작성하여 공식 답변을 등록할 수 있습니다.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    {/* 1. 선수 제출 내용 요약 카드 */}
+                    <div style={{ background: '#f8fafc', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#475569' }}>
+                          📋 선수 접수 이의제기서
+                        </span>
+                        <span style={{ fontSize: '0.76rem', color: '#94a3b8' }}>
+                          접수번호: {selectedProtest.id}
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '8px', fontSize: '0.84rem' }}>
+                        <div><span style={{ color: '#64748b' }}>선수명:</span> <strong>{selectedProtest.applicantName}</strong></div>
+                        <div><span style={{ color: '#64748b' }}>배번:</span> <strong style={{ color: '#0284c7' }}>#{selectedProtest.bibNumber}</strong></div>
+                        <div><span style={{ color: '#64748b' }}>종목/부문:</span> <strong>{selectedProtest.division} ({selectedProtest.subclass || '통합'})</strong></div>
+                        <div><span style={{ color: '#64748b' }}>대상 라운드:</span> <strong style={{ color: '#b45309' }}>{selectedProtest.targetRound}</strong></div>
+                        <div><span style={{ color: '#64748b' }}>소속:</span> <span>{selectedProtest.club || '-'}</span></div>
+                        <div><span style={{ color: '#64748b' }}>연락처:</span> <span>{selectedProtest.phone || '-'}</span></div>
+                        {selectedProtest.respondent && (
+                          <div><span style={{ color: '#64748b' }}>피항의자:</span> <strong style={{ color: '#dc2626' }}>{selectedProtest.respondent}</strong></div>
+                        )}
+                        {selectedProtest.incidentTime && (
+                          <div><span style={{ color: '#64748b' }}>발생 위치:</span> <span>{selectedProtest.incidentTime}</span></div>
+                        )}
+                      </div>
+
+                      <div style={{ borderTop: '1px dashed #cbd5e1', paddingTop: '10px' }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: '800', color: '#334155', display: 'block', marginBottom: '4px' }}>
+                          선수 주장 및 진술 경위:
+                        </span>
+                        <div style={{ background: '#ffffff', padding: '12px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.88rem', color: '#0f172a', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
+                          {selectedProtest.content}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 2. 심판 심의 판정 및 답변 작성기 */}
+                    <div style={{ background: '#ffffff', borderRadius: '14px', border: '2px solid #2563eb', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: '900', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Scale size={18} style={{ color: '#2563eb' }} />
+                          <span>심판 심의 결정 및 민원 조치 작성기</span>
+                        </h4>
+                        <span style={{ fontSize: '0.76rem', color: '#2563eb', fontWeight: '700' }}>
+                          * 등록 즉시 홈페이지에 공개 답변으로 반영됩니다.
+                        </span>
+                      </div>
+
+                      {/* 처리 상태 선택 버튼들 */}
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: '800', color: '#334155', marginBottom: '6px' }}>
+                          심의 결과 상태 선택:
+                        </label>
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                          {[
+                            { id: 'ACCEPTED', label: '🟢 인용 (기록·순위 수정 완료)', bg: '#dcfce7', color: '#15803d', border: '#86efac' },
+                            { id: 'REJECTED', label: '🔴 기각 (규칙 위반 미확인/유지)', bg: '#fee2e2', color: '#b91c1c', border: '#fca5a5' },
+                            { id: 'IN_REVIEW', label: '🔵 심의 진행중 (비디오 판독중)', bg: '#e0f2fe', color: '#0369a1', border: '#bae6fd' },
+                            { id: 'RESOLVED', label: '🟣 답변 및 조치 안내 완료', bg: '#f3e8ff', color: '#7e22ce', border: '#d8b4fe' },
+                          ].map(st => {
+                            const active = decisionStatus === st.id;
+                            return (
+                              <button
+                                key={st.id}
+                                type="button"
+                                onClick={() => setDecisionStatus(st.id)}
+                                style={{
+                                  padding: '8px 14px',
+                                  borderRadius: '8px',
+                                  border: active ? `2px solid ${st.color}` : `1px solid ${st.border}`,
+                                  background: active ? st.bg : '#ffffff',
+                                  color: st.color,
+                                  fontWeight: '800',
+                                  fontSize: '0.82rem',
+                                  cursor: 'pointer',
+                                  boxShadow: active ? '0 2px 6px rgba(0,0,0,0.08)' : 'none',
+                                }}
+                              >
+                                {st.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* 빠른 결정문 템플릿 버튼 */}
+                      <div>
+                        <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#64748b', display: 'block', marginBottom: '4px' }}>
+                          빠른 결정문 서식 템플릿:
+                        </span>
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDecisionStatus('ACCEPTED');
+                              setAnswerDecision(`[심판위원회 심의 결정]\n해당 라운드(${selectedProtest.targetRound}) 결승선 통과 영상 및 수석계측원 원본 기록지를 정밀 대조 확인한 결과, ${selectedProtest.applicantName}(#${selectedProtest.bibNumber}) 선수의 완주 사실이 인정되어 순위표를 즉시 정정 반영 완료하였습니다.`);
+                            }}
+                            style={{ padding: '4px 10px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '700', color: '#334155', cursor: 'pointer' }}
+                          >
+                            + 비디오 판독 결과 완주 인정 (순위 정정 반영)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDecisionStatus('ACCEPTED');
+                              setAnswerDecision(`[심판위원회 심의 결정]\n기록원의 착오로 DNS(출발하지않음) 표기된 사실이 확인되어, ${selectedProtest.applicantName} 선수의 실제 완주 순위로 득점 정정을 완료하였습니다.`);
+                            }}
+                            style={{ padding: '4px 10px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '700', color: '#334155', cursor: 'pointer' }}
+                          >
+                            + 계측원 기록지 대조 결과 DNS 오기 정정 완료
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDecisionStatus('REJECTED');
+                              setAnswerDecision(`[심판위원회 심의 결정]\n제출된 정황 진술 및 수역 심판관 관측 결과, 월드세일링 RRS 우선권 규칙 위반 사실을 입증할 충분한 증거가 확인되지 않아 본 항의를 [기각] 결정하며 종전 순위를 유지합니다.`);
+                            }}
+                            style={{ padding: '4px 10px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '700', color: '#334155', cursor: 'pointer' }}
+                          >
+                            + RRS 규칙 심의 결과 반칙 미인정 (기각)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDecisionStatus('RESOLVED');
+                              setAnswerDecision(`[심판위원회 안내]\n대회 요강(NoR) 및 세일링 Low-Point 규정에 따라 정상 산출된 점수임을 재확인하였습니다. 자세한 채점 내역은 본부 심판실에 방문하여 확인하실 수 있습니다.`);
+                            }}
+                            style={{ padding: '4px 10px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '700', color: '#334155', cursor: 'pointer' }}
+                          >
+                            + 대회 요강 및 채점 규정 정상 산출 안내
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* 심의 결정문 본문 입력란 */}
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: '800', color: '#334155', marginBottom: '4px' }}>
+                          심의 결정문 및 조치 상세 내용 <span style={{ color: '#ef4444' }}>*</span>
+                        </label>
+                        <textarea
+                          rows={5}
+                          value={answerDecision}
+                          onChange={e => setAnswerDecision(e.target.value)}
+                          placeholder="심의 결과와 순위표 수정 조치 사항을 작성해 주세요. (예: 2R 8위 완주 인정되어 순위표에 8점 반영 완료함)"
+                          style={{ width: '100%', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.88rem', lineHeight: '1.6' }}
+                        />
+                      </div>
+
+                      {/* 심판관 서명 명의 및 저장 버튼 */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', paddingTop: '4px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '0.82rem', fontWeight: '800', color: '#475569' }}>심판관 서명:</span>
+                          <input
+                            type="text"
+                            value={decidedByTitle}
+                            onChange={e => setDecidedByTitle(e.target.value)}
+                            style={{ padding: '6px 10px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.84rem', fontWeight: '700' }}
+                          />
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleSaveDecision(selectedProtest.id)}
+                          disabled={savingDecision}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '10px 22px',
+                            background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                            border: 'none',
+                            borderRadius: '8px',
+                            color: 'white',
+                            fontWeight: '800',
+                            fontSize: '0.88rem',
+                            cursor: savingDecision ? 'not-allowed' : 'pointer',
+                            boxShadow: '0 2px 8px rgba(37,99,235,0.3)',
+                          }}
+                        >
+                          <Send size={15} />
+                          {savingDecision ? '답변 등록 중...' : '💾 심판 심의 답변 등록 및 홈페이지 즉시 공지'}
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
