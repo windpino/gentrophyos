@@ -2599,6 +2599,8 @@ export default function RefereeMobilePage({
               setRefereeViewMode('scoring');
             }}
             dnsDnfRule={dnsDnfRule}
+            currentDivision={activeDivisionTab}
+            currentParticipants={participants}
           />
         ) : (
           <>

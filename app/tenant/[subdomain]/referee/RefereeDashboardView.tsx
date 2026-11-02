@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   Trophy,
   Users,
@@ -21,7 +21,8 @@ import {
   Send,
   Flag,
   Activity,
-  UserCheck
+  UserCheck,
+  RefreshCw
 } from 'lucide-react';
 import { parseParticipantRegion, parseParticipantAge, parseParticipantGender, normalizeDivisionName } from '../host/HostDashboardView';
 
@@ -38,6 +39,8 @@ interface RefereeDashboardViewProps {
   onOpenProtestModal: (protest?: any) => void;
   onNavigateToScoring: (division: string) => void;
   dnsDnfRule: string;
+  currentDivision?: string;
+  currentParticipants?: any[];
 }
 
 export default function RefereeDashboardView({
@@ -53,7 +56,37 @@ export default function RefereeDashboardView({
   onOpenProtestModal,
   onNavigateToScoring,
   dnsDnfRule,
+  currentDivision,
+  currentParticipants,
 }: RefereeDashboardViewProps) {
+  // 실시간 전체 리더보드 데이터 및 갱신 상태
+  const [allLeaderboards, setAllLeaderboards] = useState<Record<string, any>>({});
+  const [loadingLeaderboards, setLoadingLeaderboards] = useState(false);
+  const [lastUpdatedTime, setLastUpdatedTime] = useState<string>('');
+
+  const fetchAllLeaderboards = async () => {
+    if (!activeTournament?.id) return;
+    setLoadingLeaderboards(true);
+    try {
+      const res = await fetch(`/api/tenant/${subdomain}/leaderboard?tournamentId=${activeTournament.id}&all=true&_t=${Date.now()}`);
+      const data = await res.json();
+      if (data.leaderboards) {
+        setAllLeaderboards(data.leaderboards);
+        const now = new Date();
+        setLastUpdatedTime(`${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`);
+      }
+    } catch (err) {
+      console.error('Failed to fetch all leaderboards for referee dashboard:', err);
+    } finally {
+      setLoadingLeaderboards(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAllLeaderboards();
+    const timer = setInterval(fetchAllLeaderboards, 12000);
+    return () => clearInterval(timer);
+  }, [subdomain, activeTournament?.id]);
 
   // 1. 종목별 인원 및 현황 통계 산출
   const stats = useMemo(() => {
@@ -103,69 +136,169 @@ export default function RefereeDashboardView({
       }
     });
 
-    // 5대 종목 세부 메타 정보 및 대표 선두 주자 (심판 기록관 실시간 데이터)
-    const divisionCards = [
+    // 종목별 실제 진행 라운드 수 및 상태 계산 함수
+    const computeConductedRounds = (list: any[] | undefined, defaultRoundText: string) => {
+      if (!list || list.length === 0) {
+        return { rounds: defaultRoundText, status: `${defaultRoundText} (공식 기록)`, count: 1 };
+      }
+      const conductedKeys = ['r1', 'r2', 'r3', 'r4', 'r5', 'r6'].filter((rKey) =>
+        list.some((p) => p[rKey] !== null && p[rKey] !== undefined && p[rKey] !== '')
+      );
+      const count = conductedKeys.length;
+      if (count === 0) {
+        return { rounds: '경기 대기', status: '기록 입력 대기', count: 0 };
+      }
+      return {
+        rounds: `${count}R 완료`,
+        status: `${count}개 라운드 완료 (실시간 연계)`,
+        count,
+      };
+    };
+
+    // 종목별 실시간 포디움 1~3위 산출 함수
+    const computeTop3Leaders = (divName: string, list: any[] | undefined, defaultLeader: string) => {
+      if (!list || list.length === 0) return defaultLeader;
+
+      const scoredPlayers = list.filter((p) => {
+        const hasRoundScore = ['r1', 'r2', 'r3', 'r4', 'r5', 'r6'].some(
+          (rk) => p[rk] !== null && p[rk] !== undefined && p[rk] !== ''
+        );
+        return hasRoundScore || (p.rank && p.rank !== '-');
+      });
+
+      if (scoredPlayers.length === 0) return defaultLeader;
+
+      const sorted = [...scoredPlayers].sort((a, b) => {
+        const rA = parseInt(String(a.rank || '').replace(/[^0-9]/g, ''), 10);
+        const rB = parseInt(String(b.rank || '').replace(/[^0-9]/g, ''), 10);
+        if (!isNaN(rA) && !isNaN(rB)) return rA - rB;
+        if (!isNaN(rA)) return -1;
+        if (!isNaN(rB)) return 1;
+        const tA = Number(a.total) || 999;
+        const tB = Number(b.total) || 999;
+        return tA - tB;
+      });
+
+      const top3 = sorted.slice(0, 3);
+      if (top3.length === 0) return defaultLeader;
+
+      if (divName === '단체전') {
+        return top3
+          .map((p, idx) => `${idx + 1}위 ${p.teamName || p.name || `팀 ${idx + 1}`}`)
+          .join(' · ');
+      }
+
+      return top3
+        .map((p, idx) => `${idx + 1}위 ${p.name} (${p.total ?? 0}점)`)
+        .join(' · ');
+    };
+
+    // 5대 종목 기본 구성 및 실시간 데이터 바인딩
+    const divisionConfigs = [
       {
         name: '혼합오픈',
-        count: divisionMap['혼합오픈'] || 64,
+        defaultCount: 64,
         unit: '명',
-        rounds: '3R 완료',
+        defaultRounds: '3R 완료',
         classes: '청년부(17) · 중년부(17) · 장년부(17) · 여자부(13)',
-        leader: '1위 조병구 (6점) · 2위 김현수 (6점) · 3위 이명헌 (8점)',
+        defaultLeader: '1위 조병구 (6점) · 2위 김현수 (6점) · 3위 이명헌 (8점)',
         color: '#2563eb',
         bg: '#eff6ff',
         border: '#bfdbfe',
-        status: '진행 완료 / 순위 확정',
       },
       {
         name: '펀&포뮬러',
-        count: divisionMap['펀&포뮬러'] || 38,
+        defaultCount: 38,
         unit: '명',
-        rounds: '3R 완료',
+        defaultRounds: '1R 완료', // 실제 1라운드만 진행됨 (동적 연동 및 기본값 1R 완료 적용)
         classes: '청년부(10) · 중년부(10) · 장년부(10) · 여자부(8)',
-        leader: '1위 박두섭 (1점) · 2위 신지현 (2점) · 3위 이후상 (3점)',
+        defaultLeader: '1위 박두섭 (1점) · 2위 신지현 (2점) · 3위 이후상 (3점)',
         color: '#ea580c',
         bg: '#fff7ed',
         border: '#fed7aa',
-        status: '진행 완료 / 순위 확정',
       },
       {
         name: '윙포일',
-        count: divisionMap['윙포일'] || 17,
+        defaultCount: 17,
         unit: '명',
-        rounds: '1R 완료',
+        defaultRounds: '1R 완료',
         classes: '남자부(9) · 여자부(8)',
-        leader: '1위 김선근 (1점) · 2위 옥덕필 (2점) · 3위 유재원 (3점)',
+        defaultLeader: '1위 김선근 (1점) · 2위 옥덕필 (2점) · 3위 유재원 (3점)',
         color: '#0284c7',
         bg: '#f0f9ff',
         border: '#bae6fd',
-        status: '진행 완료 / 순위 확정',
       },
       {
         name: '윈드포일',
-        count: divisionMap['윈드포일'] || 11,
+        defaultCount: 11,
         unit: '명',
-        rounds: '1R 완료',
+        defaultRounds: '1R 완료',
         classes: '남녀 통합 오픈부(11)',
-        leader: '1위 강민호 (1점) · 2위 현인성 (2점) · 3위 김재창 (3점)',
+        defaultLeader: '1위 강민호 (1점) · 2위 현인성 (2점) · 3위 김재창 (3점)',
         color: '#059669',
         bg: '#ecfdf5',
         border: '#a7f3d0',
-        status: '진행 완료 / 순위 확정',
       },
       {
         name: '단체전',
-        count: 6,
+        defaultCount: 6,
         unit: '개팀',
-        rounds: '1R 완료',
+        defaultRounds: '1R 완료',
         classes: '시·도 및 클럽대항전(6)',
-        leader: '1위 통영협회 T2 · 2위 거제한화 T4 · 3위 가천대 T3',
+        defaultLeader: '1위 통영윈드서핑협회 · 2위 거제한화오션윈드서핑클럽 · 3위 가천대',
         color: '#7c3aed',
         bg: '#f5f3ff',
         border: '#ddd6fe',
-        status: '진행 완료 / 순위 확정',
       },
     ];
+
+    const divisionCards = divisionConfigs.map((cfg) => {
+      // 1. 현재 편집 중인 종목 데이터 우선 확인
+      let list: any[] = [];
+      if (currentDivision && currentParticipants && currentParticipants.length > 0) {
+        const normCur = normalizeDivisionName(currentDivision);
+        const normCfg = normalizeDivisionName(cfg.name);
+        if (normCur === normCfg) {
+          list = currentParticipants;
+        }
+      }
+
+      // 2. 전체 리더보드 데이터에서 조회
+      if (list.length === 0) {
+        if (allLeaderboards[cfg.name]?.list) {
+          list = allLeaderboards[cfg.name].list;
+        } else if (cfg.name.includes('펀')) {
+          const alt = cfg.name.includes('&')
+            ? cfg.name.replace('펀&포뮬러', '펀엔포뮬러')
+            : cfg.name.replace('펀엔포뮬러', '펀&포뮬러');
+          if (allLeaderboards[alt]?.list) {
+            list = allLeaderboards[alt].list;
+          }
+        }
+      }
+
+      const roundInfo = computeConductedRounds(list, cfg.defaultRounds);
+      const leader = computeTop3Leaders(cfg.name, list, cfg.defaultLeader);
+      const count = cfg.name === '단체전'
+        ? (list.length || 6)
+        : (list.length || divisionMap[cfg.name] || cfg.defaultCount);
+
+      return {
+        name: cfg.name,
+        count,
+        unit: cfg.unit,
+        rounds: roundInfo.rounds,
+        classes: cfg.classes,
+        leader,
+        color: cfg.color,
+        bg: cfg.bg,
+        border: cfg.border,
+        status: roundInfo.status,
+        conductedCount: roundInfo.count,
+      };
+    });
+
+    const completedDivisionsCount = divisionCards.filter((d) => d.conductedCount > 0).length;
 
     // 지역별 정렬
     const sortedRegions = Object.entries(regionMap).sort((a, b) => b[1] - a[1]);
@@ -176,10 +309,11 @@ export default function RefereeDashboardView({
       femaleCount,
       divisionMap,
       divisionCards,
+      completedDivisionsCount,
       sortedRegions,
       ageMap,
     };
-  }, [rawRegistrations]);
+  }, [rawRegistrations, allLeaderboards, currentDivision, currentParticipants]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
@@ -308,10 +442,10 @@ export default function RefereeDashboardView({
             </div>
           </div>
           <div style={{ fontSize: '1.7rem', fontWeight: '900', color: '#059669' }}>
-            5 / 5<span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '600' }}>개 종목 완료</span>
+            {stats.completedDivisionsCount} / {stats.divisionCards.length}<span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '600' }}>개 종목 진행 완료</span>
           </div>
           <div style={{ fontSize: '0.78rem', color: '#059669', fontWeight: '700', marginTop: '4px' }}>
-            전 종목 실시간 공식 기록 일치 완료
+            전 종목 실시간 공식 기록 연동 완료
           </div>
         </div>
 
@@ -351,7 +485,7 @@ export default function RefereeDashboardView({
 
       {/* ── [3] 5대 종목별 경기 현황 및 원클릭 순위입력 이동 상황판 ── */}
       <div style={{ background: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '22px 24px', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
           <div>
             <h3 style={{ fontSize: '1.15rem', fontWeight: '900', color: '#0f172a', margin: 0 }}>
               ⛵ 5대 공식 종목별 실시간 경기 진행 및 선두 현황
@@ -360,9 +494,32 @@ export default function RefereeDashboardView({
               종목 카드의 [순위 입력하기] 버튼을 누르면 해당 종목의 심판 입력기로 즉시 전환됩니다.
             </p>
           </div>
-          <span style={{ fontSize: '0.78rem', fontWeight: '700', color: '#059669', background: '#dcfce7', padding: '4px 10px', borderRadius: '6px' }}>
-            심판 기록관 실시간 연동 완료
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={fetchAllLeaderboards}
+              disabled={loadingLeaderboards}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '5px 12px',
+                borderRadius: '8px',
+                background: '#f1f5f9',
+                border: '1px solid #cbd5e1',
+                color: '#334155',
+                fontSize: '0.78rem',
+                fontWeight: '700',
+                cursor: loadingLeaderboards ? 'wait' : 'pointer',
+              }}
+            >
+              <RefreshCw size={13} className={loadingLeaderboards ? 'animate-spin' : ''} />
+              <span>{loadingLeaderboards ? '연동 중...' : (lastUpdatedTime ? `${lastUpdatedTime} 연동됨` : '실시간 동기화')}</span>
+            </button>
+            <span style={{ fontSize: '0.78rem', fontWeight: '700', color: '#059669', background: '#dcfce7', padding: '4px 10px', borderRadius: '6px' }}>
+              심판 기록관 실시간 연동 완료
+            </span>
+          </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '14px' }}>
