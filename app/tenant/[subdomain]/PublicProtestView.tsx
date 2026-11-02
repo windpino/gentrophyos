@@ -50,12 +50,6 @@ export default function PublicProtestView({ subdomain, defaultDivision = '혼합
   const [incidentTime, setIncidentTime] = useState('');
   const [content, setContent] = useState('');
 
-  // 비밀글 열람용 상태
-  const [unlockTargetId, setUnlockTargetId] = useState<string | null>(null);
-  const [unlockPassword, setUnlockPassword] = useState('');
-  const [unlockedContents, setUnlockedContents] = useState<Record<string, string>>({});
-  const [unlockError, setUnlockError] = useState('');
-
   const fetchProtests = async () => {
     setLoading(true);
     try {
@@ -121,32 +115,6 @@ export default function PublicProtestView({ subdomain, defaultDivision = '혼합
       alert(`제출 중 오류: ${err.message}`);
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  // 비밀글 잠금해제
-  const handleUnlockSecret = async (id: string) => {
-    if (!unlockPassword.trim()) {
-      setUnlockError('비밀번호를 입력해 주세요.');
-      return;
-    }
-    setUnlockError('');
-    try {
-      const res = await fetch(`/api/tenant/${subdomain}/protests/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, password: unlockPassword }),
-      });
-      const data = await res.json();
-      if (res.ok && data.verified) {
-        setUnlockedContents(prev => ({ ...prev, [id]: data.content }));
-        setUnlockTargetId(null);
-        setUnlockPassword('');
-      } else {
-        setUnlockError(data.error || '비밀번호가 일치하지 않습니다.');
-      }
-    } catch (err: any) {
-      setUnlockError(err.message || '인증 오류');
     }
   };
 
@@ -428,7 +396,7 @@ export default function PublicProtestView({ subdomain, defaultDivision = '혼합
                   onChange={e => setIsSecret(e.target.checked)}
                   style={{ width: '17px', height: '17px' }}
                 />
-                비공개 접수 (작성자·심판만 열람)
+                비공개 접수 (접수 내용과 심의 결과만 공개되고, 접수자 및 대상자 정보 가림)
               </label>
             </div>
           </div>
@@ -602,8 +570,6 @@ export default function PublicProtestView({ subdomain, defaultDivision = '혼합
           {filteredProtests.map(item => {
             const statusBadge = getStatusBadge(item.status);
             const typeLabel = getProtestTypeLabel(item.protestType);
-            const isSecretLocked = item.isSecret && !unlockedContents[item.id];
-            const displayContent = unlockedContents[item.id] || item.content;
 
             return (
               <div
@@ -654,8 +620,8 @@ export default function PublicProtestView({ subdomain, defaultDivision = '혼합
                     </span>
 
                     {item.isSecret && (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.74rem', color: '#dc2626', fontWeight: '700', background: '#fee2e2', padding: '2px 8px', borderRadius: '4px' }}>
-                        <Lock size={12} /> 비공개
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.74rem', color: '#b45309', fontWeight: '800', background: '#fef3c7', padding: '2px 8px', borderRadius: '4px', border: '1px solid #fde68a' }}>
+                        <Lock size={12} /> 비공개 (접수자·대상자 정보 가림)
                       </span>
                     )}
                   </div>
@@ -665,90 +631,72 @@ export default function PublicProtestView({ subdomain, defaultDivision = '혼합
                   </span>
                 </div>
 
-                {/* 신청인 및 종목 요약 */}
+                {/* 신청인 및 종목 요약 (비공개 시 접수자 및 대상자 내역 가림) */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', fontSize: '0.88rem', background: '#f8fafc', padding: '10px 14px', borderRadius: '10px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '800', color: '#0f172a' }}>
-                    <User size={15} style={{ color: '#64748b' }} />
-                    <span>{item.applicantName}</span>
-                  </div>
-                  <div style={{ color: '#0284c7', fontWeight: '800' }}>
-                    #{item.bibNumber}
-                  </div>
-                  <div style={{ color: '#64748b' }}>
-                    {item.division} {item.subclass ? `(${item.subclass})` : ''}
-                  </div>
-                  {item.club && (
-                    <div style={{ color: '#64748b' }}>
-                      소속: {item.club}
-                    </div>
-                  )}
-                  {item.respondent && (
-                    <div style={{ color: '#dc2626', fontWeight: '700', background: '#fef2f2', padding: '2px 8px', borderRadius: '4px' }}>
-                      상대: {item.respondent}
-                    </div>
-                  )}
-                  {item.incidentTime && (
-                    <div style={{ color: '#64748b', fontSize: '0.8rem' }}>
-                      📍 {item.incidentTime}
-                    </div>
-                  )}
-                </div>
-
-                {/* 내용 본문 */}
-                <div style={{ fontSize: '0.9rem', color: '#334155', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
-                  {isSecretLocked ? (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fffbeb', padding: '12px 16px', borderRadius: '8px', border: '1px solid #fde68a' }}>
-                      <span style={{ fontSize: '0.84rem', color: '#b45309', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <Lock size={15} /> 비공개 이의제기입니다. 작성자 본인 비밀번호를 입력하여 열람하실 수 있습니다.
-                      </span>
-                      <button
-                        onClick={() => {
-                          setUnlockTargetId(item.id);
-                          setUnlockPassword('');
-                          setUnlockError('');
-                        }}
-                        style={{ padding: '5px 12px', background: '#b45309', color: 'white', border: 'none', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '800', cursor: 'pointer' }}
-                      >
-                        열람하기
-                      </button>
-                    </div>
+                  {item.isSecret ? (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '800', color: '#64748b' }}>
+                        <Lock size={14} style={{ color: '#ea580c' }} />
+                        <span>접수자: 익명 (비공개)</span>
+                      </div>
+                      <div style={{ color: '#94a3b8', fontWeight: '700' }}>
+                        배번: 비공개
+                      </div>
+                      <div style={{ color: '#64748b' }}>
+                        {item.division} {item.subclass ? `(${item.subclass})` : ''}
+                      </div>
+                      {item.respondent && (
+                        <div style={{ color: '#b91c1c', fontWeight: '700', background: '#fee2e2', padding: '2px 8px', borderRadius: '4px' }}>
+                          대상자(상대): 비공개 (가림)
+                        </div>
+                      )}
+                      {item.incidentTime && (
+                        <div style={{ color: '#64748b', fontSize: '0.8rem' }}>
+                          📍 {item.incidentTime}
+                        </div>
+                      )}
+                    </>
                   ) : (
-                    displayContent
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '800', color: '#0f172a' }}>
+                        <User size={15} style={{ color: '#64748b' }} />
+                        <span>{item.applicantName}</span>
+                      </div>
+                      <div style={{ color: '#0284c7', fontWeight: '800' }}>
+                        #{item.bibNumber}
+                      </div>
+                      <div style={{ color: '#64748b' }}>
+                        {item.division} {item.subclass ? `(${item.subclass})` : ''}
+                      </div>
+                      {item.club && (
+                        <div style={{ color: '#64748b' }}>
+                          소속: {item.club}
+                        </div>
+                      )}
+                      {item.respondent && (
+                        <div style={{ color: '#dc2626', fontWeight: '700', background: '#fef2f2', padding: '2px 8px', borderRadius: '4px' }}>
+                          상대: {item.respondent}
+                        </div>
+                      )}
+                      {item.incidentTime && (
+                        <div style={{ color: '#64748b', fontSize: '0.8rem' }}>
+                          📍 {item.incidentTime}
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
 
-                {/* 비밀번호 입력 팝업 (해당 글 선택 시) */}
-                {unlockTargetId === item.id && (
-                  <div style={{ background: '#f8fafc', padding: '14px 16px', borderRadius: '10px', border: '1px solid #cbd5e1', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '0.82rem', fontWeight: '800', color: '#334155' }}>
-                      열람 비밀번호:
-                    </span>
-                    <input
-                      type="password"
-                      placeholder="비밀번호"
-                      value={unlockPassword}
-                      onChange={e => setUnlockPassword(e.target.value)}
-                      style={{ padding: '6px 10px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.84rem' }}
-                    />
-                    <button
-                      onClick={() => handleUnlockSecret(item.id)}
-                      style={{ padding: '6px 14px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '6px', fontSize: '0.82rem', fontWeight: '700', cursor: 'pointer' }}
-                    >
-                      확인
-                    </button>
-                    <button
-                      onClick={() => setUnlockTargetId(null)}
-                      style={{ padding: '6px 10px', background: 'none', border: 'none', color: '#64748b', fontSize: '0.82rem', cursor: 'pointer' }}
-                    >
-                      취소
-                    </button>
-                    {unlockError && (
-                      <span style={{ fontSize: '0.78rem', color: '#dc2626', fontWeight: '700' }}>
-                        {unlockError}
-                      </span>
-                    )}
-                  </div>
-                )}
+                {/* 내용 본문 (비공개 이의제기도 접수 내용은 공개) */}
+                <div style={{ fontSize: '0.9rem', color: '#334155', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
+                  {item.isSecret && (
+                    <div style={{ fontSize: '0.78rem', color: '#9a3412', background: '#fff7ed', border: '1px solid #ffedd5', padding: '8px 12px', borderRadius: '8px', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Lock size={13} style={{ color: '#ea580c', flexShrink: 0 }} />
+                      <span>비공개 이의제기 접수 건입니다. 접수 내용과 심의 결과만 공개되며, 접수자 및 대상자(상대 선수) 인적 사항은 가림 처리되었습니다.</span>
+                    </div>
+                  )}
+                  {item.content}
+                </div>
 
                 {/* ── [5] 심판 공식 심의 결정문 및 민원 해결 답변 박스 ── */}
                 {item.officialDecision ? (

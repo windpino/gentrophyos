@@ -5839,9 +5839,16 @@ export default function RefereeMobilePage({
                     {/* 1. 선수 제출 내용 요약 카드 */}
                     <div style={{ background: '#f8fafc', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#475569' }}>
-                          📋 선수 접수 이의제기서
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#475569' }}>
+                            📋 선수 접수 이의제기서
+                          </span>
+                          {selectedProtest.isSecret && (
+                            <span style={{ fontSize: '0.72rem', fontWeight: '800', color: '#b45309', background: '#fef3c7', padding: '1px 8px', borderRadius: '4px', border: '1px solid #fde68a' }}>
+                              🔒 비공개 접수 (홈페이지에는 인적사항 가림 노출 중)
+                            </span>
+                          )}
+                        </div>
                         <span style={{ fontSize: '0.76rem', color: '#94a3b8' }}>
                           접수번호: {selectedProtest.id}
                         </span>

@@ -76,14 +76,17 @@ export async function GET(
 
       // 일반 홈페이지 사용자
       if (isSecret) {
+        // 비공개 이의제기: 접수 내용(사유/답변)은 공개하고, 접수자 및 대상자(상대 선수) 인적 사항은 가림
         return {
           id: d.id,
           subdomain: data.subdomain,
-          applicantName: maskName(data.applicantName),
-          bibNumber: data.bibNumber,
+          applicantName: '익명 (비공개)',
+          bibNumber: '비공개',
           division: data.division,
           subclass: data.subclass,
-          club: data.club,
+          club: '비공개',
+          respondent: data.respondent ? '비공개' : '',
+          incidentTime: data.incidentTime || '',
           protestType: data.protestType,
           targetRound: data.targetRound,
           isSecret: true,
@@ -93,7 +96,7 @@ export async function GET(
           decidedAt: data.decidedAt || null,
           createdAt: data.createdAt,
           updatedAt: data.updatedAt,
-          content: '🔒 작성자와 심판진만 열람할 수 있는 비공개 이의제기입니다.',
+          content: data.content,
         };
       }
 
