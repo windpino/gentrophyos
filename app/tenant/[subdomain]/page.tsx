@@ -3615,7 +3615,7 @@ export default function TenantPortalPage({
           {/* LIVE. 경기운영 / 공식 이의제기 및 득점 확인 탭 */}
           {activeTab === 'live' && activeSubTab === 'live-protest' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <PublicProtestView subdomain={subdomain} defaultDivision={activeDivisionTab} />
+              <PublicProtestView subdomain={subdomain} defaultDivision={activeDivisionTab} tenant={tenant} />
             </div>
           )}
 

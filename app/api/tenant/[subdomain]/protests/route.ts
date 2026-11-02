@@ -45,7 +45,7 @@ function maskName(name: string): string {
   return `${trimmed[0]}${'*'.repeat(trimmed.length - 2)}${trimmed[trimmed.length - 1]}`;
 }
 
-// GET: 이의제기 목록 조회
+// GET: 이의제기 목록 조회 및 항의 시한(1시간) 메타데이터 반환
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ subdomain: string }> }
@@ -55,6 +55,31 @@ export async function GET(
     const auth = authenticateApiRequest(req, ['admin', 'referee']);
     const isPrivileged = auth.authorized;
 
+    // 테넌트 설정 조회 (점수 공개 시각 및 1시간 카운트다운 정보)
+    const tenantRef = doc(firestore, 'tenants', subdomain);
+    const tenantSnap = await getDoc(tenantRef);
+    const tenantData = tenantSnap.exists() ? tenantSnap.data() : {};
+    const overviewConfig = tenantData.overviewConfig || {};
+    const isPublished = Boolean(overviewConfig.leaderboardPublished || overviewConfig.bracketsPublished);
+    const publishedAt = overviewConfig.leaderboardPublishedAt || overviewConfig.bracketsPublishedAt || tenantData.updatedAt || null;
+
+    // 1. 일반 사용자(선수/관람객) 요청인 경우:
+    // 내역 목록은 심판진에게만 직통 전달되므로 공개하지 않고 빈 배열과 타이머 메타데이터만 반환
+    if (!isPrivileged) {
+      return NextResponse.json({
+        protests: [],
+        isPrivileged: false,
+        timeLimit: {
+          isPublished,
+          publishedAt,
+          timeLimitMinutes: 60,
+        },
+        message: '이의제기 접수 내역은 공정한 심의를 위해 심판진에게만 비공개로 전달됩니다.'
+      });
+    }
+
+    // 2. 심판/관리자 인증 요청인 경우:
+    // 심판진의 원활한 심의 처리를 위해 전체 이의제기 목록 반환
     const q = query(
       collection(firestore, 'protests'),
       where('subdomain', '==', subdomain)
@@ -63,55 +88,25 @@ export async function GET(
     const snapshot = await getDocs(q);
     const protestList = snapshot.docs.map((d) => {
       const data = d.data() as ProtestItem;
-      const isSecret = Boolean(data.isSecret);
-
-      if (isPrivileged) {
-        // 심판/관리자는 패스워드 해시만 제외하고 모든 상세 정보 확인 가능
-        const { id: _itemDocId, passwordHash, ...rest } = data;
-        return {
-          id: d.id,
-          ...rest,
-        };
-      }
-
-      // 일반 홈페이지 사용자
-      if (isSecret) {
-        // 비공개 이의제기: 접수 내용(사유/답변)은 공개하고, 접수자 및 대상자(상대 선수) 인적 사항은 가림
-        return {
-          id: d.id,
-          subdomain: data.subdomain,
-          applicantName: '익명 (비공개)',
-          bibNumber: '비공개',
-          division: data.division,
-          subclass: data.subclass,
-          club: '비공개',
-          respondent: data.respondent ? '비공개' : '',
-          incidentTime: data.incidentTime || '',
-          protestType: data.protestType,
-          targetRound: data.targetRound,
-          isSecret: true,
-          status: data.status || 'PENDING',
-          officialDecision: data.officialDecision || null,
-          decidedBy: data.decidedBy || null,
-          decidedAt: data.decidedAt || null,
-          createdAt: data.createdAt,
-          updatedAt: data.updatedAt,
-          content: data.content,
-        };
-      }
-
-      const { id: _itemDocId2, passwordHash, phone, ...safeData } = data;
+      const { id: _itemDocId, passwordHash, ...rest } = data;
       return {
         id: d.id,
-        ...safeData,
-        applicantName: data.applicantName,
+        ...rest,
       };
     });
 
     // 최신 등록순 정렬
     protestList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-    return NextResponse.json({ protests: protestList });
+    return NextResponse.json({
+      protests: protestList,
+      isPrivileged: true,
+      timeLimit: {
+        isPublished,
+        publishedAt,
+        timeLimitMinutes: 60,
+      }
+    });
   } catch (error: any) {
     console.error('이의제기 목록 조회 오류:', error);
     return NextResponse.json({ error: error.message || '조회 실패' }, { status: 500 });
@@ -155,6 +150,8 @@ export async function POST(
     const id = `protest_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const now = new Date().toISOString();
 
+    const receiptNumber = `PR-2026-${id.slice(-6).toUpperCase()}`;
+
     const newProtest: ProtestItem = {
       id,
       subdomain,
@@ -166,7 +163,7 @@ export async function POST(
       club: club ? String(club).trim() : '',
       phone: phone ? String(phone).trim() : '',
       passwordHash: password ? hashPassword(password) : '',
-      isSecret: Boolean(isSecret),
+      isSecret: true, // 심판진 직통 비공개 전달 보장
       protestType: protestType || 'SCORING',
       targetRound: String(targetRound).trim(),
       respondent: respondent ? String(respondent).trim() : '',
@@ -181,7 +178,12 @@ export async function POST(
     await setDoc(doc(firestore, 'protests', id), newProtest);
 
     const { passwordHash, ...safeItem } = newProtest;
-    return NextResponse.json({ success: true, protest: safeItem }, { status: 201 });
+    return NextResponse.json({
+      success: true,
+      protest: safeItem,
+      receiptNumber,
+      message: '이의제기가 심판진에게 비공개로 즉시 전달되었습니다.'
+    }, { status: 201 });
   } catch (error: any) {
     console.error('이의제기 등록 실패:', error);
     return NextResponse.json({ error: error.message || '등록 실패' }, { status: 500 });

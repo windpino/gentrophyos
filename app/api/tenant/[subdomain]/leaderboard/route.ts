@@ -314,15 +314,17 @@ export async function POST(
       if (tenantSnap.exists()) {
         const existingData = tenantSnap.data();
         const existingConfig = existingData.overviewConfig || {};
+        const nowIso = new Date().toISOString();
         const updatedOverview = {
           ...existingConfig,
           bracketsPublished: publishVal,
           leaderboardPublished: publishVal,
-          bracketsPublishedAt: publishVal ? new Date().toISOString() : (existingConfig.bracketsPublishedAt || null),
+          bracketsPublishedAt: publishVal ? (existingConfig.bracketsPublishedAt || nowIso) : null,
+          leaderboardPublishedAt: publishVal ? nowIso : null,
         };
         await setDoc(tenantRef, {
           overviewConfig: updatedOverview,
-          updatedAt: new Date().toISOString()
+          updatedAt: nowIso
         }, { merge: true });
         invalidateTenantCache(subdomain);
       }
@@ -377,15 +379,17 @@ export async function POST(
       if (tenantSnap.exists()) {
         const existingData = tenantSnap.data();
         const existingConfig = existingData.overviewConfig || {};
+        const nowIso = new Date().toISOString();
         const updatedOverview = {
           ...existingConfig,
           bracketsPublished: publishVal,
           leaderboardPublished: publishVal,
-          bracketsPublishedAt: publishVal ? new Date().toISOString() : (existingConfig.bracketsPublishedAt || null),
+          bracketsPublishedAt: publishVal ? (existingConfig.bracketsPublishedAt || nowIso) : null,
+          leaderboardPublishedAt: publishVal ? nowIso : null,
         };
         await setDoc(tenantRef, {
           overviewConfig: updatedOverview,
-          updatedAt: new Date().toISOString()
+          updatedAt: nowIso
         }, { merge: true });
         invalidateTenantCache(subdomain);
       }
