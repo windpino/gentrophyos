@@ -504,12 +504,12 @@ export default function PublicProtestView({
 
         {/* 안내 바 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.08)', fontSize: '0.8rem', color: '#cbd5e1' }}>
-          <div>
-            <span>⏱️ 항의 접수 시한 원칙: </span>
+          <div style={{ whiteSpace: 'nowrap' }}>
+            <span>⏱️ 항의 접수 시한: </span>
             <strong style={{ color: '#fbbf24' }}>종목별 경기 완주 및 성적 개시 후 60분 이내 (RRS 61.3)</strong>
           </div>
-          <div>
-            <span>🔒 비공개 처리 원칙: </span>
+          <div style={{ whiteSpace: 'nowrap' }}>
+            <span>🔒 비공개 원칙: </span>
             <strong style={{ color: '#38bdf8' }}>접수 내역은 다른 선수에게 비공개되며 심판위원회에만 즉시 전달</strong>
           </div>
         </div>
@@ -523,16 +523,16 @@ export default function PublicProtestView({
               ⛵ 현재 완주 및 완료된 종목별 항의 유효 시간 (개시 후 60분 카운트다운)
             </h4>
             <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>
-              각 종목 카드의 [이의제기 접수하기] 버튼을 누르면 해당 종목과 완료 라운드가 자동 선택되어 즉시 접수할 수 있습니다.
+              각 종목 카드의 [이의제기 접수] 버튼을 누르면 해당 종목과 완료 라운드가 자동 선택되어 즉시 접수할 수 있습니다.
             </p>
           </div>
-          <span style={{ fontSize: '0.76rem', fontWeight: '800', color: '#059669', background: '#dcfce7', padding: '4px 10px', borderRadius: '6px' }}>
+          <span style={{ fontSize: '0.76rem', fontWeight: '800', color: '#059669', background: '#dcfce7', padding: '4px 10px', borderRadius: '6px', whiteSpace: 'nowrap' }}>
             심판진 실시간 전송 대기 중
           </span>
         </div>
 
         {/* 5대 종목 반응형 카드 그리드 */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(310px, 1fr))', gap: '14px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '14px' }}>
           {divisionCards.map((div) => {
             const isUrgent = !div.isExpired && div.mins < 15;
             const isCritical = !div.isExpired && div.mins < 5;
@@ -554,29 +554,28 @@ export default function PublicProtestView({
                 }}
               >
                 {/* 카드 상단: 종목명, 인원, 완주 라운드 뱃지 */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <h4 style={{ fontSize: '1.15rem', fontWeight: '900', margin: 0, color: '#0f172a' }}>
-                        {div.name}
-                      </h4>
-                      <span style={{ fontSize: '0.8rem', fontWeight: '800', color: div.color, background: 'rgba(255,255,255,0.85)', padding: '2px 8px', borderRadius: '12px' }}>
-                        {div.count}{div.unit}
-                      </span>
-                    </div>
-                    <span style={{ fontSize: '0.74rem', color: '#64748b', display: 'block', marginTop: '2px' }}>
-                      {div.classes}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
+                    <h4 style={{ fontSize: '1.15rem', fontWeight: '900', margin: 0, color: '#0f172a', whiteSpace: 'nowrap' }}>
+                      {div.name}
+                    </h4>
+                    <span style={{ fontSize: '0.8rem', fontWeight: '800', color: div.color, background: 'rgba(255,255,255,0.85)', padding: '2px 8px', borderRadius: '12px', whiteSpace: 'nowrap' }}>
+                      {div.count}{div.unit}
                     </span>
                   </div>
 
-                  <span style={{ fontSize: '0.76rem', fontWeight: '900', padding: '3px 10px', borderRadius: '6px', background: '#dcfce7', color: '#15803d', border: '1px solid #86efac' }}>
+                  <span style={{ fontSize: '0.76rem', fontWeight: '900', padding: '3px 10px', borderRadius: '6px', background: '#dcfce7', color: '#15803d', border: '1px solid #86efac', whiteSpace: 'nowrap' }}>
                     {div.rounds}
                   </span>
                 </div>
 
+                <span style={{ fontSize: '0.74rem', color: '#64748b', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {div.classes}
+                </span>
+
                 {/* 현재 1~3위 선두 주자 */}
                 <div style={{ background: '#ffffff', padding: '8px 12px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.05)', fontSize: '0.8rem' }}>
-                  <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#94a3b8', display: 'block', marginBottom: '2px' }}>
+                  <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#94a3b8', display: 'block', marginBottom: '2px', whiteSpace: 'nowrap' }}>
                     공식 포디움 선두 (1~3위)
                   </span>
                   <strong style={{ color: '#0f172a', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -596,20 +595,20 @@ export default function PublicProtestView({
                     gap: '8px',
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', whiteSpace: 'nowrap', gap: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
                       {!div.isExpired ? (
-                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: isCritical ? '#ef4444' : isUrgent ? '#f59e0b' : '#22c55e', display: 'inline-block', boxShadow: `0 0 6px ${isCritical ? '#ef4444' : '#22c55e'}` }} />
+                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: isCritical ? '#ef4444' : isUrgent ? '#f59e0b' : '#22c55e', display: 'inline-block', flexShrink: 0, boxShadow: `0 0 6px ${isCritical ? '#ef4444' : '#22c55e'}` }} />
                       ) : (
-                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#94a3b8', display: 'inline-block' }} />
+                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#94a3b8', display: 'inline-block', flexShrink: 0 }} />
                       )}
-                      <span style={{ fontSize: '0.78rem', fontWeight: '800', color: div.isExpired ? '#64748b' : isCritical ? '#b91c1c' : isUrgent ? '#c2410c' : '#15803d' }}>
-                        {!div.isExpired ? (isCritical ? '⚠️ 마감 임박 (5분 미만)' : isUrgent ? '마감 임박 (15분 미만)' : '항의 접수 유효 시간') : '공식 접수 마감됨'}
+                      <span style={{ fontSize: '0.78rem', fontWeight: '800', color: div.isExpired ? '#64748b' : isCritical ? '#b91c1c' : isUrgent ? '#c2410c' : '#15803d', whiteSpace: 'nowrap' }}>
+                        {!div.isExpired ? (isCritical ? '마감 임박 (5분)' : isUrgent ? '마감 임박 (15분)' : '이의제기 유효 시간') : '공식 접수 마감'}
                       </span>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <span style={{ fontSize: '1.25rem', fontWeight: '900', fontFamily: 'monospace', color: div.isExpired ? '#94a3b8' : isCritical ? '#dc2626' : isUrgent ? '#d97706' : '#0f172a', letterSpacing: '0.5px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
+                      <span style={{ fontSize: '1.25rem', fontWeight: '900', fontFamily: 'monospace', color: div.isExpired ? '#94a3b8' : isCritical ? '#dc2626' : isUrgent ? '#d97706' : '#0f172a', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>
                         {div.formattedClock}
                       </span>
                       <button
@@ -651,13 +650,13 @@ export default function PublicProtestView({
                   </div>
 
                   {/* 개시 시각 및 마감 시각 표기 */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#64748b' }}>
-                    <span>개시: <strong>{formatTimeOnly(div.startDate)}</strong></span>
-                    <span>마감: <strong style={{ color: div.isExpired ? '#94a3b8' : '#2563eb' }}>{formatTimeOnly(div.expiryDate)}</strong></span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', color: '#64748b', whiteSpace: 'nowrap' }}>
+                    <span style={{ whiteSpace: 'nowrap' }}>개시: <strong style={{ color: '#334155' }}>{formatTimeOnly(div.startDate)}</strong></span>
+                    <span style={{ whiteSpace: 'nowrap' }}>마감: <strong style={{ color: div.isExpired ? '#94a3b8' : '#2563eb' }}>{formatTimeOnly(div.expiryDate)}</strong></span>
                   </div>
                 </div>
 
-                {/* 핵심 상호연결: 시간 내에는 활성화 / 시간 초과 시 비활성화되는 이의제기 접수 버튼 */}
+                {/* 핵심 상호연결: 버튼 내 시간표기 제거 및 줄바꿈 없는 깔끔한 액션 버튼 */}
                 {!div.isExpired ? (
                   <button
                     type="button"
@@ -668,19 +667,20 @@ export default function PublicProtestView({
                       justifyContent: 'center',
                       gap: '6px',
                       width: '100%',
-                      padding: '10px 14px',
+                      padding: '11px 16px',
                       background: div.color,
                       color: 'white',
                       border: 'none',
                       borderRadius: '10px',
                       fontWeight: '800',
-                      fontSize: '0.86rem',
+                      fontSize: '0.88rem',
+                      whiteSpace: 'nowrap',
                       cursor: 'pointer',
                       boxShadow: `0 3px 10px ${div.color}40`,
                       transition: 'all 0.15s ease',
                     }}
                   >
-                    <span>✍️ {div.name} 이의제기 접수 ({div.formattedClock} 남음)</span>
+                    <span style={{ whiteSpace: 'nowrap' }}>✍️ {div.name} 이의제기 접수하기</span>
                     <ArrowRight size={14} />
                   </button>
                 ) : (
@@ -693,18 +693,19 @@ export default function PublicProtestView({
                       justifyContent: 'center',
                       gap: '6px',
                       width: '100%',
-                      padding: '10px 14px',
+                      padding: '11px 16px',
                       background: '#e2e8f0',
                       color: '#94a3b8',
                       border: 'none',
                       borderRadius: '10px',
                       fontWeight: '800',
-                      fontSize: '0.84rem',
+                      fontSize: '0.86rem',
+                      whiteSpace: 'nowrap',
                       cursor: 'not-allowed',
                     }}
                   >
                     <Clock size={14} />
-                    <span>🚫 {div.name} 항의 시한 마감 (60분 경과)</span>
+                    <span style={{ whiteSpace: 'nowrap' }}>🚫 {div.name} 항의 시한 마감</span>
                   </button>
                 )}
               </div>
@@ -810,29 +811,29 @@ export default function PublicProtestView({
             {/* 폼 상단: 선택된 종목 및 남은 시한 안내 바 */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1.5px solid #fed7aa', paddingBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <h4 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '900', color: '#9a3412' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <h4 style={{ margin: 0, fontSize: '1.18rem', fontWeight: '900', color: '#9a3412', whiteSpace: 'nowrap' }}>
                     ✍️ [{division}] 공식 이의제기 및 득점 확인서 접수
                   </h4>
                   {!currentSelectedDivisionCard.isExpired ? (
-                    <span style={{ fontSize: '0.78rem', fontWeight: '900', padding: '2px 8px', borderRadius: '12px', background: '#dcfce7', color: '#15803d', border: '1px solid #86efac' }}>
-                      ⏱️ 항의 시한: {currentSelectedDivisionCard.formattedClock} 남음
+                    <span style={{ fontSize: '0.78rem', fontWeight: '900', padding: '2px 8px', borderRadius: '12px', background: '#dcfce7', color: '#15803d', border: '1px solid #86efac', whiteSpace: 'nowrap' }}>
+                      ⏱️ 남은 시한: {currentSelectedDivisionCard.formattedClock}
                     </span>
                   ) : (
-                    <span style={{ fontSize: '0.78rem', fontWeight: '900', padding: '2px 8px', borderRadius: '12px', background: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5' }}>
-                      🚫 항의 시한 마감됨 (접수 불가)
+                    <span style={{ fontSize: '0.78rem', fontWeight: '900', padding: '2px 8px', borderRadius: '12px', background: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5', whiteSpace: 'nowrap' }}>
+                      🚫 접수 시한 마감됨
                     </span>
                   )}
                 </div>
-                <span style={{ fontSize: '0.78rem', color: '#c2410c', display: 'block', marginTop: '2px' }}>
-                  * 본 접수 내역은 다른 선수에게 일체 공개되지 않으며 심판위원회에만 즉시 비공개 직통 전달됩니다.
+                <span style={{ fontSize: '0.78rem', color: '#c2410c', display: 'block', marginTop: '3px', whiteSpace: 'nowrap' }}>
+                  * 본 접수 내역은 다른 선수에게 공개되지 않으며 심판위원회에만 즉시 비공개 직통 전달됩니다.
                 </span>
               </div>
 
               <button
                 type="button"
                 onClick={() => setIsFormOpen(false)}
-                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#9a3412' }}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#9a3412', padding: '4px' }}
               >
                 <X size={22} />
               </button>
@@ -1068,12 +1069,13 @@ export default function PublicProtestView({
                   color: 'white',
                   fontWeight: '800',
                   fontSize: '0.9rem',
+                  whiteSpace: 'nowrap',
                   cursor: submitting || currentSelectedDivisionCard.isExpired ? 'not-allowed' : 'pointer',
                   boxShadow: currentSelectedDivisionCard.isExpired ? 'none' : '0 2px 10px rgba(245, 158, 11, 0.4)',
                 }}
               >
                 <Send size={15} />
-                <span>
+                <span style={{ whiteSpace: 'nowrap' }}>
                   {submitting
                     ? '심판진 전송 중...'
                     : currentSelectedDivisionCard.isExpired
